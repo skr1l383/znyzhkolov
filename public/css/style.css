@@ -20,6 +20,10 @@
   --steam: #1f6fb2;
   --gog: #8a3fd1;
   --epic: #3a4252;
+  /* Лінії графіка: синій і помаранчевий розрізняються і при дальтонізмі
+     (фірмові синій Steam і фіолетовий GOG — ні) */
+  --chart-steam: #1f6fb2;
+  --chart-gog: #c2410c;
   --shadow: 0 1px 2px rgb(18 24 38 / 0.05), 0 6px 20px rgb(18 24 38 / 0.06);
   --ring: 0 0 0 3px rgb(242 154 46 / 0.45);
 
@@ -50,6 +54,8 @@
     --steam: #66b3f0;
     --gog: #c08af0;
     --epic: #c9d1e0;
+  --chart-steam: #3d8ce6;
+  --chart-gog: #e0662f;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.22);
     color-scheme: dark;
   }
@@ -73,6 +79,8 @@
   --steam: #66b3f0;
   --gog: #c08af0;
   --epic: #c9d1e0;
+  --chart-steam: #3d8ce6;
+  --chart-gog: #e0662f;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.22);
   color-scheme: dark;
 }
@@ -1262,6 +1270,202 @@ p {
   to {
     background-position: -200% 0;
   }
+}
+
+/* ---------- Графік ціни ---------- */
+.dialog.dialog-wide {
+  width: min(880px, calc(100vw - 32px));
+}
+
+.series-steam {
+  --series: var(--chart-steam);
+}
+
+.series-gog {
+  --series: var(--chart-gog);
+}
+
+.chart-box {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.chart-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.chart-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+}
+
+.chart-stat {
+  display: grid;
+  gap: 2px;
+}
+
+.chart-stat span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chart-stat strong {
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.chart-stat small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.legend-item,
+.chart-tip-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.legend-line {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--series);
+}
+
+.chart-plot {
+  position: relative;
+  border-radius: var(--radius-sm);
+  outline: none;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+
+.chart-plot:focus-visible {
+  box-shadow: var(--ring);
+}
+
+.chart-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-axis {
+  fill: var(--muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--series);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-end-label,
+.chart-min-label {
+  fill: var(--fg);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chart-min-label {
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.chart-min-dot {
+  fill: var(--surface);
+  stroke: var(--fg);
+  stroke-width: 2;
+}
+
+.chart-dot {
+  fill: var(--series);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.chart-cross {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.chart-tip {
+  position: absolute;
+  top: 6px;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  min-width: 170px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.chart-tip.flip {
+  transform: translateX(-100%);
+}
+
+.chart-tip-date {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.chart-tip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.chart-tip-row .legend-line {
+  width: 12px;
+}
+
+.chart-table summary {
+  color: var(--muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chart-table .table-wrap {
+  max-height: 260px;
+  margin-top: 8px;
+  overflow: auto;
 }
 
 /* ---------- Мобільна версія ---------- */

@@ -91,6 +91,35 @@ export const demoStores = {
   },
 };
 
+/**
+ * Вигадана історія цін за останні `days` днів, щоб у демо-режимі графік не був порожнім.
+ * Одна точка на добу (як і в справжньому режимі), раз на 3–6 тижнів — розпродаж на 4–14 днів.
+ * Повертає точки від найстарішої до вчорашньої; сьогоднішню ціну запише звичайна перевірка.
+ */
+export function demoHistory(base, days = 120) {
+  if (base == null) return [];
+  const day = 864e5;
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const points = [];
+  let nextSale = 10 + Math.floor(Math.random() * 20);
+  let saleLeft = 0;
+  let discount = 0;
+  for (let i = days; i >= 1; i--) {
+    const index = days - i;
+    if (saleLeft === 0 && index >= nextSale) {
+      discount = DISCOUNTS[2 + Math.floor(Math.random() * 6)]; // від 25% до 75%
+      saleLeft = 4 + Math.floor(Math.random() * 11);
+      nextSale = index + saleLeft + 21 + Math.floor(Math.random() * 22);
+    }
+    const d = saleLeft > 0 ? discount : 0;
+    if (saleLeft > 0) saleLeft--;
+    const price = Math.round((base * (100 - d)) / 100);
+    points.push({ price, basePrice: base, discount: d, at: new Date(today.getTime() - i * day).toISOString() });
+  }
+  return points;
+}
+
 export async function demoEpicFreebies() {
   const day = 864e5;
   const t = Date.now();

@@ -1,5 +1,6 @@
 // Головна сторінка: список ігор, за якими стежить користувач, з цінами в усіх магазинах.
 import { del, get, patch, post } from '../api.js';
+import { priceChart } from '../chart.js';
 import {
   $,
   STORE_NAMES,
@@ -71,6 +72,7 @@ function gameCard(item) {
         <p class="conditions">Сповістити, коли: ${conditionsText(item)}</p>
         ${item.lastAlertAt ? html`<p class="hint">Останнє сповіщення ${timeAgo(item.lastAlertAt)}</p>` : ''}
         <div class="game-actions">
+          <button class="btn btn-sm" type="button" data-action="chart">Графік ціни</button>
           <button class="btn btn-sm" type="button" data-action="refresh">Оновити ціни</button>
           <button class="btn btn-sm" type="button" data-action="edit">Умови</button>
           <button class="btn btn-sm" type="button" data-action="toggle">${item.active ? 'Пауза' : 'Увімкнути'}</button>
@@ -137,6 +139,30 @@ function editDialog(item, onSaved) {
   });
 }
 
+async function chartDialog(item) {
+  const dialog = openDialog(html`
+    <div class="dialog-body">
+      <div class="dialog-head">
+        ${cover(item.imageUrl, item.title)}
+        <div><p class="muted">Історія ціни</p><h2>${item.title}</h2></div>
+      </div>
+      <div class="chart-box"><div class="skeleton"></div></div>
+      <div class="dialog-foot"><button class="btn" type="button" data-close>Закрити</button></div>
+    </div>
+  `);
+  // Графіку потрібно більше місця, ніж звичайному діалогу
+  dialog.classList.add('dialog-wide');
+  dialog.addEventListener('close', () => dialog.classList.remove('dialog-wide'), { once: true });
+  $('[data-close]', dialog).addEventListener('click', closeDialog);
+  const box = $('.chart-box', dialog);
+  try {
+    const { series } = await get(`/api/watch/${item.id}/history`);
+    if (box.isConnected) priceChart(box, series);
+  } catch (err) {
+    setHtml(box, html`<p class="form-error">${err.message}</p>`);
+  }
+}
+
 export async function render(root) {
   setHtml(root, html`<div class="stack"><div class="skeleton"></div><div class="skeleton"></div></div>`);
   let items = (await get('/api/watch')).items;
@@ -183,6 +209,8 @@ export async function render(root) {
           replace(res.item);
           toast(res.errors?.length ? `Частину цін не вдалося оновити: ${res.errors.join('; ')}` : 'Ціни оновлено', res.errors?.length ? 'error' : 'info');
         });
+      } else if (action === 'chart') {
+        await chartDialog(item);
       } else if (action === 'edit') {
         editDialog(item, replace);
       } else if (action === 'toggle') {

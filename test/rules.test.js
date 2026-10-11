@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { rankMatches, titleScore } from '../server/stores/match.js';
 import { bestOffer, evaluateWatch } from '../server/services/watch.js';
+import { demoHistory } from '../server/stores/demo.js';
 
 test('Назви: та сама гра з різними підписами', () => {
   assert.equal(titleScore('Stardew Valley', 'Stardew Valley'), 1);
@@ -53,4 +54,15 @@ test('Умова: безкоштовна роздача; недоступні т
 test('Найкраща ціна серед магазинів', () => {
   const best = bestOffer([offer({ store: 'steam', price_uah: 51500 }), offer({ store: 'gog', price_uah: 41000 }), offer({ store: 'x', price_uah: null })]);
   assert.equal(best.store, 'gog');
+});
+
+test('Демо-історія цін: по точці на добу, знижки в межах розумного', () => {
+  const points = demoHistory(51500, 120);
+  assert.equal(points.length, 120);
+  const times = points.map((p) => new Date(p.at).getTime());
+  assert.ok(times.every((t, i) => !i || t > times[i - 1]), 'точки йдуть від старих до нових');
+  assert.ok(times.at(-1) < Date.now(), 'історія закінчується до сьогоднішньої перевірки');
+  assert.ok(points.every((p) => p.basePrice === 51500 && p.price <= 51500 && p.discount >= 0 && p.discount <= 75));
+  assert.ok(points.some((p) => p.discount > 0), 'за 4 місяці є хоча б один розпродаж');
+  assert.deepEqual(demoHistory(null), []);
 });

@@ -1,7 +1,9 @@
 // Оновлення цін, історія цін і перевірка умов користувачів.
+import { config } from '../config.js';
 import { db, now, tx } from '../db.js';
 import { log } from '../logger.js';
 import { getUsdRate, toUah } from '../stores/currency.js';
+import { demoHistory } from '../stores/demo.js';
 import { STORE_NAMES, store } from '../stores/index.js';
 import { dealMessage, notifyUser } from './notifier.js';
 import { evaluateWatch, offersForGame } from './watch.js';
@@ -19,6 +21,16 @@ function recordHistory(offer, force) {
     db.prepare(
       'INSERT INTO price_history (offer_id, price, base_price, discount, price_uah, recorded_at) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(offer.id, offer.price, offer.base_price, offer.discount, offer.price_uah, now());
+  }
+}
+
+// Демо-режим: одразу заповнюємо історію за 4 місяці, щоб було що показати на графіку
+function seedDemoHistory(offerId, o, rate) {
+  const insert = db.prepare(
+    'INSERT INTO price_history (offer_id, price, base_price, discount, price_uah, recorded_at) VALUES (?, ?, ?, ?, ?, ?)'
+  );
+  for (const p of demoHistory(o.basePrice ?? o.price)) {
+    insert.run(offerId, p.price, p.basePrice, p.discount, toUah(p.price, o.currency, rate), p.at);
   }
 }
 
@@ -61,10 +73,9 @@ export function upsertGameWithOffers(offers) {
         )
         .run(gameId, o.store, o.storeId, o.title, o.url, o.imageUrl, o.currency, o.price, o.basePrice,
           o.discount || 0, o.isFree ? 1 : 0, priceUah, now());
-      recordHistory(
-        { id: Number(info.lastInsertRowid), price: o.price, base_price: o.basePrice, discount: o.discount || 0, price_uah: priceUah },
-        true
-      );
+      const offerId = Number(info.lastInsertRowid);
+      if (config.demoStores) seedDemoHistory(offerId, o, rate);
+      recordHistory({ id: offerId, price: o.price, base_price: o.basePrice, discount: o.discount || 0, price_uah: priceUah }, true);
     }
     return gameId;
   });
