@@ -1,0 +1,14 @@
+{
+  // Папки показуються над файлами, а схожі файли згортаються під головним
+  "explorer.sortOrder": "foldersNestsFiles",
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "package.json": ".gitignore, .env, .env.example",
+    "README.md": "*.md"
+  },
+  // Кнопки npm-скриптів (demo, start, test) у бічній панелі «NPM Scripts»
+  "npm.enableScriptExplorer": true,
+  // База даних і журнали не потрапляють у пошук по коду
+  "search.exclude": { "data/**": true }
+}

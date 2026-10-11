@@ -1,0 +1,16 @@
+{
+  "name": "znyzhkolov",
+  "version": "0.1.0",
+  "description": "Знижколов: стеження за знижками на ігри в Steam, GOG та Epic Games зі сповіщеннями в Telegram",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "dev": "node --watch --disable-warning=ExperimentalWarning server/index.js",
+    "demo": "node --disable-warning=ExperimentalWarning server/index.js --demo",
+    "test": "node --disable-warning=ExperimentalWarning --test"
+  }
+}
