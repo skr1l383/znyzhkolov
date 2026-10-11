@@ -1,9 +1,12 @@
 // Головна сторінка: список ігор, за якими стежить користувач, з цінами в усіх магазинах.
-import { del, get, patch, post } from '../api.js';
+import { del, get, patch, post, upload } from '../api.js';
 import { priceChart } from '../chart.js';
 import {
   $,
   STORE_NAMES,
+  bindDropZone,
+  dropZone,
+  formatSize,
   closeDialog,
   confirmDialog,
   cover,
@@ -139,6 +142,94 @@ function editDialog(item, onSaved) {
   });
 }
 
+const IMPORT_MAX_BYTES = 1024 * 1024; // те саме обмеження, що й на сервері
+
+function importReport({ added, skipped }) {
+  const stores = (list) => list.map((s) => STORE_NAMES[s]).join(' + ');
+  return html`
+    <div class="import-report stack">
+      <div class="row">
+        <span class="pill pill-good">Додано: ${added.length}</span>
+        ${skipped.length ? html`<span class="pill">Пропущено: ${skipped.length}</span>` : ''}
+      </div>
+      ${added.length
+        ? html`<ul class="report-list">
+            ${added.map(
+              (a) => html`<li>
+                <span class="report-line">рядок ${a.line}</span>
+                <span><strong>${a.matched}</strong>${a.matched !== a.title ? html` <span class="muted">(у файлі: ${a.title})</span>` : ''}
+                  <span class="muted"> · ${stores(a.stores)}</span>
+                  ${a.notes?.length ? html`<span class="hint report-note">${a.notes.join('; ')}</span>` : ''}</span>
+              </li>`
+            )}
+          </ul>`
+        : ''}
+      ${skipped.length
+        ? html`<h3>Не додано</h3>
+          <ul class="report-list">
+            ${skipped.map(
+              (s) => html`<li><span class="report-line">рядок ${s.line}</span><span>${s.title || '—'} <span class="muted">— ${s.reason}</span></span></li>`
+            )}
+          </ul>`
+        : ''}
+      ${added.length ? html`<p class="hint">Ціни щойно доданих ігор оновлюються у фоні, за хвилину-дві вони будуть актуальні.</p>` : ''}
+    </div>
+  `;
+}
+
+function filesDialog(hasItems, onImported) {
+  const dialog = openDialog(html`
+    <div class="dialog-body">
+      <div><p class="muted">Мій список</p><h2>Імпорт і експорт</h2></div>
+
+      <section class="stack">
+        <h3>Експорт у файл</h3>
+        <p class="muted">${hasItems
+          ? 'Таблиця з усіма іграми, цінами в Steam і GOG та умовами сповіщень. Відкривається в Excel і Google Таблицях.'
+          : 'Список поки порожній — файл стане шаблоном, який можна заповнити й імпортувати.'}</p>
+        <div class="row">
+          <a class="btn" href="/api/watch/export?format=xlsx" download>Excel (.xlsx)</a>
+          <a class="btn" href="/api/watch/export?format=csv" download>CSV</a>
+        </div>
+      </section>
+
+      <section class="stack" id="import-box">
+        <h3>Імпорт з файлу</h3>
+        <p class="muted">
+          Підійде файл, експортований звідси, або просто назви ігор у першому стовпці.
+          Кожну гру шукаємо в Steam і GOG. Якщо умову не вказано — сповістимо про знижку від 50%.
+        </p>
+        ${dropZone({
+          title: 'Перетягни таблицю сюди',
+          hint: `або натисни, щоб вибрати файл. Excel (.xlsx) або CSV, до ${formatSize(IMPORT_MAX_BYTES)} і до 50 ігор`,
+          accept: '.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })}
+      </section>
+
+      <div class="dialog-foot"><button class="btn" type="button" data-close>Закрити</button></div>
+    </div>
+  `);
+  $('[data-close]', dialog).addEventListener('click', closeDialog);
+
+  const box = $('#import-box', dialog);
+  bindDropZone($('.dropzone', box), {
+    extensions: ['xlsx', 'csv'],
+    maxBytes: IMPORT_MAX_BYTES,
+    typeError: 'Цей формат не підтримується. Можна Excel (.xlsx) або CSV',
+    onFile: async (file) => {
+      $('.dropzone-hint', box).textContent = `«${file.name}»: шукаємо ігри в Steam і GOG, це може зайняти до хвилини…`;
+      try {
+        const report = await upload('/api/watch/import', file);
+        setHtml(box, html`<h3>Результат імпорту «${file.name}»</h3>${importReport(report)}`);
+        if (report.added.length) onImported();
+      } finally {
+        const hint = $('.dropzone-hint', box);
+        if (hint) hint.textContent = 'Спробуй інший файл: Excel (.xlsx) або CSV';
+      }
+    },
+  });
+}
+
 async function chartDialog(item) {
   const dialog = openDialog(html`
     <div class="dialog-body">
@@ -182,7 +273,10 @@ export async function render(root) {
                 </div>`
               : html`<p>Тут будуть ігри, за цінами яких ти стежиш.</p>`}
           </div>
-          ${items.length ? html`<a class="btn btn-primary" href="#/search">Додати гру</a>` : ''}
+          <div class="row">
+            <button class="btn" type="button" id="files-btn">Імпорт / експорт</button>
+            ${items.length ? html`<a class="btn btn-primary" href="#/search">Додати гру</a>` : ''}
+          </div>
         </div>
         ${items.length ? html`<div class="game-list">${items.map(gameCard)}</div>` : emptyState()}
       `
@@ -195,6 +289,13 @@ export async function render(root) {
   };
 
   root.onclick = async (e) => {
+    if (e.target.closest('#files-btn')) {
+      filesDialog(items.length > 0, async () => {
+        items = (await get('/api/watch')).items;
+        draw();
+      });
+      return;
+    }
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     const card = btn.closest('[data-id]');

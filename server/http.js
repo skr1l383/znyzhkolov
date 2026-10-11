@@ -105,17 +105,62 @@ async function readJson(req) {
   }
 }
 
+const formatMb = (bytes) => `${Math.round((bytes / 1024 / 1024) * 10) / 10} МБ`;
+
+/**
+ * Читає файл, надісланий у тілі запиту (маршрути router.upload).
+ * Розмір перевіряється двічі: за заголовком Content-Length ще до читання
+ * і під час читання, якщо заголовок збрехав або його немає.
+ */
+export async function readUpload(req, { maxBytes }) {
+  const tooBig = () => new HttpError(413, `Файл завеликий: максимум ${formatMb(maxBytes)}`);
+  const declared = Number(req.headers['content-length']);
+  if (declared > maxBytes) {
+    req.resume(); // дочитуємо й відкидаємо, щоб браузер отримав зрозумілу відповідь
+    throw tooBig();
+  }
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size <= maxBytes) chunks.push(chunk);
+  }
+  if (size > maxBytes) throw tooBig();
+  if (!size) throw new HttpError(400, 'Файл порожній');
+  let name = '';
+  try {
+    name = decodeURIComponent(req.headers['x-file-name'] || '');
+  } catch {
+    // ім'я файлу необов'язкове
+  }
+  return { buffer: Buffer.concat(chunks), name: name.slice(0, 200) };
+}
+
+/** Віддає файл (Buffer) у відповідь: картинку для показу або документ для завантаження. */
+export function sendFile(res, buffer, { type, filename, cache = 'no-store' }) {
+  const headers = { ...SECURITY_HEADERS, 'Content-Type': type, 'Content-Length': buffer.length, 'Cache-Control': cache };
+  if (filename) {
+    // ASCII-ім'я для старих браузерів і повне UTF-8 ім'я для решти
+    const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/"/g, '');
+    headers['Content-Disposition'] = `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+  }
+  res.writeHead(200, headers);
+  res.end(buffer);
+}
+
 export class Router {
   constructor() {
     this.routes = [];
   }
-  add(method, pattern, handlers) {
-    this.routes.push({ method, ...compile(pattern), handlers });
+  add(method, pattern, handlers, opts = {}) {
+    this.routes.push({ method, ...compile(pattern), handlers, ...opts });
   }
   get(p, ...h) { this.add('GET', p, h); }
   post(p, ...h) { this.add('POST', p, h); }
   patch(p, ...h) { this.add('PATCH', p, h); }
   delete(p, ...h) { this.add('DELETE', p, h); }
+  /** POST, у тілі якого файл, а не JSON. Обробник читає його через readUpload. */
+  upload(p, ...h) { this.add('POST', p, h, { upload: true }); }
 
   match(method, pathname) {
     let pathMatched = false;
@@ -235,7 +280,7 @@ export function createApp({ router, publicDir, onError, beforeRoute }) {
           }
           if (originHost !== req.headers.host) throw new HttpError(403, 'Запит з іншого сайту заблоковано');
         }
-        ctx.body = await readJson(req);
+        if (!found.route.upload) ctx.body = await readJson(req);
       }
 
       if (beforeRoute) await beforeRoute(ctx);

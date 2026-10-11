@@ -1,6 +1,10 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { config } from '../config.js';
 import { db, getSetting, now } from '../db.js';
-import { HttpError } from '../http.js';
+import { detectImage } from '../formats/detect.js';
+import { HttpError, readUpload, sendFile } from '../http.js';
 import { log } from '../logger.js';
 import { publicUser, requireAuth } from '../auth.js';
 import { listFreebies } from '../services/epicFree.js';
@@ -10,6 +14,14 @@ import { botStatus, ensureBotUsername, linkUrl } from '../services/telegram.js';
 import * as v from '../validate.js';
 
 const userById = (id) => db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+const AVATAR_DIR = path.join(config.dataDir, 'avatars');
+
+function removeAvatarFile(fileName) {
+  if (!fileName) return;
+  fs.rm(path.join(AVATAR_DIR, path.basename(fileName)), { force: true }, () => {});
+}
 
 export function profileRoutes(router) {
   router.patch('/api/me', requireAuth, (ctx) => {
@@ -25,6 +37,44 @@ export function profileRoutes(router) {
       log.info('profile.update', `${ctx.user.email} оновив профіль`, { userId: ctx.user.id, meta: changes });
     }
     return { user: publicUser(userById(ctx.user.id)) };
+  });
+
+  // Аватар: файл лежить у data/avatars, у базі — лише його ім'я
+  router.upload('/api/me/avatar', requireAuth, async (ctx) => {
+    const { buffer, name } = await readUpload(ctx.req, { maxBytes: AVATAR_MAX_BYTES });
+    const image = detectImage(buffer);
+    if (!image) {
+      log.warn('profile.avatar.rejected', `${ctx.user.email}: файл «${name}» не є картинкою PNG, JPG або WEBP`, { userId: ctx.user.id });
+      throw new HttpError(415, 'Формат не підтримується. Можна завантажити картинку PNG, JPG або WEBP');
+    }
+    // Нове випадкове ім'я при кожному завантаженні: браузер не покаже старе фото з кешу
+    const fileName = `${ctx.user.id}-${crypto.randomBytes(8).toString('hex')}.${image.ext}`;
+    fs.mkdirSync(AVATAR_DIR, { recursive: true });
+    fs.writeFileSync(path.join(AVATAR_DIR, fileName), buffer);
+    removeAvatarFile(userById(ctx.user.id).avatar);
+    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(fileName, ctx.user.id);
+    log.info('profile.avatar', `${ctx.user.email} змінив фото профілю (${Math.round(buffer.length / 1024)} КБ)`, { userId: ctx.user.id });
+    return { user: publicUser(userById(ctx.user.id)) };
+  });
+
+  router.delete('/api/me/avatar', requireAuth, (ctx) => {
+    removeAvatarFile(userById(ctx.user.id).avatar);
+    db.prepare('UPDATE users SET avatar = NULL WHERE id = ?').run(ctx.user.id);
+    log.info('profile.avatar', `${ctx.user.email} видалив фото профілю`, { userId: ctx.user.id });
+    return { user: publicUser(userById(ctx.user.id)) };
+  });
+
+  router.get('/api/avatars/:file', requireAuth, (ctx) => {
+    const m = /^\d+-[0-9a-f]{16}\.(png|jpg|webp)$/.exec(ctx.params.file);
+    if (!m) throw new HttpError(404, 'Фото не знайдено');
+    let buffer;
+    try {
+      buffer = fs.readFileSync(path.join(AVATAR_DIR, ctx.params.file));
+    } catch {
+      throw new HttpError(404, 'Фото не знайдено');
+    }
+    const type = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' }[m[1]];
+    sendFile(ctx.res, buffer, { type, cache: 'private, max-age=86400' });
   });
 
   router.post('/api/me/telegram/link', requireAuth, async (ctx) => {

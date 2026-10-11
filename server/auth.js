@@ -77,6 +77,7 @@ export function publicUser(u) {
     telegramLinked: Boolean(u.telegram_chat_id),
     telegramUsername: u.telegram_username || null,
     notifyEpicFree: Boolean(u.notify_epic_free),
+    avatarUrl: u.avatar ? `/api/avatars/${u.avatar}` : null,
     createdAt: u.created_at,
   };
 }

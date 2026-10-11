@@ -1,5 +1,5 @@
 import { db, now } from '../db.js';
-import { HttpError } from '../http.js';
+import { HttpError, readUpload, sendFile } from '../http.js';
 import { log } from '../logger.js';
 import { requireAuth } from '../auth.js';
 import { SEARCHABLE, STORE_NAMES, store } from '../stores/index.js';
@@ -7,6 +7,7 @@ import { rankMatches } from '../stores/match.js';
 import { steamUrl } from '../stores/steam.js';
 import { safeImageUrl } from '../stores/util.js';
 import { evaluateWatches, refreshGame, upsertGameWithOffers } from '../services/prices.js';
+import { exportFile, IMPORT_MAX_BYTES, parseImportRows, readTable, resolveEntry } from '../services/transfer.js';
 import { getWatch, listWatch, offersForGame } from '../services/watch.js';
 import * as v from '../validate.js';
 
@@ -54,6 +55,34 @@ function ensureSomeCondition(c) {
   if (c.min_discount == null && c.max_price_uah == null && !c.notify_free) {
     throw v.fieldError('minDiscount', 'Вкажіть хоча б одну умову: знижку, ціну або безкоштовну роздачу');
   }
+}
+
+/** Додає гру до списку користувача (і звичайне додавання, і імпорт). Перша пропозиція — основна. */
+function createWatch(userId, offers, conditions) {
+  const count = db.prepare('SELECT COUNT(*) AS n FROM watch_items WHERE user_id = ?').get(userId).n;
+  if (count >= MAX_WATCH_ITEMS) throw new HttpError(400, `У списку може бути не більше ${MAX_WATCH_ITEMS} ігор`);
+
+  const [offer, ...extra] = offers;
+  const gameId = upsertGameWithOffers([offer, ...extra.filter((e) => e.store !== offer.store)]);
+  if (db.prepare('SELECT 1 FROM watch_items WHERE user_id = ? AND game_id = ?').get(userId, gameId)) {
+    throw new HttpError(409, 'Ця гра вже є у твоєму списку');
+  }
+
+  const info = db
+    .prepare(
+      `INSERT INTO watch_items (user_id, game_id, min_discount, max_price_uah, notify_free, active, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(userId, gameId, conditions.min_discount, conditions.max_price_uah, conditions.notify_free, conditions.active ?? 1, now());
+  return { gameId, watchId: Number(info.lastInsertRowid) };
+}
+
+/** Після імпорту оновлюємо ціни ігор по черзі, щоб не засипати магазини запитами. */
+async function refreshManyInBackground(gameIds) {
+  for (const gameId of gameIds) {
+    await refreshGame(gameId).catch((err) => log.warn('prices.refresh', `Не вдалося оновити ціни гри #${gameId}: ${err.message}`));
+  }
+  if (gameIds.length) await evaluateWatches().catch(() => {});
 }
 
 const refreshLimiter = new Map();
@@ -109,27 +138,64 @@ export function gameRoutes(router) {
 
   router.get('/api/watch', requireAuth, (ctx) => ({ items: listWatch(ctx.user.id) }));
 
+  // Експорт списку у файл: /api/watch/export?format=csv або xlsx
+  router.get('/api/watch/export', requireAuth, (ctx) => {
+    const format = ['csv', 'xlsx'].includes(ctx.query.format) ? ctx.query.format : null;
+    if (!format) throw new HttpError(400, 'Формат має бути csv або xlsx');
+    const file = exportFile(ctx.user.id, format);
+    log.info('watch.export', `${ctx.user.email} експортував список (${file.count} ігор, ${format.toUpperCase()})`, { userId: ctx.user.id });
+    sendFile(ctx.res, file.buffer, file);
+  });
+
+  // Імпорт списку з CSV або Excel. Кожну гру шукаємо в Steam і GOG, у відповіді — звіт по рядках.
+  router.upload('/api/watch/import', requireAuth, async (ctx) => {
+    const { buffer, name } = await readUpload(ctx.req, { maxBytes: IMPORT_MAX_BYTES });
+    let entries;
+    try {
+      entries = parseImportRows(readTable(buffer));
+    } catch (err) {
+      log.warn('watch.import.rejected', `${ctx.user.email}: файл «${name}» не імпортовано — ${err.message}`, { userId: ctx.user.id });
+      throw err;
+    }
+
+    const added = [];
+    const skipped = [];
+    const gameIds = [];
+    for (const entry of entries) {
+      const base = { line: entry.line, title: entry.title };
+      if (!entry.title) {
+        skipped.push({ ...base, reason: 'немає назви гри' });
+        continue;
+      }
+      try {
+        const offers = (await resolveEntry(entry)).map(cleanOffer);
+        if (!offers.length) {
+          skipped.push({ ...base, reason: 'не знайдено ні в Steam, ні в GOG' });
+          continue;
+        }
+        const { gameId } = createWatch(ctx.user.id, offers, entry.conditions);
+        gameIds.push(gameId);
+        added.push({ ...base, matched: offers[0].title, stores: offers.map((o) => o.store), notes: entry.problems });
+      } catch (err) {
+        const reason = err.status === 409 ? 'уже є у списку' : err instanceof HttpError ? err.message : 'магазин не відповідає, спробуй пізніше';
+        skipped.push({ ...base, reason });
+      }
+    }
+
+    log.info('watch.import', `${ctx.user.email} імпортував «${name}»: додано ${added.length}, пропущено ${skipped.length}`, {
+      userId: ctx.user.id,
+      meta: { file: name, added: added.length, skipped: skipped.length },
+    });
+    refreshManyInBackground(gameIds);
+    return { added, skipped };
+  });
+
   router.post('/api/watch', requireAuth, (ctx) => {
     const offer = cleanOffer(ctx.body.offer);
     const extra = Array.isArray(ctx.body.extra) ? ctx.body.extra.slice(0, 3).map(cleanOffer) : [];
     const conditions = cleanConditions(ctx.body);
     ensureSomeCondition(conditions);
-
-    const count = db.prepare('SELECT COUNT(*) AS n FROM watch_items WHERE user_id = ?').get(ctx.user.id).n;
-    if (count >= MAX_WATCH_ITEMS) throw new HttpError(400, `У списку може бути не більше ${MAX_WATCH_ITEMS} ігор`);
-
-    const gameId = upsertGameWithOffers([offer, ...extra.filter((e) => e.store !== offer.store)]);
-    if (db.prepare('SELECT 1 FROM watch_items WHERE user_id = ? AND game_id = ?').get(ctx.user.id, gameId)) {
-      throw new HttpError(409, 'Ця гра вже є у твоєму списку');
-    }
-
-    const info = db
-      .prepare(
-        `INSERT INTO watch_items (user_id, game_id, min_discount, max_price_uah, notify_free, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      .run(ctx.user.id, gameId, conditions.min_discount, conditions.max_price_uah, conditions.notify_free, now());
-    const watchId = Number(info.lastInsertRowid);
+    const { gameId, watchId } = createWatch(ctx.user.id, [offer, ...extra], conditions);
 
     log.info('watch.add', `${ctx.user.email} додав «${offer.title}» до списку`, {
       userId: ctx.user.id,

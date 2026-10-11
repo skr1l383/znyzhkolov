@@ -8,15 +8,27 @@ export class ApiError extends Error {
   }
 }
 
-export async function api(method, url, body) {
+export function api(method, url, body) {
+  return send(url, {
+    method,
+    headers: method === 'GET' ? {} : { 'Content-Type': 'application/json' },
+    body: method === 'GET' ? undefined : JSON.stringify(body ?? {}),
+  });
+}
+
+/** Надсилає файл «як є» в тілі запиту; ім'я файлу — в заголовку X-File-Name. */
+export function upload(url, file) {
+  return send(url, {
+    method: 'POST',
+    headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) },
+    body: file,
+  });
+}
+
+async function send(url, init) {
   let res;
   try {
-    res = await fetch(url, {
-      method,
-      headers: method === 'GET' ? {} : { 'Content-Type': 'application/json' },
-      body: method === 'GET' ? undefined : JSON.stringify(body ?? {}),
-      credentials: 'same-origin',
-    });
+    res = await fetch(url, { ...init, credentials: 'same-origin' });
   } catch {
     throw new ApiError('Немає зв’язку із сервером. Перевірте, чи він запущений', 0);
   }

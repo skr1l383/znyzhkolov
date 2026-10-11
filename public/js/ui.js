@@ -189,3 +189,84 @@ export function clearFormErrors(form) {
   const general = $('.form-error', form);
   if (general) general.hidden = true;
 }
+
+/** Розмір файлу людською мовою: 2 097 152 → «2 МБ». */
+export function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} Б`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`;
+  return `${Math.round((bytes / 1024 / 1024) * 10) / 10} МБ`.replace('.', ',');
+}
+
+/** Аватар користувача: фото або перша літера імені. */
+export function avatar(user, extraClass = '') {
+  if (user?.avatarUrl) return html`<img class="avatar-img ${extraClass}" src="${user.avatarUrl}" alt="" />`;
+  return html`<span class="avatar-letter ${extraClass}" aria-hidden="true">${initials(user?.name).slice(0, 1) || '?'}</span>`;
+}
+
+/**
+ * Зона для файлу: можна перетягнути файл мишкою або натиснути й вибрати.
+ * Поле вибору файлу лишається доступним з клавіатури (Tab, потім Enter).
+ */
+export function dropZone({ title, hint, accept }) {
+  return html`
+    <label class="dropzone">
+      <input class="visually-hidden" type="file" accept="${accept}" />
+      <svg class="dropzone-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15" /></svg>
+      <strong>${title}</strong>
+      <span class="dropzone-hint">${hint}</span>
+      <span class="dropzone-error" role="alert" hidden></span>
+    </label>
+  `;
+}
+
+/**
+ * Підключає до зони перетягування й вибір файлу. Перед надсиланням перевіряє
+ * розширення і розмір, щоб не вантажити на сервер завідомо невідповідний файл
+ * (сервер однаково перевіряє все ще раз).
+ */
+export function bindDropZone(zone, { extensions, maxBytes, typeError, onFile }) {
+  const input = $('input[type="file"]', zone);
+  const error = $('.dropzone-error', zone);
+  const showError = (message) => {
+    error.textContent = message;
+    error.hidden = false;
+  };
+
+  const take = async (file) => {
+    error.hidden = true;
+    if (!file) return;
+    const ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+    if (!extensions.includes(ext)) return showError(typeError);
+    if (file.size > maxBytes) {
+      return showError(`Файл завеликий: ${formatSize(file.size)}. Максимум — ${formatSize(maxBytes)}`);
+    }
+    zone.classList.add('busy');
+    try {
+      await onFile(file);
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      zone.classList.remove('busy');
+    }
+  };
+
+  input.addEventListener('change', () => {
+    take(input.files[0]);
+    input.value = ''; // щоб той самий файл можна було вибрати ще раз
+  });
+  zone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    zone.classList.add('dragging');
+  });
+  zone.addEventListener('dragleave', (e) => {
+    if (!zone.contains(e.relatedTarget)) zone.classList.remove('dragging');
+  });
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('dragging');
+    if (e.dataTransfer.files.length > 1) return showError('Перетягни лише один файл');
+    take(e.dataTransfer.files[0]);
+  });
+  return { showError };
+}

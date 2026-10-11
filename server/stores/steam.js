@@ -64,9 +64,9 @@ export function parseSteamPrices(json) {
   return result;
 }
 
-export async function searchSteam(term) {
-  const { steamCountry, steamLanguage } = config.stores;
-  const url = `${BASE}/storesearch/?term=${encodeURIComponent(term)}&l=${steamLanguage}&cc=${steamCountry}`;
+/** language: мова назв у результатах. Для зіставлення з іншими магазинами потрібні англійські назви. */
+export async function searchSteam(term, { language = config.stores.steamLanguage } = {}) {
+  const url = `${BASE}/storesearch/?term=${encodeURIComponent(term)}&l=${encodeURIComponent(language)}&cc=${config.stores.steamCountry}`;
   return parseSteamSearch(await fetchJson('Steam', url));
 }
 

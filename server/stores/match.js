@@ -13,6 +13,7 @@ export function normalizeTitle(title) {
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[™®©]/g, '')
+    .replace(/['’`]/g, '') // Baldur's Gate = Baldurs Gate
     .replace(/&/g, ' and ')
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()
@@ -21,6 +22,9 @@ export function normalizeTitle(title) {
 
 const words = (t) => normalizeTitle(t).split(' ').filter(Boolean);
 const coreWords = (t) => words(t).filter((w) => !EDITION_WORDS.has(w));
+
+/** Номери частин серії в назві: «Hades II» → "ii", «Witcher 3» → "3". */
+export const numberWords = (t) => words(t).filter((w) => /^(\d+|ii|iii|iv|v|vi|vii|viii|ix|x)$/.test(w)).join(',');
 
 /** Схожість назв від 0 до 1. */
 export function titleScore(a, b) {
@@ -34,9 +38,7 @@ export function titleScore(a, b) {
   if (ca && ca === cb) return 0.9;
 
   // Числа в назві (Hades vs Hades II, Witcher 2 vs Witcher 3) мають збігатися
-  const numsA = words(a).filter((w) => /^(\d+|ii|iii|iv|v|vi|vii|viii|ix|x)$/.test(w)).join(',');
-  const numsB = words(b).filter((w) => /^(\d+|ii|iii|iv|v|vi|vii|viii|ix|x)$/.test(w)).join(',');
-  if (numsA !== numsB) return 0;
+  if (numberWords(a) !== numberWords(b)) return 0;
 
   const sa = new Set(coreWords(a));
   const sb = new Set(coreWords(b));

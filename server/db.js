@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   telegram_link_code TEXT UNIQUE,
   notify_epic_free   INTEGER NOT NULL DEFAULT 1,
   lang               TEXT NOT NULL DEFAULT 'uk',
+  avatar             TEXT,
   created_at         TEXT NOT NULL,
   last_login_at      TEXT
 );
@@ -133,6 +134,17 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `;
 
+// Стовпці, додані після першої версії. Бази, створені раніше, отримують їх при запуску,
+// і дані користувачів при цьому зберігаються.
+const ADDED_COLUMNS = [['users', 'avatar', 'TEXT']];
+
+function migrate() {
+  for (const [table, column, type] of ADDED_COLUMNS) {
+    const exists = db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column);
+    if (!exists) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+}
+
 /** @type {DatabaseSync} */
 export let db;
 
@@ -141,6 +153,7 @@ export function initDb(file) {
   db = new DatabaseSync(file);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA);
+  migrate();
   return db;
 }
 

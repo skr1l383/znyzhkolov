@@ -1,6 +1,6 @@
 // Головний модуль інтерфейсу: стан користувача, навігація між сторінками, тема.
 import { get } from './api.js';
-import { $, $$, closeDialog, html, initials, setHtml } from './ui.js';
+import { $, $$, avatar, closeDialog, html, initials, setHtml } from './ui.js';
 import * as admin from './views/admin.js';
 import * as auth from './views/auth.js';
 import * as epic from './views/epic.js';
@@ -85,7 +85,7 @@ function renderChrome(activeNav) {
   $('#nav-profile').hidden = !loggedIn;
   $('#nav-admin').hidden = state.user?.role !== 'admin';
   $('#demo-banner').hidden = !state.app.demo;
-  if (loggedIn) $('#nav-profile').textContent = initials(state.user.name).slice(0, 1) || '?';
+  if (loggedIn) setHtml($('#nav-profile'), avatar(state.user));
   if (activeNav !== undefined) {
     $$('[data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === activeNav));
   }
@@ -139,6 +139,16 @@ window.addEventListener('zk:unauthorized', () => {
 });
 
 window.addEventListener('hashchange', navigate);
+
+// Файл, кинутий повз зону завантаження, браузер відкрив би замість сайту — не дозволяємо
+for (const type of ['dragover', 'drop']) {
+  window.addEventListener(type, (e) => {
+    if (e.dataTransfer?.types.includes('Files') && !e.target.closest?.('.dropzone')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'none';
+    }
+  });
+}
 
 // Якщо обкладинка гри не завантажилась (немає інтернету, картинку прибрали),
 // показуємо заглушку з літерами назви замість «битої» картинки

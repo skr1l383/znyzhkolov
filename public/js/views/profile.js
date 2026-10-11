@@ -1,7 +1,63 @@
 // Профіль: ім'я, підключення Telegram, налаштування сповіщень, вихід.
-import { get, patch, post } from '../api.js';
+import { del, get, patch, post, upload } from '../api.js';
 import { go, refreshMe, reload, state } from '../app.js';
-import { $, clearFormErrors, formatDate, html, setHtml, showFormError, toast, withLoading } from '../ui.js';
+import {
+  $,
+  avatar,
+  bindDropZone,
+  clearFormErrors,
+  dropZone,
+  formatDate,
+  formatSize,
+  html,
+  setHtml,
+  showFormError,
+  toast,
+  withLoading,
+} from '../ui.js';
+
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024; // те саме обмеження, що й на сервері
+
+function avatarPanel(u) {
+  return html`
+    <h2>Фото профілю</h2>
+    <div class="avatar-edit">
+      <div class="avatar-big">${avatar(u)}</div>
+      <div class="stack">
+        ${dropZone({
+          title: u.avatarUrl ? 'Замінити фото' : 'Завантажити фото',
+          hint: `Перетягни картинку сюди або натисни, щоб вибрати. PNG, JPG або WEBP, до ${formatSize(AVATAR_MAX_BYTES)}`,
+          accept: 'image/png,image/jpeg,image/webp',
+        })}
+        ${u.avatarUrl ? html`<div><button class="btn btn-sm btn-ghost btn-danger" type="button" id="avatar-remove">Видалити фото</button></div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+/** Малює блок фото і підключає до нього завантаження та видалення. */
+function mountAvatar(box) {
+  setHtml(box, avatarPanel(state.user));
+  const updated = (user, message) => {
+    state.user = user;
+    refreshMe().catch(() => {});
+    mountAvatar(box);
+    toast(message);
+  };
+  bindDropZone($('.dropzone', box), {
+    extensions: ['png', 'jpg', 'jpeg', 'webp'],
+    maxBytes: AVATAR_MAX_BYTES,
+    typeError: 'Цей формат не підтримується. Вибери картинку PNG, JPG або WEBP',
+    onFile: async (file) => updated((await upload('/api/me/avatar', file)).user, 'Фото профілю оновлено'),
+  });
+  $('#avatar-remove', box)?.addEventListener('click', async () => {
+    try {
+      updated((await del('/api/me/avatar')).user, 'Фото видалено');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
+}
 
 function telegramPanel() {
   const tg = state.app.telegram;
@@ -64,6 +120,8 @@ export async function render(root) {
           <div><button class="btn btn-primary" type="submit">Зберегти</button></div>
         </form>
 
+        <section class="panel stack" id="avatar-box"></section>
+
         <section class="panel stack">
           <h2>Telegram</h2>
           ${telegramPanel()}
@@ -80,6 +138,8 @@ export async function render(root) {
       </div>
     `
   );
+
+  mountAvatar($('#avatar-box', root));
 
   $('#logout', root).addEventListener('click', async () => {
     await post('/api/auth/logout').catch(() => {});

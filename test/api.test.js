@@ -91,7 +91,7 @@ after(async () => {
 // Простий клієнт із cookie, як браузер
 function client() {
   let cookie = '';
-  return async function call(method, url, body) {
+  const call = async function call(method, url, body) {
     const res = await fetch(baseUrl + url, {
       method,
       headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
@@ -101,7 +101,28 @@ function client() {
     if (setCookie) cookie = setCookie.split(';')[0];
     return { status: res.status, data: await res.json() };
   };
+  // Надсилання файлу, як це робить браузер на сторінці
+  call.upload = async (url, bytes, name = 'file') => {
+    const res = await fetch(baseUrl + url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(name), Cookie: cookie },
+      body: bytes,
+    });
+    return { status: res.status, data: await res.json() };
+  };
+  // Завантаження файлу з сервера
+  call.download = async (url) => {
+    const res = await fetch(baseUrl + url, { headers: { Cookie: cookie } });
+    return { status: res.status, headers: res.headers, bytes: Buffer.from(await res.arrayBuffer()) };
+  };
+  return call;
 }
+
+// Справжня картинка PNG 1×1 піксель
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64'
+);
 
 const admin = client();
 const user = client();
@@ -235,6 +256,94 @@ test('Захист: запит з чужого сайту і некоректн�
   assert.equal(res.status, 400);
   res = await fetch(baseUrl + '/../server/config.js');
   assert.notEqual(res.status, 200);
+});
+
+test('Аватар: завеликий файл, непідтримуваний формат, завантаження і видалення', async () => {
+  const big = Buffer.concat([TINY_PNG, Buffer.alloc(2.5 * 1024 * 1024)]);
+  let r = await user.upload('/api/me/avatar', big, 'huge.png');
+  assert.equal(r.status, 413);
+  assert.match(r.data.error, /максимум 2 МБ/);
+
+  r = await user.upload('/api/me/avatar', Buffer.from('MZ це програма, а не картинка'), 'photo.png');
+  assert.equal(r.status, 415, 'назва .png не обманює перевірку');
+  assert.match(r.data.error, /PNG, JPG або WEBP/);
+
+  r = await user.upload('/api/me/avatar', TINY_PNG, 'я.png');
+  assert.equal(r.status, 200);
+  const url = r.data.user.avatarUrl;
+  assert.match(url, /^\/api\/avatars\/\d+-[0-9a-f]{16}\.png$/);
+
+  const img = await user.download(url);
+  assert.equal(img.status, 200);
+  assert.equal(img.headers.get('content-type'), 'image/png');
+  assert.deepEqual(img.bytes, TINY_PNG);
+  assert.equal((await client().download(url)).status, 401, 'гість фото не бачить');
+
+  r = await user('DELETE', '/api/me/avatar');
+  assert.equal(r.data.user.avatarUrl, null);
+  assert.equal((await user.download(url)).status, 404, 'файл видалено з диска');
+});
+
+test('Експорт списку в CSV і Excel', async () => {
+  const csv = await user.download('/api/watch/export?format=csv');
+  assert.equal(csv.status, 200);
+  assert.match(csv.headers.get('content-disposition'), /attachment; filename="znyzhkolov-\d{4}-\d{2}-\d{2}\.csv"/);
+  const text = csv.bytes.toString('utf8');
+  assert.ok(text.startsWith('﻿Назва;Steam ID;GOG ID'), 'BOM і заголовок');
+  assert.match(text, /Hollow Knight;367520;1308320804;/);
+
+  const xlsx = await user.download('/api/watch/export?format=xlsx');
+  assert.equal(xlsx.status, 200);
+  const { parseXlsx } = await import('../server/formats/xlsx.js');
+  const rows = parseXlsx(xlsx.bytes);
+  assert.equal(rows[0][0], 'Назва');
+  assert.equal(rows[1][0], 'Hollow Knight');
+  assert.equal(rows[1][1], '367520');
+
+  assert.equal((await user.download('/api/watch/export?format=pdf')).status, 400);
+});
+
+test('Імпорт: Excel з іншого акаунта, простий список назв і непідтримувані файли', async () => {
+  // Експорт одного користувача імпортується іншим — та сама гра з тими самими умовами
+  const xlsx = await user.download('/api/watch/export?format=xlsx');
+  let r = await admin.upload('/api/watch/import', xlsx.bytes, 'список.xlsx');
+  assert.equal(r.status, 200);
+  assert.equal(r.data.added.length, 1);
+  assert.deepEqual(r.data.added[0].stores, ['steam', 'gog']);
+  const original = (await user('GET', '/api/watch')).data.items[0];
+  let list = (await admin('GET', '/api/watch')).data.items;
+  assert.equal(list[0].title, 'Hollow Knight');
+  assert.equal(list[0].minDiscount, original.minDiscount);
+  assert.equal(list[0].maxPriceUah, original.maxPriceUah);
+  assert.equal(list[0].notifyFree, original.notifyFree);
+
+  // Просто назви в стовпчик, без заголовка; одна вже є, однієї немає в магазинах
+  const names = 'Stardew Valley\r\nНеіснуюча гра 12345\r\nHollow Knight\r\nTerraria\r\n';
+  r = await admin.upload('/api/watch/import', Buffer.from(names), 'ігри.csv');
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.data.added.map((a) => a.title), ['Stardew Valley', 'Terraria']);
+  assert.deepEqual(
+    r.data.skipped.map((s) => [s.line, s.reason]),
+    [
+      [2, 'не знайдено ні в Steam, ні в GOG'],
+      [3, 'уже є у списку'],
+    ]
+  );
+  list = (await admin('GET', '/api/watch')).data.items;
+  assert.equal(list.length, 3);
+  assert.equal(list.find((i) => i.title === 'Terraria').minDiscount, 50, 'типова умова — знижка від 50%');
+
+  r = await admin.upload('/api/watch/import', Buffer.from('%PDF-1.7 ...'), 'звіт.csv');
+  assert.equal(r.status, 415, 'PDF під виглядом CSV не приймається');
+  r = await admin.upload('/api/watch/import', Buffer.from('d0cf11e0a1b11ae1', 'hex'), 'old.xls');
+  assert.equal(r.status, 415);
+  assert.match(r.data.error, /\.xls/);
+  r = await admin.upload('/api/watch/import', Buffer.alloc(0), 'empty.csv');
+  assert.equal(r.status, 400);
+
+  const { events } = (await admin('GET', '/api/admin/events?type=watch.import')).data;
+  assert.ok(events.some((e) => e.type === 'watch.import' && e.meta.added === 2), 'імпорт записано в журнал');
+  assert.ok(events.some((e) => e.type === 'watch.import.rejected' && e.level === 'warn'), 'відхилений файл теж');
 });
 
 test('Дані зберігаються після перезапуску сервера', async () => {
