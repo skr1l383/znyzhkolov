@@ -9,8 +9,9 @@
   },
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
-    "dev": "node --watch --disable-warning=ExperimentalWarning server/index.js",
     "demo": "node --disable-warning=ExperimentalWarning server/index.js --demo",
+    "dev": "node --watch --disable-warning=ExperimentalWarning server/index.js",
+    "dev:demo": "node --watch --disable-warning=ExperimentalWarning server/index.js --demo",
     "test": "node --disable-warning=ExperimentalWarning --test"
   }
 }
