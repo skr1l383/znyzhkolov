@@ -94,10 +94,10 @@ export function initials(title) {
 }
 
 /** Обкладинка гри або заглушка з першими літерами назви. */
-export function cover(url, title, extraClass = '') {
+export function cover(url, title, extraClass = '', fallback = null) {
   if (url) {
     return html`<img class="cover ${extraClass}" src="${url}" alt="" loading="lazy" referrerpolicy="no-referrer"
-      data-title="${title}" />`;
+      data-title="${title}" ${fallback ? html`data-fallback="${fallback}"` : ''} />`;
   }
   return html`<div class="cover cover-placeholder ${extraClass}" aria-hidden="true">${initials(title)}</div>`;
 }

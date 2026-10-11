@@ -127,6 +127,27 @@ CREATE TABLE IF NOT EXISTS event_log (
 );
 CREATE INDEX IF NOT EXISTS idx_events_created ON event_log(created_at);
 
+-- Вітрина: популярні ігри зі знижками, оновлюється за розкладом. rank — місце в популярності магазину.
+CREATE TABLE IF NOT EXISTS deals (
+  store          TEXT NOT NULL,
+  store_id       TEXT NOT NULL,
+  title          TEXT NOT NULL,
+  search_title   TEXT NOT NULL,
+  url            TEXT NOT NULL,
+  image_url      TEXT,
+  image_fallback TEXT,
+  currency       TEXT,
+  price          INTEGER NOT NULL,
+  base_price     INTEGER,
+  discount       INTEGER NOT NULL,
+  price_uah      INTEGER NOT NULL,
+  base_price_uah INTEGER,
+  rating         INTEGER,
+  rank           INTEGER NOT NULL,
+  updated_at     TEXT NOT NULL,
+  PRIMARY KEY (store, store_id)
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key        TEXT PRIMARY KEY,
   value      TEXT,

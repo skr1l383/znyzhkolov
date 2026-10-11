@@ -51,7 +51,8 @@ function resultCard(o, index, linkMode) {
   `;
 }
 
-async function openAddDialog(offer) {
+/** Діалог «Стежити за ціною». Використовується на сторінці пошуку і на вітрині. */
+export async function openAddDialog(offer, { onAdded } = {}) {
   const dialog = openDialog(html`
     <form class="dialog-body" novalidate>
       <div class="dialog-head">
@@ -128,7 +129,8 @@ async function openAddDialog(offer) {
         await post('/api/watch', { offer, extra, ...readConditions(form) });
         closeDialog();
         toast(`«${offer.title}» додано. Повідомимо, щойно умова виконається`);
-        go('#/');
+        if (onAdded) onAdded();
+        else go('#/list');
       } catch (err) {
         showFormError(form, err);
       }
@@ -238,7 +240,7 @@ export async function render(root, params) {
       try {
         await post(`/api/watch/${linkId}/offers`, { offer });
         toast(`${STORE_NAMES[offer.store]} додано до гри`);
-        go('#/');
+        go('#/list');
       } catch (err) {
         toast(err.message, 'error');
       }

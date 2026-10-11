@@ -7,6 +7,7 @@ import * as epic from './views/epic.js';
 import * as notifications from './views/notifications.js';
 import * as profile from './views/profile.js';
 import * as search from './views/search.js';
+import * as showcase from './views/showcase.js';
 import * as watchlist from './views/watchlist.js';
 
 export const state = {
@@ -17,7 +18,9 @@ export const state = {
 const routes = {
   login: { view: auth.renderLogin, public: true, title: 'Вхід' },
   register: { view: auth.renderRegister, public: true, title: 'Реєстрація' },
-  '': { view: watchlist.render, nav: 'watch', title: 'Мій список' },
+  // open — сторінка доступна і гостям, і тим, хто увійшов
+  '': { view: showcase.render, nav: 'showcase', title: 'Знижки зараз', open: true },
+  list: { view: watchlist.render, nav: 'watch', title: 'Мій список' },
   search: { view: search.render, nav: 'search', title: 'Знайти гру' },
   epic: { view: epic.render, nav: 'epic', title: 'Роздачі Epic' },
   notifications: { view: notifications.render, nav: 'notifications', title: 'Сповіщення' },
@@ -38,7 +41,7 @@ async function navigate() {
   const { name, params } = parseHash();
   const route = routes[name];
   if (!route) return go('#/');
-  if (!route.public && !state.user) return go('#/login');
+  if (!route.public && !route.open && !state.user) return go('#/login');
   if (route.public && state.user) return go('#/');
   if (route.admin && state.user.role !== 'admin') return go('#/');
 
@@ -81,6 +84,7 @@ export async function refreshMe() {
 function renderChrome(activeNav) {
   const loggedIn = Boolean(state.user);
   $('#nav').hidden = !loggedIn;
+  $('#nav-guest').hidden = loggedIn;
   document.body.classList.toggle('has-nav', loggedIn);
   $('#nav-profile').hidden = !loggedIn;
   $('#nav-admin').hidden = state.user?.role !== 'admin';
@@ -157,6 +161,12 @@ document.addEventListener(
   (e) => {
     const img = e.target;
     if (!(img instanceof HTMLImageElement) || !img.classList.contains('cover')) return;
+    // Спершу пробуємо запасну картинку, якщо вона є
+    if (img.dataset.fallback) {
+      img.src = img.dataset.fallback;
+      delete img.dataset.fallback;
+      return;
+    }
     const box = document.createElement('div');
     box.className = `${img.className} cover-placeholder`;
     box.setAttribute('aria-hidden', 'true');

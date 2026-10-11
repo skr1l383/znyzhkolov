@@ -49,6 +49,7 @@ export const config = {
   schedule: {
     pricesMinutes: num(env.CHECK_INTERVAL_MINUTES, 180),
     epicMinutes: num(env.EPIC_INTERVAL_MINUTES, 360),
+    dealsMinutes: num(env.DEALS_INTERVAL_MINUTES, 60),
     rateMinutes: num(env.RATE_INTERVAL_MINUTES, 720),
   },
 

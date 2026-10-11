@@ -3,6 +3,7 @@
 // як приходять сповіщення, не чекаючи справжнього розпродажу.
 import { discountPercent } from './util.js';
 import { normalizeTitle } from './match.js';
+import { steamHeader } from './deals.js';
 
 const steamImg = (id) => `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${id}/capsule_231x87.jpg`;
 
@@ -118,6 +119,20 @@ export function demoHistory(base, days = 120) {
     points.push({ price, basePrice: base, discount: d, at: new Date(today.getTime() - i * day).toISOString() });
   }
   return points;
+}
+
+/** Вітрина в демо-режимі: ті самі тестові ігри з випадковими знижками. */
+export async function demoDeals() {
+  const pick = () => DISCOUNTS[1 + Math.floor(Math.random() * (DISCOUNTS.length - 1))];
+  const deal = (offer, base) => {
+    const discount = pick();
+    const price = Math.round((base * (100 - discount)) / 100);
+    return { ...offer, price, basePrice: base, discount, rating: 70 + Math.floor(Math.random() * 28), reviews: null };
+  };
+  return {
+    steam: STEAM.filter((g) => g.price).map((g) => deal({ ...steamOffer(g), imageUrl: steamHeader(g.id) }, g.price)),
+    gog: GOG.map((g) => deal(gogOffer(g), g.price)),
+  };
 }
 
 export async function demoEpicFreebies() {

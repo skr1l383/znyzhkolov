@@ -6,6 +6,7 @@ import { parseSteamPrices, parseSteamSearch } from '../server/stores/steam.js';
 import { parseGogCatalog } from '../server/stores/gog.js';
 import { parseEpicFreebies } from '../server/stores/epic.js';
 import { parseNbuRate } from '../server/stores/currency.js';
+import { parseGogDeals, parseSteamSpecials } from '../server/stores/deals.js';
 import { discountPercent, formatUah, safeImageUrl, toMinor } from '../server/stores/util.js';
 
 test('Steam: пошук повертає ігри з цінами в гривнях', () => {
@@ -134,4 +135,85 @@ test('Гроші: копійки, відсотки, формат', () => {
   assert.equal(formatUah(129900), '1 299 ₴');
   assert.equal(safeImageUrl('https://images.gog-statics.com/x.jpg'), 'https://images.gog-statics.com/x.jpg');
   assert.equal(safeImageUrl('javascript:alert(1)'), null);
+});
+
+// Фрагмент справжньої сторінки https://store.steampowered.com/search/results/?specials=1 (скорочено)
+const STEAM_SPECIALS_HTML = `
+<!-- List Items -->
+  <a href="https://store.steampowered.com/app/632360/Risk_of_Rain_2/?snr=1_7_7_2300_150_1"
+   data-ds-appid="632360" data-ds-itemkey="App_632360" data-ds-tagids="[3814,42804]" class="search_result_row ds_collapse_flag "
+   data-search-page="1" data-gpnav="item">
+    <div class="search_capsule"><img src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/632360/capsule_231x87.jpg" ></div>
+    <div class="responsive_search_name_combined">
+      <div class="search_name ellipsis"><span class="title">Risk of Rain 2</span></div>
+      <div class="search_reviewscore responsive_secondrow">
+        <span class="search_review_summary positive" data-tooltip-html="дуже схвальні&lt;br&gt;93% з 1&nbsp;893 рецензій на цю гру є позитивними."></span>
+      </div>
+      <div class="search_price_discount_combined responsive_secondrow" data-price-final="10800">
+        <div class="discount_block search_discount_block" data-price-final="10800" data-bundlediscount="0" data-discount="67"><div class="discount_pct">-67%</div><div class="discount_prices"><div class="discount_original_price">329,00₴</div><div class="discount_final_price">108,00₴</div></div></div>
+      </div>
+    </div>
+  </a>
+  <a href="https://store.steampowered.com/bundle/1234/Some_Bundle/"
+   data-ds-bundleid="1234" data-ds-packageid="55" class="search_result_row ds_collapse_flag ">
+    <span class="title">Набір із трьох ігор</span>
+    <div class="discount_block" data-price-final="50000" data-discount="40"></div>
+  </a>
+  <a href="https://store.steampowered.com/app/1174180/Red_Dead_Redemption_2/"
+   data-ds-appid="1174180" class="search_result_row ds_collapse_flag ">
+    <span class="title">Tom Clancy&#39;s &amp; Red Dead Redemption 2</span>
+    <div class="search_price_discount_combined" data-price-final="64900">
+      <div class="discount_block" data-price-final="64900" data-discount="75"><div class="discount_original_price">2 599,00₴</div></div>
+    </div>
+  </a>
+  <a href="https://store.steampowered.com/app/10/Without_Discount/" data-ds-appid="10" class="search_result_row">
+    <span class="title">Без знижки</span>
+    <div class="discount_block" data-price-final="19900" data-discount="0"></div>
+  </a>`;
+
+test('Steam: розбір HTML сторінки знижок (парсинг)', () => {
+  const deals = parseSteamSpecials(STEAM_SPECIALS_HTML);
+  assert.equal(deals.length, 2, 'набір і гру без знижки пропущено');
+  assert.deepEqual(deals[0], {
+    store: 'steam',
+    storeId: '632360',
+    title: 'Risk of Rain 2',
+    url: 'https://store.steampowered.com/app/632360/',
+    imageUrl: 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/632360/header.jpg',
+    imageFallback: 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/632360/capsule_231x87.jpg',
+    currency: 'UAH',
+    price: 10800,
+    basePrice: 32900,
+    discount: 67,
+    rating: 93,
+    reviews: 1893,
+  });
+  assert.equal(deals[1].title, "Tom Clancy's & Red Dead Redemption 2", 'HTML-сутності розкодовано');
+  assert.equal(deals[1].basePrice, 259900, 'ціна з пробілом у тисячах');
+  assert.equal(deals[1].rating, null, 'без відгуків — без рейтингу');
+  assert.deepEqual(parseSteamSpecials(''), []);
+});
+
+test('GOG: каталог знижок переводиться у знижки з рейтингом', () => {
+  const deals = parseGogDeals({
+    products: [
+      {
+        id: '1207658787',
+        title: 'Heroes of Might and Magic® 3: Complete',
+        slug: 'heroes_of_might_and_magic_3_complete_edition',
+        coverHorizontal: 'https://images.gog-statics.com/a18a.png',
+        price: { finalMoney: { amount: '3.35', currency: 'USD' }, baseMoney: { amount: '6.71', currency: 'USD' } },
+        reviewsRating: 48,
+        reviewsCount: 15929,
+      },
+      { id: '2', title: 'Без знижки', price: { finalMoney: { amount: '9.99', currency: 'USD' }, baseMoney: { amount: '9.99' } } },
+      { id: '3', title: 'Без ціни', price: null },
+    ],
+  });
+  assert.equal(deals.length, 1);
+  assert.equal(deals[0].price, 335);
+  assert.equal(deals[0].basePrice, 671);
+  assert.equal(deals[0].discount, 50);
+  assert.equal(deals[0].rating, 96, 'рейтинг GOG 4,8 з 5 → 96%');
+  assert.equal(deals[0].url, 'https://www.gog.com/en/game/heroes_of_might_and_magic_3_complete_edition');
 });

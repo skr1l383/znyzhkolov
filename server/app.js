@@ -7,10 +7,12 @@ import { initLogger, log } from './logger.js';
 import { SESSION_COOKIE, cleanupSessions, userBySession } from './auth.js';
 import { adminRoutes } from './routes/admin.js';
 import { authRoutes } from './routes/auth.js';
+import { dealRoutes } from './routes/deals.js';
 import { gameRoutes } from './routes/games.js';
 import { profileRoutes } from './routes/profile.js';
 import { saveUsdRate } from './stores/currency.js';
 import { fetchLatestUsdRate } from './stores/index.js';
+import { refreshDeals } from './services/deals.js';
 import { runEpicCheck } from './services/epicFree.js';
 import { runPriceCheck } from './services/prices.js';
 import { defineJob } from './services/scheduler.js';
@@ -36,6 +38,11 @@ function defineJobs() {
     everyMinutes: config.schedule.epicMinutes,
     run: () => runEpicCheck(),
   });
+  defineJob('deals', {
+    title: 'Вітрина знижок',
+    everyMinutes: config.schedule.dealsMinutes,
+    run: () => refreshDeals(),
+  });
   defineJob('cleanup', {
     title: 'Очищення старих сесій',
     everyMinutes: 24 * 60,
@@ -51,6 +58,7 @@ export function buildServer({ dbFile, silent = false } = {}) {
   const router = new Router();
   authRoutes(router);
   gameRoutes(router);
+  dealRoutes(router);
   profileRoutes(router);
   adminRoutes(router);
 

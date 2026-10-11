@@ -1395,6 +1395,228 @@ p {
   }
 }
 
+/* Короткі підписи пунктів меню показуються лише на телефоні */
+.nav-short {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .nav .nav-full {
+    display: none;
+  }
+  .nav .nav-short {
+    display: inline;
+  }
+}
+
+/* ---------- Вітрина знижок ---------- */
+.intro {
+  max-width: 720px;
+  margin: -6px 0 22px;
+  color: var(--muted);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.filters .select {
+  width: auto;
+}
+
+.filter-q {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.filter-price {
+  width: 140px;
+}
+
+.deal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.deal-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.deal-card:hover {
+  transform: translateY(-2px);
+}
+
+.deal-cover {
+  position: relative;
+  display: block;
+}
+
+.deal-cover .cover {
+  display: block;
+  aspect-ratio: 460 / 215;
+  border-radius: 0;
+}
+
+.deal-badge {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.deal-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 14px;
+}
+
+.deal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.deal-rating {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.deal-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.deal-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.deal-title a:hover {
+  text-decoration: underline;
+}
+
+.deal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.deal-prices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: baseline;
+}
+
+.deal-prices .price {
+  font-size: 18px;
+}
+
+.deal-skeleton {
+  height: 250px;
+}
+
+.more-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+@media (max-width: 760px) {
+  .filter-q {
+    flex-basis: 100%;
+  }
+  .filters .select,
+  .filter-price {
+    flex: 1 1 140px;
+    width: auto;
+  }
+  .deal-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .deal-body {
+    padding: 10px;
+  }
+  .deal-title {
+    font-size: 14px;
+  }
+}
+
+/* Безкоштовні роздачі Epic на вітрині */
+.home-freebies {
+  margin-bottom: 22px;
+}
+
+.home-freebies-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.home-freebies-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.home-freebies-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.home-freebie {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--good) 9%, var(--surface)));
+  color: inherit;
+  text-decoration: none;
+}
+
+.home-freebie .cover {
+  aspect-ratio: 16 / 9;
+}
+
+.home-freebie strong {
+  display: block;
+  line-height: 1.3;
+}
+
 /* ---------- Графік ціни ---------- */
 .dialog.dialog-wide {
   width: min(880px, calc(100vw - 32px));

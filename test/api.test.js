@@ -346,6 +346,48 @@ test('Імпорт: Excel з іншого акаунта, простий спи�
   assert.ok(events.some((e) => e.type === 'watch.import.rejected' && e.level === 'warn'), 'відхилений файл теж');
 });
 
+test('Вітрина: відкрита для гостей, фільтри за магазином, знижкою, ціною і назвою, сортування', async () => {
+  const guest = client();
+  // Перший запит запускає збирання вітрини; чекаємо, поки вона наповниться
+  let r = await guest('GET', '/api/deals');
+  assert.equal(r.status, 200, 'гостю вітрина доступна');
+  for (let i = 0; i < 50 && !r.data.total; i++) {
+    await new Promise((res) => setTimeout(res, 50));
+    r = await guest('GET', '/api/deals');
+  }
+  const all = r.data.total;
+  assert.ok(all > 10, 'вітрина наповнилась');
+  assert.ok(r.data.counts.steam > 0 && r.data.counts.gog > 0);
+  assert.ok(r.data.items.every((d) => d.discount > 0 && d.priceUah > 0));
+
+  r = await guest('GET', '/api/deals?store=gog&limit=60');
+  assert.ok(r.data.items.length > 0 && r.data.items.every((d) => d.store === 'gog' && d.currency === 'USD'));
+
+  r = await guest('GET', '/api/deals?minDiscount=50&maxPrice=300&limit=60');
+  assert.ok(r.data.items.every((d) => d.discount >= 50 && d.priceUah <= 30000), 'два фільтри одночасно');
+  assert.ok(r.data.total <= all);
+
+  r = await guest('GET', '/api/deals?q=hollow&limit=60');
+  assert.ok(r.data.items.length >= 1 && r.data.items.every((d) => /hollow/i.test(d.title)));
+  r = await guest('GET', `/api/deals?q=${encodeURIComponent('100%_')}`);
+  assert.equal(r.data.total, 0, 'символи % і _ у пошуку не ламають запит');
+
+  r = await guest('GET', '/api/deals?sort=cheap&limit=60');
+  const prices = r.data.items.map((d) => d.priceUah);
+  assert.deepEqual(prices, [...prices].sort((a, b) => a - b), 'сортування від дешевших');
+  r = await guest('GET', '/api/deals?sort=discount&limit=60');
+  const discounts = r.data.items.map((d) => d.discount);
+  assert.deepEqual(discounts, [...discounts].sort((a, b) => b - a), 'сортування за знижкою');
+
+  r = await guest('GET', '/api/deals?limit=5&offset=5');
+  assert.equal(r.data.items.length, 5, 'сторінками по кілька');
+
+  // Ігри, за якими користувач стежить, позначені на вітрині
+  const mine = await user('GET', '/api/deals?q=hollow&store=steam');
+  assert.equal(mine.data.items[0].watching, true);
+  assert.equal((await guest('GET', '/api/deals?q=hollow&store=steam')).data.items[0].watching, false);
+});
+
 test('Дані зберігаються після перезапуску сервера', async () => {
   await stopApp();
   await startApp();
