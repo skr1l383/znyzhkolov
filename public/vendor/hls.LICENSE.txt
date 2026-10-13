@@ -1,0 +1,4 @@
+hls.js 1.5.17 — https://github.com/video-dev/hls.js
+Copyright (c) 2017 Dailymotion (http://www.dailymotion.com)
+Licensed under the Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0
+Використовується на сторінці гри, щоб програвати трейлери Steam (формат HLS) у браузерах без вбудованої підтримки HLS.

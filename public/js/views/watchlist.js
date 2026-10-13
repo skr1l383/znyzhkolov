@@ -12,6 +12,7 @@ import {
   cover,
   formatMoney,
   formatUah,
+  gameHref,
   html,
   openDialog,
   setHtml,
@@ -71,7 +72,7 @@ function gameCard(item) {
       ${cover(item.imageUrl, item.title)}
       <div class="game-main">
         <div class="row">${statusPill(item)}</div>
-        <h2 class="game-title">${item.title}</h2>
+        <h2 class="game-title"><a class="plain-link" href="${gameHref(item.offers[0]?.store, item.offers[0]?.storeId)}">${item.title}</a></h2>
         <p class="conditions">Сповістити, коли: ${conditionsText(item)}</p>
         ${item.lastAlertAt ? html`<p class="hint">Останнє сповіщення ${timeAgo(item.lastAlertAt)}</p>` : ''}
         <div class="game-actions">

@@ -120,15 +120,24 @@ export function parseGogDeals(json) {
     .filter((d) => d.storeId && d.title && d.price != null && d.discount > 0);
 }
 
-export async function fetchGogDeals(limit = 60) {
-  const params = new URLSearchParams({
-    limit: String(limit),
-    order: 'desc:trending', // найпопулярніші зараз
-    discounted: 'eq:true',
-    productType: 'in:game,pack',
-    countryCode: config.stores.gogCountry,
-    currencyCode: 'USD',
-    locale: 'en-US',
-  });
-  return parseGogDeals(await fetchJson('GOG', `${GOG_CATALOG}?${params}`));
+/** Каталог GOG віддає до 50 ігор за раз, тому йдемо сторінками. */
+export async function fetchGogDeals(total = 150) {
+  const all = [];
+  for (let page = 1; all.length < total; page++) {
+    const params = new URLSearchParams({
+      limit: '50',
+      page: String(page),
+      order: 'desc:trending', // найпопулярніші зараз
+      discounted: 'eq:true',
+      productType: 'in:game,pack',
+      countryCode: config.stores.gogCountry,
+      currencyCode: 'USD',
+      locale: 'en-US',
+    });
+    const json = await fetchJson('GOG', `${GOG_CATALOG}?${params}`);
+    all.push(...parseGogDeals(json));
+    if (page >= (json?.pages || 1)) break;
+    await sleep(500);
+  }
+  return all.slice(0, total);
 }

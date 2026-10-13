@@ -229,3 +229,66 @@ test('GOG: важкі PNG-обкладинки замінюються стисн
   assert.equal(gogImage('https://example.com/a.png'), null, 'картинки з невідомих сайтів не показуємо');
   assert.equal(gogImage('javascript:alert(1)'), null);
 });
+
+test('Сторінка гри: HTML-опис магазину перетворюється на безпечний текст', async () => {
+  const { htmlToParagraphs } = await import('../server/stores/details.js');
+  const html = `<h2 class="bb_tag">Про гру</h2><p>Перший&nbsp;абзац &amp; ще трохи.</p><br><script>alert(1)</script>
+    <ul class="bb_ul"><li>Пункт один</li><li><b>Пункт</b> два</li></ul><img src="x" onerror="alert(2)">Кінець`;
+  assert.deepEqual(htmlToParagraphs(html), ['Про гру', 'Перший абзац & ще трохи.', '• Пункт один', '• Пункт два', 'Кінець']);
+  assert.deepEqual(htmlToParagraphs(''), []);
+});
+
+test('Сторінка гри: дані Steam і GOG', async () => {
+  const { parseSteamDetails, parseSteamReviews, parseGogProduct } = await import('../server/stores/details.js');
+  const steam = parseSteamDetails(
+    {
+      1145360: {
+        success: true,
+        data: {
+          name: 'Hades',
+          short_description: 'Defy the god of the dead &amp; more',
+          about_the_game: '<img src="a.gif">',
+          detailed_description: '<p>Повний опис</p>',
+          header_image: 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/header.jpg',
+          screenshots: [{ path_thumbnail: 'https://shared.akamai.steamstatic.com/ss.600x338.jpg', path_full: 'https://shared.akamai.steamstatic.com/ss.1920x1080.jpg' }],
+          movies: [{ name: 'Trailer', thumbnail: 'https://shared.akamai.steamstatic.com/m.jpg', hls_h264: 'https://video.akamai.steamstatic.com/t/hls_264_master.m3u8' }, { name: 'Без HLS' }],
+          genres: [{ description: 'Інді' }],
+          developers: ['Supergiant Games'],
+          release_date: { date: '17 верес. 2020', coming_soon: false },
+          metacritic: { score: 93 },
+          platforms: { windows: true, mac: true, linux: false },
+          price_overview: { currency: 'UAH', initial: 51500, final: 41200, discount_percent: 20 },
+        },
+      },
+    },
+    '1145360'
+  );
+  assert.equal(steam.title, 'Hades');
+  assert.equal(steam.shortDescription, 'Defy the god of the dead & more');
+  assert.deepEqual(steam.description, ['Повний опис'], 'якщо «про гру» — лише картинки, береться повний опис');
+  assert.equal(steam.videos.length, 1, 'трейлер без потоку HLS пропущено');
+  assert.deepEqual(steam.platforms, ['windows', 'mac']);
+  assert.deepEqual(steam.price, { currency: 'UAH', price: 41200, basePrice: 51500, discount: 20 });
+  assert.equal(parseSteamDetails({ 1: { success: false } }, '1'), null);
+  assert.deepEqual(parseSteamReviews({ query_summary: { total_positive: 98, total_reviews: 100, review_score_desc: 'Very Positive' } }), {
+    percent: 98,
+    total: 100,
+    summary: 'Very Positive',
+  });
+
+  const gog = parseGogProduct({
+    id: 1308320804,
+    title: 'Hollow Knight',
+    links: { product_card: 'https://www.gog.com/game/hollow_knight' },
+    images: { background: '//images-1.gog-statics.com/bg.jpg' },
+    description: { full: '<p>Опис GOG</p>' },
+    screenshots: [{ formatter_template_url: 'https://images-1.gog-statics.com/abc_{formatter}.png' }],
+    videos: [
+      { video_url: 'https://www.youtube.com/embed/jFwdbtqsM8c?wmode=opaque&rel=0', thumbnail_url: 'https://img.youtube.com/vi/jFwdbtqsM8c/hqdefault.jpg', provider: 'youtube' },
+      { video_url: 'https://fast.wistia.net/embed/iframe/72q7bnpifp', provider: 'wistia' },
+    ],
+  });
+  assert.equal(gog.background, 'https://images-1.gog-statics.com/bg.jpg');
+  assert.equal(gog.screenshots[0].full, 'https://images-1.gog-statics.com/abc_ggvgm_2x.jpg');
+  assert.deepEqual(gog.videos.map((v) => v.src), ['https://www.youtube-nocookie.com/embed/jFwdbtqsM8c'], 'YouTube без стеження, інші сервіси пропущено');
+});

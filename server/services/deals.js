@@ -28,12 +28,15 @@ function saveStore(store, deals, rate) {
 
 export async function refreshDeals() {
   const rate = getUsdRate().rate;
-  const sources = config.demoStores
-    ? Object.entries(await demoDeals()).map(([store, deals]) => [store, async () => deals])
-    : [
-        ['steam', () => fetchSteamSpecials(100)],
-        ['gog', () => fetchGogDeals(60)],
-      ];
+  // Вітрина справжня навіть у демо-режимі (тестові там лише ціни ігор зі списку).
+  // DEALS_SOURCE=demo — тестова вітрина без інтернету (так працюють автотести).
+  const sources =
+    config.dealsSource === 'demo'
+      ? Object.entries(await demoDeals()).map(([store, deals]) => [store, async () => deals])
+      : [
+          ['steam', () => fetchSteamSpecials(250)],
+          ['gog', () => fetchGogDeals(150)],
+        ];
   const result = {};
   const errors = [];
   for (const [store, load] of sources) {

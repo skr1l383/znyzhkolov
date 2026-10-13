@@ -60,6 +60,8 @@ const ALLOWED_IMAGE_HOSTS = [
   'gog.com',
   'epicgames.com',
   'unrealengine.com',
+  'ytimg.com', // прев'ю трейлерів YouTube на сторінці гри
+  'youtube.com',
 ];
 
 /** Пропускає лише https-картинки з CDN магазинів. */

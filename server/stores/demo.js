@@ -45,6 +45,12 @@ function randomPrice(base) {
   return { price: base, basePrice: base, discount: 0, isFree: false };
 }
 
+/**
+ * Гра не з тестового набору (наприклад, додана зі справжньої вітрини):
+ * тестові ціни крутяться навколо її справжньої звичайної ціни.
+ */
+const baseOf = (o) => o.base_price ?? o.basePrice ?? o.price ?? null;
+
 const matches = (title, term) => normalizeTitle(title).includes(normalizeTitle(term));
 
 const steamOffer = (g, prices = { price: g.price, basePrice: g.price, discount: 0, isFree: false }) => ({
@@ -70,11 +76,12 @@ const gogOffer = (g, prices = { price: g.price, basePrice: g.price, discount: 0,
 export const demoStores = {
   steam: {
     search: async (term) => STEAM.filter((g) => matches(g.title, term)).map((g) => steamOffer(g)),
-    fetchPrices: async (ids) => {
+    fetchPrices: async (offers) => {
       const map = new Map();
-      for (const id of ids) {
-        const g = STEAM.find((x) => x.id === String(id));
-        map.set(String(id), g ? { available: true, currency: g.price == null ? null : 'UAH', ...randomPrice(g.price) } : { available: false });
+      for (const o of offers) {
+        const g = STEAM.find((x) => x.id === String(o.storeId));
+        const base = g ? g.price : baseOf(o);
+        map.set(String(o.storeId), { available: true, currency: base == null ? null : 'UAH', ...randomPrice(base) });
       }
       return map;
     },
@@ -85,7 +92,8 @@ export const demoStores = {
       const map = new Map();
       for (const o of offers) {
         const g = GOG.find((x) => x.id === String(o.storeId));
-        map.set(String(o.storeId), g ? { available: true, currency: 'USD', ...randomPrice(g.price) } : { missing: true });
+        const base = g ? g.price : baseOf(o);
+        map.set(String(o.storeId), base == null ? { missing: true } : { available: true, currency: 'USD', ...randomPrice(base) });
       }
       return map;
     },

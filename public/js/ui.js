@@ -190,6 +190,9 @@ export function clearFormErrors(form) {
   if (general) general.hidden = true;
 }
 
+/** Адреса сторінки гри в застосунку. */
+export const gameHref = (store, storeId) => `#/game?store=${encodeURIComponent(store)}&id=${encodeURIComponent(storeId)}`;
+
 /** Розмір файлу людською мовою: 2 097 152 → «2 МБ». */
 export function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} Б`;

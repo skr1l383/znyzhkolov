@@ -26,7 +26,7 @@ const real = {
 const demo = {
   steam: {
     search: demoStores.steam.search,
-    fetchPrices: (offers) => demoStores.steam.fetchPrices(offers.map((o) => o.storeId)),
+    fetchPrices: (offers) => demoStores.steam.fetchPrices(offers),
   },
   gog: {
     search: demoStores.gog.search,

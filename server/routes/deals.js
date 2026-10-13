@@ -1,3 +1,5 @@
+import { HttpError } from '../http.js';
+import { getGameDetails } from '../services/gameDetails.js';
 import { listFreebies } from '../services/epicFree.js';
 import { dealsStatus, listDeals } from '../services/deals.js';
 import { runJob } from '../services/scheduler.js';
@@ -33,5 +35,14 @@ export function dealRoutes(router) {
       updating,
       freebies: listFreebies().filter((f) => f.status === 'current'),
     };
+  });
+}
+
+export function gamePageRoutes(router) {
+  // Сторінка гри відкрита й для гостей, як і вітрина
+  router.get('/api/games/:store/:id', async (ctx) => {
+    const { store, id } = ctx.params;
+    if (!['steam', 'gog'].includes(store) || !/^\d{1,12}$/.test(id)) throw new HttpError(404, 'Гру не знайдено');
+    return getGameDetails(store, id, ctx.user?.id ?? null);
   });
 }

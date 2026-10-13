@@ -8,6 +8,7 @@ import {
   cover,
   formatMoney,
   formatUah,
+  gameHref,
   html,
   openDialog,
   setHtml,
@@ -44,7 +45,7 @@ function resultCard(o, index, linkMode) {
       ${cover(o.imageUrl, o.title)}
       <div>
         <span class="store store-${o.store}">${STORE_NAMES[o.store]}</span>
-        <h3>${o.title}</h3>
+        <h3><a class="plain-link" href="${gameHref(o.store, o.storeId)}">${o.title}</a></h3>
       </div>
       <div class="result-foot">${priceBlock(o)} ${button}</div>
     </article>

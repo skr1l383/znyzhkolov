@@ -2,7 +2,7 @@
 // Фільтри зберігаються в адресі сторінки (#/?store=gog&minDiscount=50), тож вибірку можна надіслати другові.
 import { get } from '../api.js';
 import { go, state } from '../app.js';
-import { $, $$, STORE_NAMES, cover, formatDate, formatMoney, formatUah, html, setHtml, timeAgo, toast } from '../ui.js';
+import { $, $$, STORE_NAMES, cover, gameHref, formatDate, formatMoney, formatUah, html, setHtml, timeAgo, toast } from '../ui.js';
 import { plural } from './watchlist.js';
 import { openAddDialog } from './search.js';
 
@@ -20,7 +20,7 @@ function dealCard(d, index) {
   const usd = d.currency === 'USD' ? `${formatMoney(d.price, 'USD')} за курсом НБУ` : '';
   return html`
     <article class="deal-card" data-title="${d.title}">
-      <a class="deal-cover" href="${d.url}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true">
+      <a class="deal-cover" href="${gameHref(d.store, d.storeId)}" tabindex="-1" aria-hidden="true">
         ${cover(d.imageUrl, d.title, '', d.imageFallback)}
         <span class="deal-badge">−${d.discount}%</span>
       </a>
@@ -30,7 +30,7 @@ function dealCard(d, index) {
           ${d.rating ? html`<span class="deal-rating" title="Частка схвальних відгуків">${d.rating}% схвальних</span>` : ''}
         </div>
         <h3 class="deal-title">
-          <a href="${d.url}" target="_blank" rel="noopener noreferrer" title="Відкрити в ${STORE_NAMES[d.store]}">${d.title}</a>
+          <a href="${gameHref(d.store, d.storeId)}">${d.title}</a>
         </h3>
         <div class="deal-foot">
           <div class="deal-prices" title="${usd}">

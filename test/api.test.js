@@ -69,6 +69,7 @@ async function stopApp() {
 before(async () => {
   await new Promise((r) => fakeTelegram.listen(0, r));
   process.env.DEMO_STORES = '1';
+  process.env.DEALS_SOURCE = 'demo';
   process.env.DATA_DIR = tmp;
   process.env.LOG_DIR = tmp;
   process.env.TELEGRAM_BOT_TOKEN = 'TEST:TOKEN';

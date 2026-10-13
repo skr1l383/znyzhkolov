@@ -148,6 +148,15 @@ CREATE TABLE IF NOT EXISTS deals (
   PRIMARY KEY (store, store_id)
 );
 
+-- Сторінки ігор: опис, скриншоти, трейлери з магазинів. Кеш на кілька годин, щоб не питати магазини щоразу.
+CREATE TABLE IF NOT EXISTS game_details (
+  store      TEXT NOT NULL,
+  store_id   TEXT NOT NULL,
+  data       TEXT NOT NULL,
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (store, store_id)
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key        TEXT PRIMARY KEY,
   value      TEXT,

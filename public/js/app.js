@@ -4,6 +4,7 @@ import { $, $$, avatar, closeDialog, html, initials, setHtml } from './ui.js';
 import * as admin from './views/admin.js';
 import * as auth from './views/auth.js';
 import * as epic from './views/epic.js';
+import * as game from './views/game.js';
 import * as notifications from './views/notifications.js';
 import * as profile from './views/profile.js';
 import * as search from './views/search.js';
@@ -21,6 +22,7 @@ const routes = {
   // open — сторінка доступна і гостям, і тим, хто увійшов
   '': { view: showcase.render, nav: 'showcase', title: 'Знижки зараз', open: true },
   list: { view: watchlist.render, nav: 'watch', title: 'Мій список' },
+  game: { view: game.render, nav: 'showcase', title: 'Гра', open: true },
   search: { view: search.render, nav: 'search', title: 'Знайти гру' },
   epic: { view: epic.render, nav: 'epic', title: 'Роздачі Epic' },
   notifications: { view: notifications.render, nav: 'notifications', title: 'Сповіщення' },

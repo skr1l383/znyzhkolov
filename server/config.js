@@ -53,6 +53,9 @@ export const config = {
     rateMinutes: num(env.RATE_INTERVAL_MINUTES, 720),
   },
 
+  // Звідки брати вітрину: live — справжні знижки (і в демо-режимі), demo — тестові без інтернету
+  dealsSource: env.DEALS_SOURCE === 'demo' ? 'demo' : 'live',
+
   sessionDays: num(env.SESSION_DAYS, 30),
 };
 
