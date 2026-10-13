@@ -14,7 +14,7 @@ import { saveUsdRate } from './stores/currency.js';
 import { fetchLatestUsdRate } from './stores/index.js';
 import { refreshDeals } from './services/deals.js';
 import { runEpicCheck } from './services/epicFree.js';
-import { runPriceCheck } from './services/prices.js';
+import { repairImages, runPriceCheck } from './services/prices.js';
 import { defineJob } from './services/scheduler.js';
 
 function defineJobs() {
@@ -53,6 +53,7 @@ function defineJobs() {
 export function buildServer({ dbFile, silent = false } = {}) {
   initDb(dbFile);
   initLogger({ silent });
+  repairImages();
   defineJobs();
 
   const router = new Router();

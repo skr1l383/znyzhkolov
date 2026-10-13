@@ -4,6 +4,16 @@ import { config } from '../config.js';
 import { discountPercent, fetchJson, safeImageUrl, sleep, toMinor } from './util.js';
 
 const CATALOG = 'https://catalog.gog.com/v1/catalog';
+
+/**
+ * Обкладинки GOG у каталозі — PNG по ~2 МБ. Той самий сервер віддає стиснуту версію
+ * 796×364 (~20 КБ), якщо додати до імені суфікс розміру, — її й показуємо.
+ */
+export function gogImage(url) {
+  const safe = safeImageUrl(url);
+  const m = safe && /^(https:\/\/images\.gog-statics\.com\/[0-9a-f]{64})(?:_[a-z0-9_]+)?\.(?:png|jpg|jpeg|webp)$/i.exec(safe);
+  return m ? `${m[1]}_product_tile_398_2x.jpg` : safe;
+}
 const GAME_TYPES = new Set(['game', 'pack']);
 
 export function parseGogCatalog(json) {
@@ -20,7 +30,7 @@ export function parseGogCatalog(json) {
         storeId: String(p.id),
         title: String(p.title),
         url: p.storeLink || (p.slug ? `https://www.gog.com/en/game/${p.slug}` : 'https://www.gog.com/'),
-        imageUrl: safeImageUrl(p.coverHorizontal),
+        imageUrl: gogImage(p.coverHorizontal),
         currency: final?.currency || base?.currency || null,
         price,
         basePrice,

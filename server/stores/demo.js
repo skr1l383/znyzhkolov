@@ -23,12 +23,12 @@ const STEAM = [
 ];
 
 const GOG = [
-  { id: '1207664663', title: 'The Witcher 3: Wild Hunt - Complete Edition', slug: 'the_witcher_3_wild_hunt_game_of_the_year_edition', price: 3999 },
-  { id: '1423049311', title: 'Cyberpunk 2077', slug: 'cyberpunk_2077', price: 5999 },
-  { id: '1453375253', title: 'Stardew Valley', slug: 'stardew_valley', price: 1499 },
-  { id: '1308320804', title: 'Hollow Knight', slug: 'hollow_knight', price: 1499 },
-  { id: '1771589310', title: 'Disco Elysium - The Final Cut', slug: 'disco_elysium', price: 3999 },
-  { id: '1207665503', title: 'Terraria', slug: 'terraria', price: 999 },
+  { id: '1207664663', image: 'https://images.gog-statics.com/536b00d90b91d9248d08aff37920d9706995337cb708cb69fa45e7900edf80b7_product_tile_398_2x.jpg', title: 'The Witcher 3: Wild Hunt - Complete Edition', slug: 'the_witcher_3_wild_hunt_game_of_the_year_edition', price: 3999 },
+  { id: '1423049311', image: 'https://images.gog-statics.com/c75e674590b8947542c809924df30bbef2190341163dd08668e243c266be70c5_product_tile_398_2x.jpg', title: 'Cyberpunk 2077', slug: 'cyberpunk_2077', price: 5999 },
+  { id: '1453375253', image: 'https://images.gog-statics.com/27d65260098fedca970a717b09a3e2513d8c2a84d02a81ac508b768c011cb46b_product_tile_398_2x.jpg', title: 'Stardew Valley', slug: 'stardew_valley', price: 1499 },
+  { id: '1308320804', image: 'https://images.gog-statics.com/e0a2e359588dcfd93af4fdf058f48ca8f77a79ad5c015d9f30bbda6190f1b777_product_tile_398_2x.jpg', title: 'Hollow Knight', slug: 'hollow_knight', price: 1499 },
+  { id: '1771589310', image: 'https://images.gog-statics.com/c058d50ddec21689b3cf8d545ec57fba21bccb1505e089e8c7913ada05ce8875_product_tile_398_2x.jpg', title: 'Disco Elysium - The Final Cut', slug: 'disco_elysium', price: 3999 },
+  { id: '1207665503', image: 'https://images.gog-statics.com/48c61dc4a3c9fad1f1ff47ab3ea0b1fce365f8d353545c746ea10528522b5df3_product_tile_398_2x.jpg', title: 'Terraria', slug: 'terraria', price: 999 },
 ];
 
 const DISCOUNTS = [10, 20, 25, 33, 40, 50, 60, 75, 80, 90];
@@ -62,7 +62,7 @@ const gogOffer = (g, prices = { price: g.price, basePrice: g.price, discount: 0,
   storeId: g.id,
   title: g.title,
   url: `https://www.gog.com/en/game/${g.slug}`,
-  imageUrl: null,
+  imageUrl: g.image,
   currency: 'USD',
   ...prices,
 });
@@ -140,10 +140,10 @@ export async function demoEpicFreebies() {
   const t = Date.now();
   const iso = (ms) => new Date(ms).toISOString();
   return [
-    { id: 'demo-epic-1', title: 'Sol Cesto', status: 'current', originalPrice: 15000, startsAt: iso(t - 2 * day), endsAt: iso(t + 5 * day) },
-    { id: 'demo-epic-2', title: 'OTXO', status: 'current', originalPrice: 27500, startsAt: iso(t - 2 * day), endsAt: iso(t + 5 * day) },
-    { id: 'demo-epic-3', title: "Them's Fightin' Herds", status: 'upcoming', originalPrice: 27900, startsAt: iso(t + 5 * day), endsAt: iso(t + 12 * day) },
-  ].map((f) => ({ ...f, url: 'https://store.epicgames.com/uk/free-games', imageUrl: null, currency: 'UAH' }));
+    { id: 'demo-epic-1', steamId: '2738490', title: 'Sol Cesto', status: 'current', originalPrice: 15000, startsAt: iso(t - 2 * day), endsAt: iso(t + 5 * day) },
+    { id: 'demo-epic-2', steamId: '1608640', title: 'OTXO', status: 'current', originalPrice: 27500, startsAt: iso(t - 2 * day), endsAt: iso(t + 5 * day) },
+    { id: 'demo-epic-3', steamId: '574980', title: "Them's Fightin' Herds", status: 'upcoming', originalPrice: 27900, startsAt: iso(t + 5 * day), endsAt: iso(t + 12 * day) },
+  ].map(({ steamId, ...f }) => ({ ...f, url: 'https://store.epicgames.com/uk/free-games', imageUrl: steamHeader(steamId), currency: 'UAH' }));
 }
 
 export const demoUsdRate = async () => ({ rate: 41.45, date: new Date().toLocaleDateString('uk-UA') });

@@ -3,7 +3,9 @@ import { config } from '../config.js';
 import { db, now, tx } from '../db.js';
 import { log } from '../logger.js';
 import { getUsdRate, toUah } from '../stores/currency.js';
+import { steamHeader } from '../stores/deals.js';
 import { demoHistory } from '../stores/demo.js';
+import { gogImage } from '../stores/gog.js';
 import { STORE_NAMES, store } from '../stores/index.js';
 import { dealMessage, notifyUser } from './notifier.js';
 import { evaluateWatch, offersForGame } from './watch.js';
@@ -57,6 +59,10 @@ export function upsertGameWithOffers(offers) {
           .lastInsertRowid
       );
     }
+
+    // Гра могла з'явитися без обкладинки — беремо її з магазину, що додається зараз
+    const image = offers.find((o) => o.imageUrl)?.imageUrl;
+    if (image) db.prepare('UPDATE games SET image_url = ? WHERE id = ? AND image_url IS NULL').run(image, gameId);
 
     for (const o of offers) {
       const existing = db.prepare('SELECT id, game_id FROM offers WHERE store = ? AND store_id = ?').get(o.store, o.storeId);
@@ -210,4 +216,34 @@ export async function runPriceCheck({ trigger = 'schedule' } = {}) {
 
 export async function refreshGame(gameId) {
   return refreshOffers(offersForGame(gameId));
+}
+
+/**
+ * Лагодить картинки вже збережених ігор (виконується при запуску):
+ * важкі PNG з GOG замінюються стиснутими, а гра без обкладинки бере її з будь-якого свого магазину
+ * або, якщо є Steam, — велику обкладинку Steam за номером гри.
+ */
+export function repairImages() {
+  let fixed = 0;
+  for (const table of ['games', 'offers', 'deals']) {
+    const rows = db.prepare(`SELECT rowid AS id, image_url FROM ${table} WHERE image_url LIKE 'https://images.gog-statics.com/%'`).all();
+    for (const r of rows) {
+      const better = gogImage(r.image_url);
+      if (better !== r.image_url) {
+        db.prepare(`UPDATE ${table} SET image_url = ? WHERE rowid = ?`).run(better, r.id);
+        fixed++;
+      }
+    }
+  }
+  for (const g of db.prepare('SELECT id FROM games WHERE image_url IS NULL').all()) {
+    const fromOffer = db.prepare('SELECT image_url FROM offers WHERE game_id = ? AND image_url IS NOT NULL').get(g.id)?.image_url;
+    const steamId = db.prepare("SELECT store_id FROM offers WHERE game_id = ? AND store = 'steam'").get(g.id)?.store_id;
+    const image = fromOffer || (steamId ? steamHeader(steamId) : null);
+    if (image) {
+      db.prepare('UPDATE games SET image_url = ? WHERE id = ?').run(image, g.id);
+      fixed++;
+    }
+  }
+  if (fixed) log.info('images.repair', `Виправлено обкладинок: ${fixed}`);
+  return fixed;
 }

@@ -217,3 +217,15 @@ test('GOG: каталог знижок переводиться у знижки 
   assert.equal(deals[0].rating, 96, 'рейтинг GOG 4,8 з 5 → 96%');
   assert.equal(deals[0].url, 'https://www.gog.com/en/game/heroes_of_might_and_magic_3_complete_edition');
 });
+
+test('GOG: важкі PNG-обкладинки замінюються стиснутими', async () => {
+  const { gogImage } = await import('../server/stores/gog.js');
+  const hash = 'c75e674590b8947542c809924df30bbef2190341163dd08668e243c266be70c5';
+  const small = `https://images.gog-statics.com/${hash}_product_tile_398_2x.jpg`;
+  assert.equal(gogImage(`https://images.gog-statics.com/${hash}.png`), small);
+  assert.equal(gogImage(`https://images.gog-statics.com/${hash}_glx_logo.jpg`), small);
+  const steam = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/570/header.jpg';
+  assert.equal(gogImage(steam), steam, 'картинки інших магазинів не змінюються');
+  assert.equal(gogImage('https://example.com/a.png'), null, 'картинки з невідомих сайтів не показуємо');
+  assert.equal(gogImage('javascript:alert(1)'), null);
+});

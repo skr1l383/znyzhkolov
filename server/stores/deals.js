@@ -4,6 +4,7 @@
 // GOG:   каталог з фільтром «зі знижкою», відсортований за популярністю (JSON).
 import { config } from '../config.js';
 import { discountPercent, fetchJson, safeImageUrl, sleep, toMinor } from './util.js';
+import { gogImage } from './gog.js';
 import { steamUrl } from './steam.js';
 
 const STEAM_SEARCH = 'https://store.steampowered.com/search/results/';
@@ -107,7 +108,7 @@ export function parseGogDeals(json) {
         storeId: String(p.id),
         title: String(p.title || '').trim(),
         url: p.storeLink || (p.slug ? `https://www.gog.com/en/game/${p.slug}` : 'https://www.gog.com/'),
-        imageUrl: safeImageUrl(p.coverHorizontal),
+        imageUrl: gogImage(p.coverHorizontal),
         currency: p.price?.finalMoney?.currency || 'USD',
         price,
         basePrice,
