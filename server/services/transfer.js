@@ -8,6 +8,7 @@ import { normalizeTitle, numberWords, titleScore } from '../stores/match.js';
 import { steamUrl } from '../stores/steam.js';
 import { sleep } from '../stores/util.js';
 import { config } from '../config.js';
+import { getUsdRate, toUah } from '../stores/currency.js';
 import { listWatch } from './watch.js';
 
 export const IMPORT_MAX_BYTES = 1024 * 1024;
@@ -97,7 +98,8 @@ export function readTable(buffer) {
 }
 
 const COLUMN_RULES = [
-  ['title', /назва|^гра$|title|name|game/],
+  // Лише точна назва стовпця: інакше гра «Game Dev Tycoon» у першому рядку здавалася б заголовком
+  ['title', /^(назва( гри)?|гра|title|name|game( title| name)?)$/],
   ['steamId', /steam/],
   ['gogId', /gog/],
   ['minDiscount', /знижка від|min.*discount|discount.*from/],
@@ -238,4 +240,79 @@ export async function resolveEntry(entry) {
   }
   if (gog) offers.push(gog);
   return offers;
+}
+
+// ---------- Заповнена таблиця ----------
+
+/** Назви, введені вручну на сайті → записи для пошуку (як рядки імпорту без умов). */
+export function entriesFromTitles(titles) {
+  const list = (Array.isArray(titles) ? titles : []).map((t) => String(t ?? '').trim().slice(0, 200)).filter(Boolean);
+  if (!list.length) throw new HttpError(400, 'Додай хоча б одну гру');
+  if (list.length > IMPORT_MAX_ROWS) throw new HttpError(400, `За один раз можна до ${IMPORT_MAX_ROWS} ігор`);
+  return list.map((title, i) => ({
+    line: i + 1,
+    title,
+    steamId: null,
+    gogId: null,
+    conditions: { min_discount: IMPORT_DEFAULT_DISCOUNT, max_price_uah: null, notify_free: 1, active: 1 },
+    problems: [],
+  }));
+}
+
+const FILLED_HEADER = [
+  'Рядок',
+  'Запит',
+  'Знайдена гра',
+  'Steam ID',
+  'GOG ID',
+  'Ціна Steam, грн',
+  'Ціна GOG, грн',
+  'Найкраща ціна, грн',
+  'Де дешевше',
+  'Знижка зараз, %',
+  'Посилання Steam',
+  'Посилання GOG',
+  'Статус',
+];
+const FILLED_WIDTHS = [7, 28, 36, 11, 13, 15, 14, 18, 12, 15, 42, 50, 22];
+
+/**
+ * Результати пошуку → таблиця для завантаження (Excel або CSV) у вигляді base64,
+ * щоб її можна було віддати разом зі звітом в одній відповіді.
+ * results: [{ line, title, offers: [...], status }]
+ */
+export function filledTable(results, format = 'xlsx') {
+  const rate = getUsdRate().rate;
+  const rows = results.map((r) => {
+    const by = (s) => r.offers?.find((o) => o.store === s);
+    const steam = by('steam');
+    const gog = by('gog');
+    const uahOf = (o) => (o && o.price != null ? toUah(o.price, o.currency, rate) : null);
+    const priced = [steam, gog].filter((o) => uahOf(o) != null).sort((a, b) => uahOf(a) - uahOf(b));
+    const best = priced[0];
+    return [
+      r.line,
+      r.title,
+      r.offers?.[0]?.title ?? '',
+      steam?.storeId ?? '',
+      gog?.storeId ?? '',
+      uah(uahOf(steam)),
+      uah(uahOf(gog)),
+      uah(uahOf(best)),
+      best ? (best.store === 'steam' ? 'Steam' : 'GOG') : '',
+      priced.length ? Math.max(...priced.map((o) => o.discount || 0)) : '',
+      steam?.url ?? '',
+      gog?.url ?? '',
+      r.status,
+    ];
+  });
+  const table = [FILLED_HEADER, ...rows];
+  const date = new Date().toISOString().slice(0, 10);
+  const buffer =
+    format === 'csv' ? Buffer.from(toCsv(table), 'utf8') : toXlsx(table, { sheetName: 'Ціни', widths: FILLED_WIDTHS });
+  return {
+    name: `znyzhkolov-ціни-${date}.${format === 'csv' ? 'csv' : 'xlsx'}`,
+    type: format === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    base64: buffer.toString('base64'),
+  };
 }

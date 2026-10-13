@@ -7,7 +7,16 @@ import { rankMatches } from '../stores/match.js';
 import { steamUrl } from '../stores/steam.js';
 import { safeImageUrl } from '../stores/util.js';
 import { evaluateWatches, refreshGame, upsertGameWithOffers } from '../services/prices.js';
-import { exportFile, IMPORT_MAX_BYTES, parseImportRows, readTable, resolveEntry } from '../services/transfer.js';
+import { detectTable } from '../formats/detect.js';
+import {
+  entriesFromTitles,
+  exportFile,
+  filledTable,
+  IMPORT_MAX_BYTES,
+  parseImportRows,
+  readTable,
+  resolveEntry,
+} from '../services/transfer.js';
 import { getWatch, listWatch, offersForGame } from '../services/watch.js';
 import * as v from '../validate.js';
 
@@ -75,6 +84,49 @@ function createWatch(userId, offers, conditions) {
     )
     .run(userId, gameId, conditions.min_discount, conditions.max_price_uah, conditions.notify_free, conditions.active ?? 1, now());
   return { gameId, watchId: Number(info.lastInsertRowid) };
+}
+
+/**
+ * Шукає кожну гру в Steam і GOG, за бажанням додає до списку і складає заповнену таблицю.
+ * Спільне для імпорту файлу і таблиці, складеної на сайті.
+ */
+async function processEntries(userId, entries, { addToList, format }) {
+  const added = [];
+  const skipped = [];
+  const found = [];
+  const results = [];
+  const gameIds = [];
+  for (const entry of entries) {
+    const base = { line: entry.line, title: entry.title };
+    if (!entry.title) {
+      skipped.push({ ...base, reason: 'немає назви гри' });
+      results.push({ ...base, offers: [], status: 'немає назви' });
+      continue;
+    }
+    let offers = [];
+    try {
+      offers = (await resolveEntry(entry)).map(cleanOffer);
+      if (!offers.length) {
+        skipped.push({ ...base, reason: 'не знайдено ні в Steam, ні в GOG' });
+        results.push({ ...base, offers, status: 'не знайдено' });
+        continue;
+      }
+      const item = { ...base, matched: offers[0].title, stores: offers.map((o) => o.store), notes: entry.problems };
+      found.push(item);
+      if (addToList) {
+        const { gameId } = createWatch(userId, offers, entry.conditions);
+        gameIds.push(gameId);
+        added.push(item);
+      }
+      results.push({ ...base, offers, status: addToList ? 'додано до списку' : 'знайдено' });
+    } catch (err) {
+      const reason = err.status === 409 ? 'уже є у списку' : err instanceof HttpError ? err.message : 'магазин не відповідає, спробуй пізніше';
+      skipped.push({ ...base, reason });
+      results.push({ ...base, offers, status: reason });
+    }
+  }
+  refreshManyInBackground(gameIds);
+  return { added, skipped, found, file: filledTable(results, format) };
 }
 
 /** Після імпорту оновлюємо ціни ігор по черзі, щоб не засипати магазини запитами. */
@@ -158,36 +210,25 @@ export function gameRoutes(router) {
       throw err;
     }
 
-    const added = [];
-    const skipped = [];
-    const gameIds = [];
-    for (const entry of entries) {
-      const base = { line: entry.line, title: entry.title };
-      if (!entry.title) {
-        skipped.push({ ...base, reason: 'немає назви гри' });
-        continue;
-      }
-      try {
-        const offers = (await resolveEntry(entry)).map(cleanOffer);
-        if (!offers.length) {
-          skipped.push({ ...base, reason: 'не знайдено ні в Steam, ні в GOG' });
-          continue;
-        }
-        const { gameId } = createWatch(ctx.user.id, offers, entry.conditions);
-        gameIds.push(gameId);
-        added.push({ ...base, matched: offers[0].title, stores: offers.map((o) => o.store), notes: entry.problems });
-      } catch (err) {
-        const reason = err.status === 409 ? 'уже є у списку' : err instanceof HttpError ? err.message : 'магазин не відповідає, спробуй пізніше';
-        skipped.push({ ...base, reason });
-      }
-    }
-
-    log.info('watch.import', `${ctx.user.email} імпортував «${name}»: додано ${added.length}, пропущено ${skipped.length}`, {
+    const addToList = ctx.query.add !== '0';
+    const report = await processEntries(ctx.user.id, entries, { addToList, format: detectTable(buffer) === 'csv' ? 'csv' : 'xlsx' });
+    log.info('watch.import', `${ctx.user.email} імпортував «${name}»: додано ${report.added.length}, пропущено ${report.skipped.length}`, {
       userId: ctx.user.id,
-      meta: { file: name, added: added.length, skipped: skipped.length },
+      meta: { file: name, added: report.added.length, skipped: report.skipped.length, addToList },
     });
-    refreshManyInBackground(gameIds);
-    return { added, skipped };
+    return report;
+  });
+
+  // Таблиця, складена прямо на сайті: назви ігор → заповнена таблиця з цінами (і, за бажанням, додавання до списку)
+  router.post('/api/watch/lookup', requireAuth, async (ctx) => {
+    const entries = entriesFromTitles(ctx.body.titles);
+    const addToList = ctx.body.addToList !== false;
+    const report = await processEntries(ctx.user.id, entries, { addToList, format: ctx.body.format === 'csv' ? 'csv' : 'xlsx' });
+    log.info('watch.lookup', `${ctx.user.email} склав таблицю з ${entries.length} ігор: знайдено ${report.found.length}`, {
+      userId: ctx.user.id,
+      meta: { count: entries.length, found: report.found.length, added: report.added.length, addToList },
+    });
+    return report;
   });
 
   router.post('/api/watch', requireAuth, (ctx) => {

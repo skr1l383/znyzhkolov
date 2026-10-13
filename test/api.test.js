@@ -346,6 +346,39 @@ test('Імпорт: Excel з іншого акаунта, простий спи�
   assert.ok(events.some((e) => e.type === 'watch.import.rejected' && e.level === 'warn'), 'відхилений файл теж');
 });
 
+test('Таблиця, складена на сайті: заповнена таблиця з цінами, з додаванням до списку і без', async () => {
+  const { parseXlsx } = await import('../server/formats/xlsx.js');
+  const before = (await user('GET', '/api/watch')).data.items.length;
+
+  // Лише дізнатися ціни: список не змінюється
+  let r = await user('POST', '/api/watch/lookup', { titles: ['Celeste', 'Неіснуюча гра 777', ' '], addToList: false });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.added.length, 0);
+  assert.deepEqual(r.data.found.map((f) => f.matched), ['Celeste']);
+  assert.equal((await user('GET', '/api/watch')).data.items.length, before, 'список не змінився');
+  const rows = parseXlsx(Buffer.from(r.data.file.base64, 'base64'));
+  assert.equal(rows[0][1], 'Запит');
+  assert.equal(rows[1][2], 'Celeste');
+  assert.equal(rows[1][3], '504230', 'Steam ID заповнено');
+  assert.ok(Number(rows[1][5]) > 0, 'ціну Steam заповнено');
+  assert.equal(rows[1][12], 'знайдено');
+  assert.equal(rows[2][12], 'не знайдено', 'ненайдена гра лишається в таблиці');
+  assert.equal(rows.length, 3, 'порожній рядок відкинуто');
+
+  // З додаванням: нова гра додається, наявна позначена, але ціни в таблиці є
+  r = await user('POST', '/api/watch/lookup', { titles: ['Celeste', 'Hollow Knight'], addToList: true });
+  assert.deepEqual(r.data.added.map((a) => a.matched), ['Celeste']);
+  assert.deepEqual(r.data.skipped.map((s) => s.reason), ['уже є у списку']);
+  const filled = parseXlsx(Buffer.from(r.data.file.base64, 'base64'));
+  assert.equal(filled[2][12], 'уже є у списку');
+  assert.equal(filled[2][3], '367520');
+  assert.equal((await user('GET', '/api/watch')).data.items.length, before + 1);
+
+  assert.equal((await user('POST', '/api/watch/lookup', { titles: [] })).status, 400);
+  assert.equal((await user('POST', '/api/watch/lookup', { titles: Array(51).fill('Hades') })).status, 400);
+  assert.equal((await client()('POST', '/api/watch/lookup', { titles: ['Hades'] })).status, 401);
+});
+
 test('Вітрина: відкрита для гостей, фільтри за магазином, знижкою, ціною і назвою, сортування', async () => {
   const guest = client();
   // Перший запит запускає збирання вітрини; чекаємо, поки вона наповниться
@@ -395,6 +428,6 @@ test('Дані зберігаються після перезапуску сер
   const r = await guest('POST', '/api/auth/login', { email: 'olia@test.ua', password: 'password123' });
   assert.equal(r.status, 200);
   const list = await guest('GET', '/api/watch');
-  assert.equal(list.data.items[0].title, 'Hollow Knight');
+  assert.ok(list.data.items.some((i) => i.title === 'Hollow Knight'));
   assert.equal(r.data.user.telegramLinked, true);
 });

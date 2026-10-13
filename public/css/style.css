@@ -437,6 +437,41 @@ p {
   display: none;
 }
 
+/* ---------- Таблиця, складена вручну ---------- */
+.segmented.tabs {
+  flex-wrap: wrap;
+  justify-self: start;
+}
+
+.lookup-rows {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 2px;
+}
+
+.lookup-row {
+  display: grid;
+  grid-template-columns: 26px 1fr 38px;
+  gap: 8px;
+  align-items: center;
+}
+
+.lookup-num {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.lookup-row .icon-btn {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--muted);
+}
+
 /* ---------- Звіт імпорту ---------- */
 .report-list {
   display: grid;

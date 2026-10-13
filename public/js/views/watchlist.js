@@ -144,20 +144,31 @@ function editDialog(item, onSaved) {
 
 const IMPORT_MAX_BYTES = 1024 * 1024; // те саме обмеження, що й на сервері
 
-function importReport({ added, skipped }) {
+const MAX_ROWS = 50;
+
+/** Таблиця з сервера приходить у base64 — робимо з неї файл, який можна зберегти. */
+function downloadLink(file) {
+  const bytes = Uint8Array.from(atob(file.base64), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: file.type }));
+  return html`<a class="btn btn-primary" href="${url}" download="${file.name}">Завантажити таблицю з цінами</a>`;
+}
+
+function importReport({ added, skipped, found, file }, { addToList, source }) {
   const stores = (list) => list.map((s) => STORE_NAMES[s]).join(' + ');
+  const ok = addToList ? added : found;
   return html`
     <div class="import-report stack">
       <div class="row">
-        <span class="pill pill-good">Додано: ${added.length}</span>
-        ${skipped.length ? html`<span class="pill">Пропущено: ${skipped.length}</span>` : ''}
+        <span class="pill pill-good">${addToList ? 'Додано' : 'Знайдено'}: ${ok.length}</span>
+        ${skipped.length ? html`<span class="pill">${addToList ? 'Пропущено' : 'Не знайдено'}: ${skipped.length}</span>` : ''}
       </div>
-      ${added.length
+      <div class="row">${downloadLink(file)}</div>
+      ${ok.length
         ? html`<ul class="report-list">
-            ${added.map(
+            ${ok.map(
               (a) => html`<li>
                 <span class="report-line">рядок ${a.line}</span>
-                <span><strong>${a.matched}</strong>${a.matched !== a.title ? html` <span class="muted">(у файлі: ${a.title})</span>` : ''}
+                <span><strong>${a.matched}</strong>${a.matched !== a.title ? html` <span class="muted">(${source}: ${a.title})</span>` : ''}
                   <span class="muted"> · ${stores(a.stores)}</span>
                   ${a.notes?.length ? html`<span class="hint report-note">${a.notes.join('; ')}</span>` : ''}</span>
               </li>`
@@ -165,7 +176,7 @@ function importReport({ added, skipped }) {
           </ul>`
         : ''}
       ${skipped.length
-        ? html`<h3>Не додано</h3>
+        ? html`<h3>${addToList ? 'Не додано' : 'Не знайдено'}</h3>
           <ul class="report-list">
             ${skipped.map(
               (s) => html`<li><span class="report-line">рядок ${s.line}</span><span>${s.title || '—'} <span class="muted">— ${s.reason}</span></span></li>`
@@ -177,15 +188,141 @@ function importReport({ added, skipped }) {
   `;
 }
 
+const addCheckbox = (id) => html`
+  <label class="check">
+    <input type="checkbox" id="${id}" checked />
+    <span>Додати знайдені ігри до мого списку (сповіщення про знижку від 50%)</span>
+  </label>`;
+
+const lookupRow = (n, value = '') => html`
+  <div class="lookup-row">
+    <span class="lookup-num">${n}</span>
+    <input class="input" type="text" maxlength="200" placeholder="Назва гри, наприклад Hollow Knight" value="${value}"
+      aria-label="Гра ${n}" />
+    <button class="icon-btn" type="button" data-remove aria-label="Прибрати рядок">×</button>
+  </div>`;
+
+/** Вкладка «Скласти таблицю»: рядки з назвами, «+», Enter, вставка цілого списку. */
+function bindLookup(panel, { onDone }) {
+  const rowsBox = $('.lookup-rows', panel);
+  const inputs = () => [...rowsBox.querySelectorAll('input')];
+  const renumber = () => {
+    rowsBox.querySelectorAll('.lookup-row').forEach((row, i) => {
+      $('.lookup-num', row).textContent = i + 1;
+      $('input', row).setAttribute('aria-label', `Гра ${i + 1}`);
+    });
+    const filled = inputs().filter((i) => i.value.trim()).length;
+    $('#lookup-count', panel).textContent = filled ? `${filled} з ${MAX_ROWS}` : '';
+    $('#lookup-add', panel).disabled = inputs().length >= MAX_ROWS;
+  };
+  const addRow = (after = null, value = '') => {
+    if (inputs().length >= MAX_ROWS) {
+      toast(`Не більше ${MAX_ROWS} ігор за раз`, 'error');
+      return null;
+    }
+    const tmp = document.createElement('div');
+    setHtml(tmp, lookupRow(0, value));
+    const row = tmp.firstElementChild;
+    if (after) after.after(row);
+    else rowsBox.append(row);
+    renumber();
+    return $('input', row);
+  };
+
+  $('#lookup-add', panel).addEventListener('click', () => addRow()?.focus());
+  rowsBox.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-remove]');
+    if (!btn) return;
+    const row = btn.closest('.lookup-row');
+    if (inputs().length === 1) $('input', row).value = '';
+    else row.remove();
+    renumber();
+  });
+  rowsBox.addEventListener('input', renumber);
+  rowsBox.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+    e.preventDefault();
+    const row = e.target.closest('.lookup-row');
+    const next = row.nextElementSibling;
+    (next ? $('input', next) : addRow(row))?.focus();
+  });
+  // Вставлений список (кожна гра з нового рядка, наприклад стовпчик з Excel) розкладаємо по рядках
+  rowsBox.addEventListener('paste', (e) => {
+    const lines = (e.clipboardData?.getData('text') || '')
+      .split(/\r?\n/)
+      .map((l) => l.split('\t')[0].trim())
+      .filter(Boolean);
+    if (lines.length < 2) return;
+    e.preventDefault();
+    let input = e.target;
+    input.value = lines[0];
+    for (const line of lines.slice(1)) {
+      input = addRow(input.closest('.lookup-row'), line);
+      if (!input) break;
+    }
+    renumber();
+  });
+
+  $('#lookup-run', panel).addEventListener('click', (e) =>
+    withLoading(e.currentTarget, async () => {
+      const titles = inputs().map((i) => i.value.trim()).filter(Boolean);
+      if (!titles.length) {
+        toast('Впиши хоча б одну гру', 'error');
+        inputs()[0].focus();
+        return;
+      }
+      const addToList = $('#lookup-to-list', panel).checked;
+      try {
+        onDone(await post('/api/watch/lookup', { titles, addToList }), addToList);
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    })
+  );
+}
+
 function filesDialog(hasItems, onImported) {
   const dialog = openDialog(html`
     <div class="dialog-body">
-      <div><p class="muted">Мій список</p><h2>Імпорт і експорт</h2></div>
+      <div><p class="muted">Мій список</p><h2>Таблиці з іграми</h2></div>
+      <div class="segmented tabs" role="group" aria-label="Що зробити">
+        <button type="button" data-tab="lookup" aria-pressed="true">Скласти таблицю</button>
+        <button type="button" data-tab="import" aria-pressed="false">Імпорт файлу</button>
+        <button type="button" data-tab="export" aria-pressed="false">Експорт</button>
+      </div>
 
-      <section class="stack">
-        <h3>Експорт у файл</h3>
+      <section class="stack" data-panel="lookup">
+        <p class="muted">
+          Впиши назви ігор — ми знайдемо кожну в Steam і GOG і повернемо таблицю з цінами, знижками й посиланнями.
+          Enter або «+» додає рядок; можна вставити цілий список, кожна гра з нового рядка.
+        </p>
+        <div class="lookup-rows">${lookupRow(1)}</div>
+        <div class="row">
+          <button class="btn btn-sm" type="button" id="lookup-add">+ Додати гру</button>
+          <span class="hint" id="lookup-count"></span>
+        </div>
+        ${addCheckbox('lookup-to-list')}
+        <div class="row"><button class="btn btn-primary" type="button" id="lookup-run">Заповнити таблицю</button></div>
+      </section>
+
+      <section class="stack" data-panel="import" hidden>
+        <p class="muted">
+          Підійде файл, експортований звідси, або просто назви ігор у першому стовпці.
+          Після пошуку можна завантажити таблицю, вже заповнену цінами.
+        </p>
+        ${addCheckbox('import-to-list')}
+        <div id="import-box">
+          ${dropZone({
+            title: 'Перетягни таблицю сюди',
+            hint: `або натисни, щоб вибрати файл. Excel (.xlsx) або CSV, до ${formatSize(IMPORT_MAX_BYTES)} і до ${MAX_ROWS} ігор`,
+            accept: '.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          })}
+        </div>
+      </section>
+
+      <section class="stack" data-panel="export" hidden>
         <p class="muted">${hasItems
-          ? 'Таблиця з усіма іграми, цінами в Steam і GOG та умовами сповіщень. Відкривається в Excel і Google Таблицях.'
+          ? 'Таблиця з усіма іграми списку, цінами в Steam і GOG та умовами сповіщень. Відкривається в Excel і Google Таблицях.'
           : 'Список поки порожній — файл стане шаблоном, який можна заповнити й імпортувати.'}</p>
         <div class="row">
           <a class="btn" href="/api/watch/export?format=xlsx" download>Excel (.xlsx)</a>
@@ -193,23 +330,30 @@ function filesDialog(hasItems, onImported) {
         </div>
       </section>
 
-      <section class="stack" id="import-box">
-        <h3>Імпорт з файлу</h3>
-        <p class="muted">
-          Підійде файл, експортований звідси, або просто назви ігор у першому стовпці.
-          Кожну гру шукаємо в Steam і GOG. Якщо умову не вказано — сповістимо про знижку від 50%.
-        </p>
-        ${dropZone({
-          title: 'Перетягни таблицю сюди',
-          hint: `або натисни, щоб вибрати файл. Excel (.xlsx) або CSV, до ${formatSize(IMPORT_MAX_BYTES)} і до 50 ігор`,
-          accept: '.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        })}
-      </section>
-
       <div class="dialog-foot"><button class="btn" type="button" data-close>Закрити</button></div>
     </div>
   `);
   $('[data-close]', dialog).addEventListener('click', closeDialog);
+
+  dialog.querySelectorAll('[data-tab]').forEach((tab) =>
+    tab.addEventListener('click', () => {
+      dialog.querySelectorAll('[data-tab]').forEach((t) => t.setAttribute('aria-pressed', String(t === tab)));
+      dialog.querySelectorAll('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== tab.dataset.tab));
+    })
+  );
+
+  const lookupPanel = $('[data-panel="lookup"]', dialog);
+  bindLookup(lookupPanel, {
+    onDone: (result, addToList) => {
+      setHtml(
+        lookupPanel,
+        html`${importReport(result, { addToList, source: 'запит' })}
+          <div class="row"><button class="btn" type="button" id="lookup-again">Скласти нову таблицю</button></div>`
+      );
+      $('#lookup-again', lookupPanel).addEventListener('click', () => filesDialog(hasItems || result.added.length > 0, onImported));
+      if (result.added.length) onImported();
+    },
+  });
 
   const box = $('#import-box', dialog);
   bindDropZone($('.dropzone', box), {
@@ -217,10 +361,11 @@ function filesDialog(hasItems, onImported) {
     maxBytes: IMPORT_MAX_BYTES,
     typeError: 'Цей формат не підтримується. Можна Excel (.xlsx) або CSV',
     onFile: async (file) => {
+      const addToList = $('#import-to-list', dialog).checked;
       $('.dropzone-hint', box).textContent = `«${file.name}»: шукаємо ігри в Steam і GOG, це може зайняти до хвилини…`;
       try {
-        const report = await upload('/api/watch/import', file);
-        setHtml(box, html`<h3>Результат імпорту «${file.name}»</h3>${importReport(report)}`);
+        const report = await upload(`/api/watch/import${addToList ? '' : '?add=0'}`, file);
+        setHtml(box, html`<h3>Результат для «${file.name}»</h3>${importReport(report, { addToList, source: 'у файлі' })}`);
         if (report.added.length) onImported();
       } finally {
         const hint = $('.dropzone-hint', box);
@@ -274,7 +419,7 @@ export async function render(root) {
               : html`<p>Тут будуть ігри, за цінами яких ти стежиш.</p>`}
           </div>
           <div class="row">
-            <button class="btn" type="button" id="files-btn">Імпорт / експорт</button>
+            <button class="btn" type="button" id="files-btn">Таблиці</button>
             ${items.length ? html`<a class="btn btn-primary" href="#/search">Додати гру</a>` : ''}
           </div>
         </div>
