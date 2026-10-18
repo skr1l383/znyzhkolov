@@ -7,7 +7,7 @@
 
 // Будь-яка зміна цього файлу (наприклад, версії) змушує браузер встановити service worker заново.
 // v2: перша версія могла встановитися із суворою CSP і блокувати обкладинки — нова її замінює.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL_CACHE = `zk-shell-${VERSION}`;
 const API_CACHE = 'zk-api'; // очищається при виході з акаунта
 const IMAGE_CACHE = 'zk-images';
@@ -33,7 +33,9 @@ const SHELL = [
   '/js/views/notifications.js',
   '/js/views/profile.js',
   '/js/views/search.js',
+  '/js/views/share.js',
   '/js/views/showcase.js',
+  '/js/qrscan.js',
   '/js/views/watchlist.js',
 ];
 

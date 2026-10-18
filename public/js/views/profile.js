@@ -206,7 +206,9 @@ export async function render(root) {
         setHtml(
           $('#tg-link-box', root),
           html`
-            ${url ? html`<a class="btn btn-primary" href="${url}" target="_blank" rel="noopener noreferrer">Відкрити бота в Telegram</a>` : ''}
+            ${url ? html`<a class="btn btn-primary" href="${url}" target="_blank" rel="noopener noreferrer">Відкрити бота в Telegram</a>
+              <div class="tg-qr"><img src="/api/qr.svg?text=${encodeURIComponent(url)}" alt="QR-код для відкриття бота" width="140" height="140" />
+                <p class="hint">Або відскануй код телефоном — бот відкриється в Telegram на телефоні.</p></div>` : ''}
             <p class="hint">Натисни «Start» у боті. Якщо кнопка не відкрилась, надішли боту цю команду:</p>
             <div class="tg-code"><span id="tg-command">${command}</span>
               <button class="btn btn-sm" type="button" id="tg-copy">Копіювати</button></div>

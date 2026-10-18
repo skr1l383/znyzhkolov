@@ -200,8 +200,8 @@ p {
   display: none;
 }
 
-@media (max-width: 760px) {
-  /* На телефоні лишаємо тільки значок, щоб шапка не переповнювалась */
+@media (max-width: 1280px) {
+  /* На ноутбуках і телефонах лишаємо тільки значок, щоб шапка з меню вміщалась */
   #install-btn span {
     display: none;
   }
@@ -1468,6 +1468,20 @@ p {
   }
 }
 
+/* Вузький ноутбук або планшет: меню лише зі значків, щоб усе вмістилося в шапку.
+   Підписи не прибираємо зовсім, а ховаємо візуально — їх і далі читають екранні читачі */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .nav .nav-full,
+  .nav a > span:not(.nav-short):not(.nav-full) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 /* Короткі підписи пунктів меню показуються лише на телефоні */
 .nav-short {
   display: none;
@@ -1791,6 +1805,99 @@ p {
   }
   .game-side-cover {
     display: none;
+  }
+}
+
+/* ---------- Поділитися списком і сканер QR ---------- */
+.share-grid {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.qr-img {
+  width: 220px;
+  height: 220px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  image-rendering: pixelated;
+}
+
+.copy-row {
+  display: flex;
+  gap: 8px;
+}
+
+.copy-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.scan-box {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: #000;
+  aspect-ratio: 4 / 3;
+}
+
+.scan-box[hidden] {
+  display: none;
+}
+
+.scan-box video,
+.scan-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scan-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.scan-result {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  word-break: break-all;
+}
+
+.scan-result p {
+  margin: 0;
+}
+
+.tg-qr {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.tg-qr img {
+  border-radius: 8px;
+  background: #fff;
+}
+
+@media (max-width: 600px) {
+  .share-grid {
+    grid-template-columns: 1fr;
+    justify-items: center;
   }
 }
 

@@ -8,6 +8,7 @@ import * as game from './views/game.js';
 import * as notifications from './views/notifications.js';
 import * as profile from './views/profile.js';
 import * as search from './views/search.js';
+import * as share from './views/share.js';
 import * as showcase from './views/showcase.js';
 import * as watchlist from './views/watchlist.js';
 
@@ -23,6 +24,7 @@ const routes = {
   '': { view: showcase.render, nav: 'showcase', title: 'Знижки зараз', open: true },
   list: { view: watchlist.render, nav: 'watch', title: 'Мій список' },
   game: { view: game.render, nav: 'showcase', title: 'Гра', open: true },
+  shared: { view: share.render, nav: 'watch', title: 'Список друга', open: true },
   search: { view: search.render, nav: 'search', title: 'Знайти гру' },
   epic: { view: epic.render, nav: 'epic', title: 'Роздачі Epic' },
   notifications: { view: notifications.render, nav: 'notifications', title: 'Сповіщення' },

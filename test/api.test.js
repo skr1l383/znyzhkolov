@@ -422,6 +422,38 @@ test('Вітрина: відкрита для гостей, фільтри за 
   assert.equal((await guest('GET', '/api/deals?q=hollow&store=steam')).data.items[0].watching, false);
 });
 
+test('Поділитися списком: посилання, перегляд гостем і другом, вимкнення, QR-код', async () => {
+  assert.equal((await user('GET', '/api/me/share')).data.token, null, 'спочатку посилання немає');
+  const { token } = (await user('POST', '/api/me/share')).data;
+  assert.match(token, /^[\w-]{16}$/);
+  assert.equal((await user('POST', '/api/me/share')).data.token, token, 'повторно — те саме посилання');
+
+  const guest = client();
+  let r = await guest('GET', `/api/shared/${token}`);
+  assert.equal(r.status, 200, 'список видно без входу');
+  assert.equal(r.data.owner.name, 'Оля');
+  assert.ok(r.data.items.length > 0);
+  const text = JSON.stringify(r.data);
+  assert.ok(!text.includes('olia@test.ua'), 'пошти власника у відповіді немає');
+  assert.ok(!('minDiscount' in r.data.items[0]), 'умов сповіщень у відповіді немає');
+  assert.ok(r.data.items.every((i) => i.inMyList === false));
+
+  // Адмін (інший користувач) уже стежить за Hollow Knight після імпорту — це позначено
+  r = await admin('GET', `/api/shared/${token}`);
+  assert.equal(r.data.items.find((i) => i.title === 'Hollow Knight').inMyList, true);
+  assert.equal((await user('GET', `/api/shared/${token}`)).data.isMine, true);
+
+  assert.equal((await user('DELETE', '/api/me/share')).data.token, null);
+  assert.equal((await guest('GET', `/api/shared/${token}`)).status, 404, 'вимкнене посилання не працює');
+  assert.equal((await guest('GET', '/api/shared/..%2F..%2Fetc')).status, 404, 'спроба вийти за межі шляху');
+
+  const qr = await fetch(`${baseUrl}/api/qr.svg?text=${encodeURIComponent('https://example.com/#/shared?token=abc')}`);
+  assert.equal(qr.status, 200);
+  assert.equal(qr.headers.get('content-type'), 'image/svg+xml');
+  assert.match(await qr.text(), /^<svg/);
+  assert.equal((await fetch(`${baseUrl}/api/qr.svg`)).status, 400);
+});
+
 test('Банер на головній: популярні ігри з великою знижкою і добрими відгуками', async () => {
   const r = await client()('GET', '/api/deals/featured');
   assert.equal(r.status, 200, 'банер бачать і гості');

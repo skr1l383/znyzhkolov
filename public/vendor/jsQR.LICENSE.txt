@@ -1,0 +1,3 @@
+jsQR 1.4.0 — https://github.com/cozmo/jsQR
+Licensed under the Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0
+Розпізнає QR-коди з камери чи фото в браузерах без вбудованого BarcodeDetector (наприклад, Chrome на Windows).

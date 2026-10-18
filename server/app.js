@@ -10,6 +10,7 @@ import { authRoutes } from './routes/auth.js';
 import { dealRoutes, featuredRoutes, gamePageRoutes } from './routes/deals.js';
 import { gameRoutes } from './routes/games.js';
 import { profileRoutes } from './routes/profile.js';
+import { shareRoutes } from './routes/share.js';
 import { saveUsdRate } from './stores/currency.js';
 import { fetchLatestUsdRate } from './stores/index.js';
 import { refreshDeals } from './services/deals.js';
@@ -63,6 +64,7 @@ export function buildServer({ dbFile, silent = false } = {}) {
   dealRoutes(router);
   gamePageRoutes(router);
   profileRoutes(router);
+  shareRoutes(router);
   adminRoutes(router);
 
   const handler = createApp({

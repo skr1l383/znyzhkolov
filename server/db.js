@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
   notify_epic_free   INTEGER NOT NULL DEFAULT 1,
   lang               TEXT NOT NULL DEFAULT 'uk',
   avatar             TEXT,
+  share_token        TEXT,
   created_at         TEXT NOT NULL,
   last_login_at      TEXT
 );
@@ -166,13 +167,18 @@ CREATE TABLE IF NOT EXISTS settings (
 
 // Стовпці, додані після першої версії. Бази, створені раніше, отримують їх при запуску,
 // і дані користувачів при цьому зберігаються.
-const ADDED_COLUMNS = [['users', 'avatar', 'TEXT']];
+const ADDED_COLUMNS = [
+  ['users', 'avatar', 'TEXT'],
+  ['users', 'share_token', 'TEXT'], // ключ публічного посилання на список гравця
+];
 
 function migrate() {
   for (const [table, column, type] of ADDED_COLUMNS) {
     const exists = db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column);
     if (!exists) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
   }
+  // ALTER TABLE не вміє додавати UNIQUE, тому унікальність ключа — окремим індексом
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_share_token ON users(share_token)');
 }
 
 /** @type {DatabaseSync} */

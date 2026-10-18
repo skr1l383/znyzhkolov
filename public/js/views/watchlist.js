@@ -22,6 +22,7 @@ import {
   withLoading,
 } from '../ui.js';
 import { conditionsFields, conditionsText, readConditions } from './conditions.js';
+import { shareDialog } from './share.js';
 
 const SUGGESTIONS = ['Hades', 'Stardew Valley', 'Hollow Knight', 'Cyberpunk 2077', 'The Witcher 3'];
 
@@ -420,6 +421,7 @@ export async function render(root) {
               : html`<p>Тут будуть ігри, за цінами яких ти стежиш.</p>`}
           </div>
           <div class="row">
+            <button class="btn" type="button" id="share-btn">Поділитися</button>
             <button class="btn" type="button" id="files-btn">Таблиці</button>
             ${items.length ? html`<a class="btn btn-primary" href="#/search">Додати гру</a>` : ''}
           </div>
@@ -435,6 +437,10 @@ export async function render(root) {
   };
 
   root.onclick = async (e) => {
+    if (e.target.closest('#share-btn')) {
+      shareDialog();
+      return;
+    }
     if (e.target.closest('#files-btn')) {
       filesDialog(items.length > 0, async () => {
         items = (await get('/api/watch')).items;
