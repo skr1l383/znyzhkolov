@@ -1867,6 +1867,49 @@ p {
   }
 }
 
+/* ---------- Підвал, сторінка «Конфіденційність», небезпечні дії ---------- */
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  justify-content: center;
+  padding: 18px 16px 28px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.site-footer a {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.doc {
+  max-width: 760px;
+}
+
+.doc h2 {
+  margin: 28px 0 10px;
+  font-size: 20px;
+}
+
+.doc ul {
+  display: grid;
+  gap: 8px;
+  padding-left: 22px;
+  line-height: 1.6;
+}
+
+.doc code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.danger-zone {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
 /* ---------- Імпорт списку бажаного Steam ---------- */
 .wish-help {
   padding: 12px 14px;
@@ -2830,6 +2873,9 @@ p {
     margin-left: 6px;
   }
   body.has-nav .container {
+    padding-bottom: 24px;
+  }
+  body.has-nav .site-footer {
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
   body.has-nav .toasts {

@@ -6,6 +6,7 @@ import * as auth from './views/auth.js';
 import * as epic from './views/epic.js';
 import * as game from './views/game.js';
 import * as notifications from './views/notifications.js';
+import * as privacy from './views/privacy.js';
 import * as profile from './views/profile.js';
 import * as search from './views/search.js';
 import * as share from './views/share.js';
@@ -23,6 +24,7 @@ const routes = {
   forgot: { view: auth.renderForgot, public: true, title: 'Відновлення пароля' },
   reset: { view: auth.renderReset, open: true, title: 'Новий пароль' },
   verify: { view: auth.renderVerify, open: true, title: 'Підтвердження пошти' },
+  privacy: { view: privacy.render, open: true, title: 'Конфіденційність' },
   // open — сторінка доступна і гостям, і тим, хто увійшов
   '': { view: showcase.render, nav: 'showcase', title: 'Знижки зараз', open: true },
   list: { view: watchlist.render, nav: 'watch', title: 'Мій список' },

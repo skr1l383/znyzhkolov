@@ -1,6 +1,7 @@
 // Профіль: ім'я, підключення Telegram, налаштування сповіщень, вихід.
 import { del, get, patch, post, upload } from '../api.js';
 import { clearPrivateCache, go, refreshMe, reload, state } from '../app.js';
+import { accountPanels, bindAccount } from './account.js';
 import {
   $,
   avatar,
@@ -143,11 +144,14 @@ export async function render(root) {
                 <button class="btn btn-sm" type="button" id="p-resend">Надіслати лист ще раз</button></p>`}
           <p class="hint">Про знижки на ігри зі списку повідомляємо на сайті завжди, коли виконується твоя умова.</p>
         </section>
+
+        ${accountPanels(u)}
       </div>
     `
   );
 
   mountAvatar($('#avatar-box', root));
+  bindAccount(root);
 
   $('#logout', root).addEventListener('click', async () => {
     await post('/api/auth/logout').catch(() => {});

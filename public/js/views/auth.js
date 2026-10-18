@@ -97,6 +97,7 @@ export function renderRegister(root) {
           <span class="hint">Щонайменше 8 символів</span>
         </div>
         <button class="btn btn-primary" type="submit">Створити акаунт</button>
+        <p class="hint">Створюючи акаунт, ти погоджуєшся з тим, як ми працюємо з даними: <a href="#/privacy">конфіденційність</a>.</p>
         <p class="auth-switch">Уже є акаунт? <a href="#/login">Увійти</a></p>
       </form>
     </div>`

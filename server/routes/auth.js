@@ -38,7 +38,7 @@ function tooOften(key, { limit, windowMs }) {
   return false;
 }
 
-async function sendVerificationEmail(user) {
+export async function sendVerificationEmail(user) {
   const token = createEmailToken(user.id, 'verify', VERIFY_MINUTES);
   const { html, text } = emailLayout({
     heading: `Підтверди пошту, ${user.name}`,

@@ -650,6 +650,58 @@ test('Імпорт списку бажаного Steam: перегляд, зак
   assert.equal((await user('POST', '/api/steam/wishlist/import', { appids: ['413150'], minDiscount: 500 })).status, 400);
 });
 
+test('Акаунт: зміна пароля і пошти, мої дані, видалення', async () => {
+  const marko = client();
+  const phone = client(); // той самий користувач на іншому пристрої
+  await marko('POST', '/api/auth/register', { name: 'Марко', email: 'marko@test.ua', password: 'password123' });
+  await phone('POST', '/api/auth/login', { email: 'marko@test.ua', password: 'password123' });
+  const { results } = (await marko('GET', '/api/search?q=celeste&store=steam')).data;
+  await marko('POST', '/api/watch', { offer: results[0], minDiscount: 40 });
+
+  // Пароль
+  let r = await marko('POST', '/api/me/password', { current: 'wrong-pass', password: 'new-password-9' });
+  assert.equal(r.status, 400);
+  assert.equal(r.data.details.field, 'current');
+  assert.equal((await marko('POST', '/api/me/password', { current: 'password123', password: 'password123' })).status, 400, 'той самий пароль');
+  r = await marko('POST', '/api/me/password', { current: 'password123', password: 'new-password-9' });
+  assert.equal(r.status, 200);
+  assert.equal((await marko('GET', '/api/watch')).status, 200, 'на цьому пристрої вхід лишається');
+  assert.equal((await phone('GET', '/api/watch')).status, 401, 'на іншому — вихід');
+
+  // Пошта
+  assert.equal((await marko('POST', '/api/me/email', { email: 'olia@test.ua', current: 'new-password-9' })).status, 400, 'чужа пошта');
+  r = await marko('POST', '/api/me/email', { email: 'marko.new@test.ua', current: 'new-password-9' });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.user.email, 'marko.new@test.ua');
+  assert.equal(r.data.user.emailVerified, false, 'нову пошту треба підтвердити');
+  const { items: letters } = (await admin('GET', '/api/admin/outbox')).data;
+  assert.ok(letters.some((m) => m.to === 'marko.new@test.ua' && m.kind === 'verify'), 'лист на нову пошту');
+
+  // Мої дані
+  const exp = await marko.download('/api/me/export.json');
+  assert.equal(exp.status, 200);
+  const data = JSON.parse(exp.bytes.toString('utf8'));
+  assert.equal(data.profile.email, 'marko.new@test.ua');
+  assert.equal(data.watchlist[0].title, 'Celeste');
+  assert.equal(data.watchlist[0].conditions.minDiscount, 40);
+  assert.ok(!exp.bytes.toString().includes('scrypt'), 'хешу пароля у файлі немає');
+
+  // Видалення
+  assert.equal((await marko('POST', '/api/me/delete', { current: 'password123' })).status, 400, 'старий пароль не підходить');
+  r = await marko('POST', '/api/me/delete', { current: 'new-password-9' });
+  assert.equal(r.status, 200);
+  assert.equal((await marko('GET', '/api/watch')).status, 401, 'сесію завершено');
+  const { events } = (await admin('GET', '/api/admin/events?limit=500')).data;
+  const journal = JSON.stringify(events);
+  assert.ok(!journal.includes('marko.new@test.ua') && !journal.includes('marko@test.ua'), 'у журналі знеособлено і нову, і стару пошту');
+  assert.ok(events.some((e) => e.type === 'account.delete'));
+  assert.equal((await client()('POST', '/api/auth/login', { email: 'marko.new@test.ua', password: 'new-password-9' })).status, 401);
+
+  r = await admin('POST', '/api/me/delete', { current: 'password123' });
+  assert.equal(r.status, 400, 'єдиного адміністратора видалити не можна');
+  assert.match(r.data.error, /єдиний адміністратор/);
+});
+
 test('Банер на головній: популярні ігри з великою знижкою і добрими відгуками', async () => {
   const r = await client()('GET', '/api/deals/featured');
   assert.equal(r.status, 200, 'банер бачать і гості');

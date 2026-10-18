@@ -55,6 +55,11 @@ export function destroyUserSessions(userId) {
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
 }
 
+/** Вийти на всіх інших пристроях, лишивши поточну сесію (після зміни пароля в профілі). */
+export function destroyOtherSessions(userId, currentToken) {
+  db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash <> ?').run(userId, sha256(currentToken || ''));
+}
+
 // ---------- Одноразові ключі для посилань з листів ----------
 
 /** Новий ключ для листа (попередні такого ж призначення скасовуються). У базі — лише хеш. */

@@ -126,7 +126,7 @@ export async function render(root) {
   );
 
   // Листи: поки не налаштовано поштовий сервіс, вони лежать тут, і з них можна перейти за посиланням
-  const KIND = { verify: 'Підтвердження пошти', reset: 'Відновлення пароля', deal: 'Знижка', free: 'Безкоштовно', epic: 'Роздача Epic' };
+  const KIND = { verify: 'Підтвердження пошти', reset: 'Відновлення пароля', deal: 'Знижка', free: 'Безкоштовно', epic: 'Роздача Epic', security: 'Безпека' };
   const loadOutbox = async () => {
     const { provider, items } = await get('/api/admin/outbox');
     setHtml(

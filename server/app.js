@@ -5,6 +5,7 @@ import { initDb } from './db.js';
 import { createApp, Router } from './http.js';
 import { initLogger, log } from './logger.js';
 import { SESSION_COOKIE, cleanupSessions, userBySession } from './auth.js';
+import { accountRoutes } from './routes/account.js';
 import { adminRoutes } from './routes/admin.js';
 import { authRoutes } from './routes/auth.js';
 import { dealRoutes, featuredRoutes, gamePageRoutes } from './routes/deals.js';
@@ -65,6 +66,7 @@ export function buildServer({ dbFile, silent = false } = {}) {
   dealRoutes(router);
   gamePageRoutes(router);
   profileRoutes(router);
+  accountRoutes(router);
   shareRoutes(router);
   wishlistRoutes(router);
   adminRoutes(router);
