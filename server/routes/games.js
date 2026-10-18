@@ -17,6 +17,7 @@ import {
   readTable,
   resolveEntry,
 } from '../services/transfer.js';
+import { buildReport } from '../services/report.js';
 import { getWatch, listWatch, offersForGame } from '../services/watch.js';
 import * as v from '../validate.js';
 
@@ -197,6 +198,13 @@ export function gameRoutes(router) {
     const file = exportFile(ctx.user.id, format);
     log.info('watch.export', `${ctx.user.email} експортував список (${file.count} ігор, ${format.toUpperCase()})`, { userId: ctx.user.id });
     sendFile(ctx.res, file.buffer, file);
+  });
+
+  // PDF-звіт про список: ціни зараз, без знижок і скільки можна заощадити
+  router.get('/api/watch/report.pdf', requireAuth, async (ctx) => {
+    const pdf = await buildReport(ctx.user, { covers: ctx.query.covers !== '0' });
+    log.info('report.pdf', `${ctx.user.email} завантажив PDF-звіт (${Math.round(pdf.length / 1024)} КБ)`, { userId: ctx.user.id });
+    sendFile(ctx.res, pdf, { type: 'application/pdf', filename: `znyzhkolov-zvit-${new Date().toISOString().slice(0, 10)}.pdf` });
   });
 
   // Імпорт списку з CSV або Excel. Кожну гру шукаємо в Steam і GOG, у відповіді — звіт по рядках.

@@ -1,0 +1,3 @@
+Manrope — Copyright 2018 The Manrope Project Authors (https://github.com/sharanda/manrope)
+Шрифт поширюється за ліцензією SIL Open Font License 1.1: https://openfontlicense.org
+Використовується для PDF-звітів (вбудовується у файл лише з потрібними літерами).

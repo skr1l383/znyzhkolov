@@ -454,6 +454,30 @@ test('Поділитися списком: посилання, перегляд 
   assert.equal((await fetch(`${baseUrl}/api/qr.svg`)).status, 400);
 });
 
+test('PDF-звіт: правильна будова файлу, вбудований шрифт, лише для власника', async () => {
+  assert.equal((await client().download('/api/watch/report.pdf')).status, 401, 'гостю звіт недоступний');
+  const res = await user.download('/api/watch/report.pdf?covers=0');
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'application/pdf');
+  assert.match(res.headers.get('content-disposition'), /znyzhkolov-zvit-\d{4}-\d{2}-\d{2}\.pdf/);
+  const pdf = res.bytes;
+  const text = pdf.toString('latin1');
+  assert.ok(text.startsWith('%PDF-1.7'));
+  assert.ok(text.trimEnd().endsWith('%%EOF'));
+  assert.match(text, /\/Subtype \/CIDFontType2/, 'шрифт вбудовано');
+  assert.match(text, /\/FontFile2 \d+ 0 R/);
+  assert.match(text, /\/ToUnicode \d+ 0 R/, 'текст можна копіювати');
+  assert.match(text, /\/BaseFont \/[A-Z]{6}\+Manrope-Bold/, 'позначка підмножини шрифту');
+
+  // Таблиця зміщень (xref): кожен запис вказує точно на початок свого об'єкта
+  const startxref = Number(/startxref\n(\d+)/.exec(text)[1]);
+  assert.ok(text.startsWith('xref', startxref));
+  const entries = [...text.slice(startxref).matchAll(/^(\d{10}) 00000 n $/gm)].map((m) => Number(m[1]));
+  assert.ok(entries.length > 10);
+  entries.forEach((offset, i) => assert.ok(text.startsWith(`${i + 1} 0 obj`, offset), `об'єкт ${i + 1}`));
+  assert.ok(pdf.length < 80 * 1024, `без обкладинок файл маленький (${pdf.length} байт): у ньому лише потрібні літери шрифту`);
+});
+
 test('Банер на головній: популярні ігри з великою знижкою і добрими відгуками', async () => {
   const r = await client()('GET', '/api/deals/featured');
   assert.equal(r.status, 200, 'банер бачать і гості');

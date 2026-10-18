@@ -120,7 +120,7 @@ self.addEventListener('fetch', (event) => {
       event.respondWith(networkFirst(request, SHELL_CACHE, { fallbackUrl: '/' }));
     } else if (url.pathname.startsWith('/api/')) {
       // Експорт файлів і т. п. не зберігаємо — лише дані для сторінок
-      if (url.pathname.startsWith('/api/watch/export')) return;
+      if (url.pathname.startsWith('/api/watch/export') || url.pathname.endsWith('.pdf')) return;
       event.respondWith(networkFirst(request, API_CACHE));
     } else {
       event.respondWith(networkFirst(request, SHELL_CACHE));

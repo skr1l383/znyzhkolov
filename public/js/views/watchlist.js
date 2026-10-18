@@ -290,7 +290,7 @@ function filesDialog(hasItems, onImported) {
       <div class="segmented tabs" role="group" aria-label="Що зробити">
         <button type="button" data-tab="lookup" aria-pressed="true">Скласти таблицю</button>
         <button type="button" data-tab="import" aria-pressed="false">Імпорт файлу</button>
-        <button type="button" data-tab="export" aria-pressed="false">Експорт</button>
+        <button type="button" data-tab="export" aria-pressed="false">Експорт і звіт</button>
       </div>
 
       <section class="stack" data-panel="lookup">
@@ -330,6 +330,9 @@ function filesDialog(hasItems, onImported) {
           <a class="btn" href="/api/watch/export?format=xlsx" download>Excel (.xlsx)</a>
           <a class="btn" href="/api/watch/export?format=csv" download>CSV</a>
         </div>
+        <h3>PDF-звіт</h3>
+        <p class="muted">Гарний звіт для друку чи пересилання: скільки ігри коштують зараз, скільки без знижок і скільки можна заощадити.</p>
+        <div class="row"><a class="btn btn-primary" href="/api/watch/report.pdf" download>Завантажити PDF-звіт</a></div>
       </section>
 
       <div class="dialog-foot"><button class="btn" type="button" data-close>Закрити</button></div>
