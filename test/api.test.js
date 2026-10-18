@@ -626,6 +626,7 @@ test('Імпорт списку бажаного Steam: перегляд, зак
   r = await user('GET', '/api/steam/wishlist?profile=privategamer');
   assert.equal(r.status, 404);
   assert.match(r.data.error, /прихований/);
+  assert.equal(r.data.details.code, 'wishlist_hidden', 'браузер покаже покрокову підказку');
   assert.equal((await user('GET', '/api/steam/wishlist?profile=nosuchgamer')).status, 404);
 
   // Додаємо три ігри: одна вже є, дві нові — з умовою «знижка від 30%»

@@ -1,7 +1,7 @@
 // Імпорт списку бажаного Steam: посилання на профіль → ігри з цінами і галочками → стежити за вибраними.
 import { get, post } from '../api.js';
 import { state } from '../app.js';
-import { $, $$, closeDialog, formatDate, formatUah, html, openDialog, setHtml, showFormError, toast, withLoading } from '../ui.js';
+import { $, $$, clearFormErrors, closeDialog, formatDate, formatUah, html, openDialog, setHtml, showFormError, toast, withLoading } from '../ui.js';
 import { plural } from './watchlist.js';
 
 const CONDITIONS = [
@@ -51,6 +51,7 @@ export function steamImportDialog(onImported) {
           Список бажаного має бути відкритим: «Редагувати профіль» → «Приватність» → «Інформація про ігри: Відкрита».
         </span>
       </div>
+      <div id="wish-help" aria-live="polite"></div>
       <div class="dialog-foot">
         <button class="btn" type="button" data-close>Скасувати</button>
         <button class="btn btn-primary" type="submit">Показати список</button>
@@ -68,7 +69,31 @@ export function steamImportDialog(onImported) {
         if (state.user) state.user.steamId = data.profile.steamId;
         showList(dialog, data, onImported);
       } catch (err) {
-        showFormError(form, err);
+        if (err.details?.code !== 'wishlist_hidden') {
+          setHtml($('#wish-help', form), '');
+          showFormError(form, err);
+          return;
+        }
+        // Steam однаково відповідає і на порожній, і на прихований список — підказуємо, що перевірити
+        clearFormErrors(form);
+        setHtml(
+          $('#wish-help', form),
+          html`<div class="wish-help">
+            <strong>${err.message}</strong>
+            <ol>
+              <li>
+                Відкрий <a href="https://steamcommunity.com/my/edit/settings" target="_blank" rel="noopener noreferrer">налаштування приватності Steam</a>
+                (там треба бути в акаунті Steam).
+              </li>
+              <li>
+                ${err.details.profilePublic ? html`«Мій профіль» уже відкритий ✓. ` : html`«Мій профіль» → <b>Відкритий</b>. `}
+                Нижче <b>«Інформація про ігри»</b> (англійською Game details) → <b>Відкрита</b>. Саме цей пункт відкриває список бажаного.
+              </li>
+              <li>Перевір, що у твоєму <a href="https://store.steampowered.com/wishlist/" target="_blank" rel="noopener noreferrer">списку бажаного</a> справді є ігри.</li>
+              <li>Steam застосовує зміни приватності не одразу — зачекай 2–5 хвилин і натисни «Показати список» ще раз.</li>
+            </ol>
+          </div>`
+        );
       }
     });
   });

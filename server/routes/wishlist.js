@@ -49,11 +49,13 @@ export function wishlistRoutes(router) {
     const profile = await fetchProfile(parsed);
     const appids = await fetchWishlist(profile.steamId);
     if (!appids.length) {
+      // Steam не відрізняє «порожній» від «прихований»: в обох випадках віддає порожній список
       throw new HttpError(
         404,
         profile.privacy && profile.privacy !== 'public'
-          ? 'Профіль Steam прихований. Відкрий його: Steam → профіль → «Редагувати профіль» → «Приватність» → «Інформація про ігри: Відкрита»'
-          : 'Список бажаного порожній або прихований. Перевір у Steam: «Редагувати профіль» → «Приватність» → «Інформація про ігри: Відкрита»'
+          ? `Профіль Steam «${profile.name}» прихований, тому список бажаного не видно`
+          : `Steam не показує список бажаного профілю «${profile.name}»: він порожній або прихований`,
+        { code: 'wishlist_hidden', profileName: profile.name, profilePublic: profile.privacy === 'public' }
       );
     }
     db.prepare('UPDATE users SET steam_id = ? WHERE id = ?').run(profile.steamId, ctx.user.id);

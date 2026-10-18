@@ -1,10 +1,11 @@
 // Запити до сервера. Помилки перетворюються на ApiError з людським повідомленням.
 
 export class ApiError extends Error {
-  constructor(message, status, field) {
+  constructor(message, status, field, details = null) {
     super(message);
     this.status = status;
     this.field = field;
+    this.details = details; // додаткові відомості від сервера (наприклад, код помилки)
   }
 }
 
@@ -46,7 +47,7 @@ async function send(url, init) {
 
   if (!res.ok) {
     if (res.status === 401 && url !== '/api/auth/login') window.dispatchEvent(new CustomEvent('zk:unauthorized'));
-    throw new ApiError(data?.error || `Помилка сервера (${res.status})`, res.status, data?.details?.field);
+    throw new ApiError(data?.error || `Помилка сервера (${res.status})`, res.status, data?.details?.field, data?.details || null);
   }
   return data;
 }

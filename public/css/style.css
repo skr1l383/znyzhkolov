@@ -1868,6 +1868,27 @@ p {
 }
 
 /* ---------- Імпорт списку бажаного Steam ---------- */
+.wish-help {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 14px;
+}
+
+.wish-help ol {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.wish-help a {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
 .wish-profile {
   display: flex;
   gap: 14px;
