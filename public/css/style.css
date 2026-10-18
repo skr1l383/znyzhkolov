@@ -169,6 +169,44 @@ p {
 }
 
 /* ---------- Верхня панель ---------- */
+.offline-banner {
+  background: var(--fg);
+  color: var(--bg);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 16px;
+}
+
+.offline-banner[hidden] {
+  display: none;
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#install-btn {
+  gap: 6px;
+}
+
+#install-btn[hidden] {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  /* На телефоні лишаємо тільки значок, щоб шапка не переповнювалась */
+  #install-btn span {
+    display: none;
+  }
+}
+
 .demo-banner {
   background: var(--accent);
   color: var(--on-accent);

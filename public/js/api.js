@@ -30,8 +30,12 @@ async function send(url, init) {
   try {
     res = await fetch(url, { ...init, credentials: 'same-origin' });
   } catch {
-    throw new ApiError('Немає зв’язку із сервером. Перевірте, чи він запущений', 0);
+    window.dispatchEvent(new CustomEvent('zk:offline'));
+    throw new ApiError(navigator.onLine ? 'Немає зв’язку із сервером. Перевірте, чи він запущений' : 'Немає інтернету. Спробуй, щойно з’явиться зв’язок', 0);
   }
+
+  // Service worker віддав збережену копію — значить, сервер або інтернет недоступні
+  window.dispatchEvent(new CustomEvent(res.headers.get('X-Zk-Offline') ? 'zk:offline' : 'zk:online'));
 
   let data = null;
   try {

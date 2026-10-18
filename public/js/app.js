@@ -139,6 +139,7 @@ $('#theme-toggle').addEventListener('click', () => {
 // ---------- Запуск ----------
 window.addEventListener('zk:unauthorized', () => {
   if (!state.user) return;
+  clearPrivateCache();
   state.user = null;
   renderChrome();
   go('#/login');
@@ -178,8 +179,58 @@ document.addEventListener(
   true
 );
 
+// ---------- Застосунок (PWA) ----------
+/** Дані акаунта, збережені для офлайну, прибираємо при виході — щоб їх не побачив наступний користувач пристрою. */
+export async function clearPrivateCache() {
+  try {
+    await caches.delete('zk-api');
+  } catch {
+    // Cache API недоступний (наприклад, сайт відкрито не через https) — нічого прибирати
+  }
+}
+
+function setupPwa() {
+  // Service worker працює лише на https або localhost
+  if ('serviceWorker' in navigator && window.isSecureContext) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  // Кнопка «Встановити»: браузер сам повідомляє, що сайт можна встановити як застосунок
+  let installPrompt = null;
+  const installBtn = $('#install-btn');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installPrompt = e;
+    installBtn.hidden = false;
+  });
+  installBtn.addEventListener('click', async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice.catch(() => null);
+    installPrompt = null;
+    installBtn.hidden = true;
+  });
+  window.addEventListener('appinstalled', () => {
+    installBtn.hidden = true;
+  });
+
+  // Смужка «немає зв'язку»: зникає, щойно сервер знову відповідає
+  const banner = $('#offline-banner');
+  const setOffline = (offline) => {
+    if (banner.hidden === !offline) return;
+    banner.hidden = !offline;
+    // Повернувся зв'язок — перемальовуємо сторінку зі свіжими даними
+    if (!offline && state.user) navigate();
+  };
+  window.addEventListener('zk:offline', () => setOffline(true));
+  window.addEventListener('zk:online', () => setOffline(false));
+  window.addEventListener('offline', () => setOffline(true));
+  window.addEventListener('online', () => refreshMe().catch(() => {}));
+}
+
 async function start() {
   applyThemeColor();
+  setupPwa();
   try {
     await refreshMe();
   } catch (err) {

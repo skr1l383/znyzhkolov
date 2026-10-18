@@ -422,6 +422,25 @@ test('Вітрина: відкрита для гостей, фільтри за 
   assert.equal((await guest('GET', '/api/deals?q=hollow&store=steam')).data.items[0].watching, false);
 });
 
+test('PWA: маніфест, іконки і service worker', async () => {
+  const res = await fetch(`${baseUrl}/manifest.webmanifest`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /application\/manifest\+json/);
+  const manifest = await res.json();
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.start_url, '/#/');
+  assert.ok(manifest.icons.some((i) => i.sizes === '512x512' && i.purpose === 'maskable'), 'є іконка для Android');
+  for (const icon of manifest.icons) {
+    assert.equal((await fetch(baseUrl + icon.src)).status, 200, `іконка ${icon.src} на місці`);
+  }
+
+  const sw = await fetch(`${baseUrl}/sw.js`);
+  assert.equal(sw.status, 200);
+  assert.equal(sw.headers.get('cache-control'), 'no-cache', 'нова версія service worker підхоплюється одразу');
+  assert.match(sw.headers.get('content-security-policy'), /connect-src 'self' https:/, 'service worker може зберігати обкладинки магазинів');
+  assert.match((await fetch(baseUrl)).headers.get('content-security-policy'), /connect-src 'self' https:\/\/video/, 'сторінки — із суворими правилами');
+});
+
 test('Дані зберігаються після перезапуску сервера', async () => {
   await stopApp();
   await startApp();

@@ -1,6 +1,6 @@
 // Профіль: ім'я, підключення Telegram, налаштування сповіщень, вихід.
 import { del, get, patch, post, upload } from '../api.js';
-import { go, refreshMe, reload, state } from '../app.js';
+import { clearPrivateCache, go, refreshMe, reload, state } from '../app.js';
 import {
   $,
   avatar,
@@ -143,6 +143,7 @@ export async function render(root) {
 
   $('#logout', root).addEventListener('click', async () => {
     await post('/api/auth/logout').catch(() => {});
+    await clearPrivateCache();
     state.user = null;
     await refreshMe().catch(() => {});
     go('#/login');

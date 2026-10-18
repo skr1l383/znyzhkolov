@@ -1,0 +1,24 @@
+{
+  "id": "/",
+  "name": "Знижколов — знижки на ігри",
+  "short_name": "Знижколов",
+  "description": "Стеження за знижками на ігри в Steam і GOG та роздачами Epic Games зі сповіщеннями в Telegram",
+  "lang": "uk",
+  "dir": "ltr",
+  "start_url": "/#/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0c111d",
+  "theme_color": "#0c111d",
+  "categories": ["games", "shopping"],
+  "icons": [
+    { "src": "/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Знижки зараз", "url": "/#/", "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Мій список", "url": "/#/list", "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

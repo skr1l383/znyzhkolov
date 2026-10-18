@@ -218,6 +218,9 @@ function serveStatic(publicDir, pathname, req, res) {
   const isSw = path.basename(file) === 'sw.js';
   res.writeHead(200, {
     ...SECURITY_HEADERS,
+    // Service worker сам завантажує обкладинки зі Steam і GOG, щоб зберегти їх для офлайну,
+    // тому йому потрібен дозвіл на https-запити (сторінки лишаються з суворими правилами)
+    ...(isSw ? { 'Content-Security-Policy': "default-src 'self'; connect-src 'self' https:" } : {}),
     'Content-Type': MIME[ext] || 'application/octet-stream',
     'Content-Length': stat.size,
     'Cache-Control': isHtml || isSw ? 'no-cache' : 'public, max-age=300',
