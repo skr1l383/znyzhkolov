@@ -1,7 +1,7 @@
 import { HttpError } from '../http.js';
 import { getGameDetails } from '../services/gameDetails.js';
 import { listFreebies } from '../services/epicFree.js';
-import { dealsStatus, listDeals } from '../services/deals.js';
+import { dealsStatus, featuredDeals, listDeals } from '../services/deals.js';
 import { runJob } from '../services/scheduler.js';
 
 const int = (value, min, max) => {
@@ -36,6 +36,11 @@ export function dealRoutes(router) {
       freebies: listFreebies().filter((f) => f.status === 'current'),
     };
   });
+}
+
+export function featuredRoutes(router) {
+  // Банер на головній
+  router.get('/api/deals/featured', (ctx) => ({ items: featuredDeals({ userId: ctx.user?.id ?? null }) }));
 }
 
 export function gamePageRoutes(router) {

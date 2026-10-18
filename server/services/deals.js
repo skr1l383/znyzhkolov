@@ -93,35 +93,67 @@ export function listDeals({ store, minDiscount, maxPriceUah, q, sort = 'popular'
     .prepare(`SELECT * FROM deals ${whereSql} ORDER BY ${SORTS[sort] || SORTS.popular} LIMIT ? OFFSET ?`)
     .all(...args, limit, offset);
 
-  // Позначаємо ігри, за якими користувач уже стежить
-  const watching = new Set(
-    userId
-      ? db
-          .prepare('SELECT o.store, o.store_id FROM offers o JOIN watch_items w ON w.game_id = o.game_id WHERE w.user_id = ?')
-          .all(userId)
-          .map((r) => `${r.store}:${r.store_id}`)
-      : []
-  );
+  const watching = watchingSet(userId);
+  return { total, items: rows.map((r) => dealItem(r, watching)) };
+}
 
+/** Ігри, за якими користувач уже стежить, — щоб позначити їх на вітрині «У списку». */
+function watchingSet(userId) {
+  if (!userId) return new Set();
+  return new Set(
+    db
+      .prepare('SELECT o.store, o.store_id FROM offers o JOIN watch_items w ON w.game_id = o.game_id WHERE w.user_id = ?')
+      .all(userId)
+      .map((r) => `${r.store}:${r.store_id}`)
+  );
+}
+
+function dealItem(r, watching) {
   return {
-    total,
-    items: rows.map((r) => ({
-      store: r.store,
-      storeId: r.store_id,
-      title: r.title,
-      url: r.url,
-      imageUrl: r.image_url,
-      imageFallback: r.image_fallback,
-      currency: r.currency,
-      price: r.price,
-      basePrice: r.base_price,
-      discount: r.discount,
-      priceUah: r.price_uah,
-      basePriceUah: r.base_price_uah,
-      rating: r.rating,
-      watching: watching.has(`${r.store}:${r.store_id}`),
-    })),
+    store: r.store,
+    storeId: r.store_id,
+    title: r.title,
+    url: r.url,
+    imageUrl: r.image_url,
+    imageFallback: r.image_fallback,
+    currency: r.currency,
+    price: r.price,
+    basePrice: r.base_price,
+    discount: r.discount,
+    priceUah: r.price_uah,
+    basePriceUah: r.base_price_uah,
+    rating: r.rating,
+    watching: watching.has(`${r.store}:${r.store_id}`),
   };
+}
+
+/** Широка картинка для банера: у Steam — «library_hero» 1920×620, у GOG — обкладинка 1020×574. */
+function heroImage(r) {
+  if (r.store === 'steam') return `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${r.store_id}/library_hero.jpg`;
+  return r.image_url?.replace(/_product_tile_398_2x\.jpg$/, '_ggvgm_2x.jpg') || r.image_url;
+}
+
+/**
+ * Банер на головній: найпопулярніші ігри з великою знижкою (від 40%) і добрими відгуками (від 75%).
+ * Чергуємо магазини: два зі Steam, один з GOG.
+ */
+export function featuredDeals({ userId = null, limit = 6 } = {}) {
+  const pick = db.prepare(
+    `SELECT * FROM deals WHERE store = ? AND discount >= 40 AND (rating IS NULL OR rating >= 75) ORDER BY rank LIMIT ?`
+  );
+  const steam = pick.all('steam', limit);
+  const gog = pick.all('gog', Math.ceil(limit / 3));
+  const rows = [];
+  while (rows.length < limit && (steam.length || gog.length)) {
+    for (const source of [steam, steam, gog]) if (source.length && rows.length < limit) rows.push(source.shift());
+  }
+  const watching = watchingSet(userId);
+  return rows.map((r) => ({
+    ...dealItem(r, watching),
+    heroImage: heroImage(r),
+    // Якщо великої картинки немає (буває в зовсім нових ігор) — звичайна обкладинка
+    heroFallback: r.image_fallback || r.image_url,
+  }));
 }
 
 /** Коли вітрину оновлювали і скільки в ній ігор з кожного магазину. */

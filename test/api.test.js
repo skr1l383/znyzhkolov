@@ -422,6 +422,21 @@ test('Вітрина: відкрита для гостей, фільтри за 
   assert.equal((await guest('GET', '/api/deals?q=hollow&store=steam')).data.items[0].watching, false);
 });
 
+test('Банер на головній: популярні ігри з великою знижкою і добрими відгуками', async () => {
+  const r = await client()('GET', '/api/deals/featured');
+  assert.equal(r.status, 200, 'банер бачать і гості');
+  const items = r.data.items;
+  assert.ok(items.length > 0 && items.length <= 6);
+  for (const d of items) {
+    assert.ok(d.discount >= 40, `${d.title}: знижка від 40%`);
+    assert.ok(d.rating == null || d.rating >= 75, `${d.title}: відгуки від 75%`);
+    assert.ok(d.heroImage?.startsWith('https://'), 'є широка картинка');
+    if (d.store === 'steam') assert.match(d.heroImage, /library_hero\.jpg$/);
+  }
+  assert.equal(items[0].store, 'steam', 'першою — гра зі Steam (там найкращі картинки)');
+  assert.equal(new Set(items.map((d) => `${d.store}:${d.storeId}`)).size, items.length, 'без повторів');
+});
+
 test('PWA: маніфест, іконки і service worker', async () => {
   const res = await fetch(`${baseUrl}/manifest.webmanifest`);
   assert.equal(res.status, 200);

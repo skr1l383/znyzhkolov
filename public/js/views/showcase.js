@@ -7,7 +7,8 @@ import { plural } from './watchlist.js';
 import { openAddDialog } from './search.js';
 
 const PAGE = 24;
-const DEFAULTS = { store: '', minDiscount: '', maxPrice: '', sort: 'popular', q: '' };
+const DEFAULTS = { store: '', minDiscount: '', maxPrice: '', sort: 'popular', q: '', page: '1' };
+const SLIDE_MS = 6000;
 const SORTS = [
   ['popular', 'Популярні'],
   ['discount', 'Найбільша знижка'],
@@ -70,6 +71,162 @@ function freebiesStrip(freebies) {
   `;
 }
 
+// ---------- Банер-карусель з найкращими пропозиціями ----------
+
+function heroSlide(d, i, count) {
+  const usd = d.currency === 'USD' ? '≈ ' : '';
+  // Картинку першого слайда вантажимо одразу, решту — коли до них дійде черга (data-src), щоб не тягнути зайві мегабайти
+  return html`
+    <article class="hero-slide ${i === 0 ? 'active' : ''}" aria-roledescription="слайд" aria-label="${i + 1} з ${count}: ${d.title}"
+      aria-hidden="${String(i !== 0)}" data-title="${d.title}">
+      <img class="cover hero-img" ${i === 0 ? html`src="${d.heroImage}"` : html`data-src="${d.heroImage}"`}
+        data-fallback="${d.heroFallback || ''}" alt="" referrerpolicy="no-referrer" />
+      <div class="hero-shade"></div>
+      <div class="hero-content">
+        <div class="hero-kicker">
+          <span class="store store-${d.store}">${STORE_NAMES[d.store]}</span>
+          ${d.rating ? html`<span>${d.rating}% схвальних відгуків</span>` : ''}
+        </div>
+        <h2 class="hero-title">${d.title}</h2>
+        <div class="hero-price">
+          <span class="hero-discount">−${d.discount}%</span>
+          ${d.basePriceUah ? html`<s>${formatUah(d.basePriceUah)}</s>` : ''}
+          <strong>${usd}${formatUah(d.priceUah)}</strong>
+        </div>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="${gameHref(d.store, d.storeId)}" tabindex="${i === 0 ? '0' : '-1'}">Детальніше</a>
+          ${d.watching
+            ? html`<span class="pill pill-good">У списку</span>`
+            : html`<button class="btn hero-watch" type="button" data-hero-watch="${i}" tabindex="${i === 0 ? '0' : '-1'}">Стежити</button>`}
+        </div>
+      </div>
+    </article>`;
+}
+
+function heroCarousel(items) {
+  return html`
+    <section class="hero" aria-roledescription="карусель" aria-label="Найкращі пропозиції зараз">
+      <div class="hero-track">${items.map((d, i) => heroSlide(d, i, items.length))}</div>
+      <button class="hero-arrow prev" type="button" data-hero-step="-1" aria-label="Попередня пропозиція">‹</button>
+      <button class="hero-arrow next" type="button" data-hero-step="1" aria-label="Наступна пропозиція">›</button>
+      <div class="hero-dots">
+        ${items.map(
+          (d, i) => html`<button type="button" class="${i === 0 ? 'active' : ''}" data-hero-go="${i}" aria-label="Пропозиція ${i + 1}: ${d.title}"></button>`
+        )}
+      </div>
+    </section>`;
+}
+
+/** Оживляє карусель: автоперемикання, стрілки, крапки, свайп. Повертає функцію зупинки. */
+function mountHero(box, items, onWatch) {
+  setHtml(box, items.length ? heroCarousel(items) : '');
+  if (!items.length) return () => {};
+  const section = $('.hero', box);
+  const slides = $$('.hero-slide', section);
+  const dots = $$('[data-hero-go]', section);
+  let current = 0;
+  let timer = null;
+
+  const loadImage = (n) => {
+    const img = $('img[data-src]', slides[n]);
+    if (img) {
+      img.src = img.dataset.src;
+      delete img.dataset.src;
+    }
+  };
+  const show = (n) => {
+    current = (n + slides.length) % slides.length;
+    loadImage(current);
+    loadImage((current + 1) % slides.length); // наступну підвантажуємо заздалегідь
+    slides.forEach((s, k) => {
+      const on = k === current;
+      s.classList.toggle('active', on);
+      s.setAttribute('aria-hidden', String(!on));
+      s.querySelectorAll('a, button').forEach((el) => (el.tabIndex = on ? 0 : -1));
+    });
+    dots.forEach((d, k) => d.classList.toggle('active', k === current));
+  };
+  // Хто просить менше руху на екрані — без автоперемикання
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const play = () => {
+    clearInterval(timer);
+    if (!still && slides.length > 1) timer = setInterval(() => show(current + 1), SLIDE_MS);
+  };
+  const pause = () => clearInterval(timer);
+
+  section.addEventListener('click', (e) => {
+    const step = e.target.closest('[data-hero-step]');
+    const dot = e.target.closest('[data-hero-go]');
+    const watch = e.target.closest('[data-hero-watch]');
+    if (step) show(current + Number(step.dataset.heroStep));
+    else if (dot) show(Number(dot.dataset.heroGo));
+    else if (watch) onWatch(items[Number(watch.dataset.heroWatch)], watch);
+    if (step || dot) play();
+  });
+  section.addEventListener('mouseenter', pause);
+  section.addEventListener('mouseleave', play);
+  section.addEventListener('focusin', pause);
+  section.addEventListener('focusout', play);
+
+  // Свайп пальцем на телефоні
+  let startX = null;
+  section.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse') startX = e.clientX;
+  });
+  section.addEventListener('pointerup', (e) => {
+    if (startX == null) return;
+    const dx = e.clientX - startX;
+    startX = null;
+    if (Math.abs(dx) > 40) {
+      show(current + (dx < 0 ? 1 : -1));
+      play();
+    }
+  });
+
+  const onVisibility = () => (document.hidden ? pause() : play());
+  document.addEventListener('visibilitychange', onVisibility);
+  loadImage(1);
+  play();
+  return () => {
+    pause();
+    document.removeEventListener('visibilitychange', onVisibility);
+  };
+}
+
+// ---------- Сторінки ----------
+
+/** Номери сторінок для навігації: 1 2 3 4 5 … 17, 1 … 6 7 8 9 10 … 17, 1 … 13 14 15 16 17. */
+function pageNumbers(page, pages) {
+  // Поточна сторінка посередині вікна з п'яти номерів; біля країв вікно впирається в край
+  const start = Math.max(1, Math.min(page - 2, pages - 4));
+  const windowPages = Array.from({ length: 5 }, (_, i) => start + i);
+  const wanted = [1, pages, ...windowPages].filter((n) => n >= 1 && n <= pages);
+  const sorted = [...new Set(wanted)].sort((a, b) => a - b);
+  const out = [];
+  sorted.forEach((n, i) => {
+    const prev = sorted[i - 1];
+    if (prev && n - prev === 2) out.push(prev + 1); // пропуск в одну сторінку — краще показати її номер
+    else if (prev && n - prev > 2) out.push('…');
+    out.push(n);
+  });
+  return out;
+}
+
+function pager(page, pages) {
+  if (pages <= 1) return '';
+  return html`
+    <nav class="pager" aria-label="Сторінки вітрини">
+      <button class="pager-btn" type="button" data-page="${page - 1}" aria-label="Попередня сторінка" ${page === 1 ? html`disabled` : ''}>‹</button>
+      ${pageNumbers(page, pages).map((n) =>
+        n === '…'
+          ? html`<span class="pager-gap" aria-hidden="true">…</span>`
+          : html`<button class="pager-btn ${n === page ? 'active' : ''}" type="button" data-page="${n}"
+              aria-label="Сторінка ${n}" ${n === page ? html`aria-current="page"` : ''}>${n}</button>`
+      )}
+      <button class="pager-btn" type="button" data-page="${page + 1}" aria-label="Наступна сторінка" ${page === pages ? html`disabled` : ''}>›</button>
+    </nav>`;
+}
+
 function readFilters(params) {
   const f = { ...DEFAULTS };
   for (const key of Object.keys(DEFAULTS)) if (params[key] != null) f[key] = String(params[key]);
@@ -94,6 +251,7 @@ export async function render(root, params) {
   setHtml(
     root,
     html`
+      <div id="hero"></div>
       <div class="page-head">
         <div>
           <h1>Знижки зараз</h1>
@@ -137,19 +295,21 @@ export async function render(root, params) {
       </form>
 
       <div id="deals" aria-live="polite"></div>
-      <div class="more-row"><button class="btn" type="button" id="more" hidden>Показати ще</button></div>
+      <div id="pager"></div>
     `
   );
 
   const form = $('.filters', root);
   const box = $('#deals', root);
-  const moreBtn = $('#more', root);
+  const pagerBox = $('#pager', root);
+  const page = () => Math.max(1, Number(filters.page) || 1);
 
-  const isDefault = () => Object.entries(filters).every(([k, v]) => v === DEFAULTS[k]);
+  // Номер сторінки — не фільтр: «Скинути» і підсумок на нього не зважають
+  const isDefault = () => Object.entries(filters).every(([k, v]) => k === 'page' || v === DEFAULTS[k]);
 
   function draw() {
     $('#filters-reset', root).hidden = isDefault();
-    moreBtn.hidden = items.length >= total;
+    setHtml(pagerBox, pager(page(), Math.ceil(total / PAGE)));
     if (!items.length) {
       setHtml(
         box,
@@ -164,13 +324,13 @@ export async function render(root, params) {
     setHtml(box, html`<div class="deal-grid">${items.map(dealCard)}</div>`);
   }
 
-  async function load({ append = false } = {}) {
+  async function load() {
     const id = ++loadId;
     clearTimeout(pollTimer);
-    if (!append) setHtml(box, html`<div class="deal-grid">${Array.from({ length: 8 }, () => html`<div class="skeleton deal-skeleton"></div>`)}</div>`);
+    setHtml(box, html`<div class="deal-grid">${Array.from({ length: 8 }, () => html`<div class="skeleton deal-skeleton"></div>`)}</div>`);
     let data;
     try {
-      data = await get(`/api/deals?${queryString(filters, { limit: PAGE, offset: append ? items.length : 0 })}`);
+      data = await get(`/api/deals?${queryString({ ...filters, page: DEFAULTS.page }, { limit: PAGE, offset: (page() - 1) * PAGE })}`);
     } catch (err) {
       if (id === loadId) setHtml(box, html`<div class="empty"><h2>Не вдалося завантажити вітрину</h2><p>${err.message}</p></div>`);
       return;
@@ -185,18 +345,30 @@ export async function render(root, params) {
       return;
     }
 
-    items = append ? [...items, ...data.items] : data.items;
+    items = data.items;
     total = data.total;
+    // Сторінки з таким номером уже немає (наприклад, змінились фільтри) — на останню наявну
+    if (!items.length && total && page() > 1) {
+      filters.page = String(Math.ceil(total / PAGE));
+      return apply({ keepPage: true });
+    }
     const all = Object.values(data.counts).reduce((a, b) => a + b, 0);
-    $('#deals-summary', root).textContent = isDefault()
-      ? `${all} ${plural(all, 'гра', 'гри', 'ігор')} зі знижкою в Steam і GOG${data.updatedAt ? ` · оновлено ${timeAgo(data.updatedAt)}` : ''}`
-      : `Знайдено ${total} з ${all}${data.updatedAt ? ` · оновлено ${timeAgo(data.updatedAt)}` : ''}`;
-    if (!append) setHtml($('#freebies', root), freebiesStrip(data.freebies));
+    const pages = Math.ceil(total / PAGE);
+    $('#deals-summary', root).textContent = [
+      isDefault() ? `${all} ${plural(all, 'гра', 'гри', 'ігор')} зі знижкою в Steam і GOG` : `Знайдено ${total} з ${all}`,
+      pages > 1 ? `сторінка ${page()} з ${pages}` : '',
+      data.updatedAt ? `оновлено ${timeAgo(data.updatedAt)}` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    setHtml($('#freebies', root), freebiesStrip(data.freebies));
     draw();
+    if (!heroShown) loadHero();
   }
 
   // Фільтри → адреса сторінки → новий запит. replaceState не створює зайвих кроків в історії «Назад».
-  function apply() {
+  function apply({ keepPage = false } = {}) {
+    if (!keepPage) filters.page = DEFAULTS.page; // нові фільтри — з першої сторінки
     const qs = queryString(filters);
     history.replaceState(null, '', `#/${qs ? `?${qs}` : ''}`);
     load();
@@ -234,13 +406,17 @@ export async function render(root, params) {
     reset();
   });
 
-  moreBtn.addEventListener('click', () => load({ append: true }));
+  pagerBox.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-page]');
+    if (!btn || btn.disabled) return;
+    filters.page = btn.dataset.page;
+    // До початку вітрини, щоб нова сторінка читалась зверху. Миттєво й до завантаження:
+    // плавну прокрутку перебило б перемальовування сітки
+    window.scrollTo({ top: form.getBoundingClientRect().top + window.scrollY - 80, behavior: 'instant' });
+    apply({ keepPage: true });
+  });
 
-  box.addEventListener('click', (e) => {
-    if (e.target.closest('[data-reset]')) return reset();
-    const btn = e.target.closest('[data-watch]');
-    if (!btn) return;
-    const deal = items[Number(btn.dataset.watch)];
+  const watch = (deal, onAdded) => {
     if (!state.user) {
       toast('Створи акаунт або увійди, щоб стежити за цінами');
       return go('#/register');
@@ -248,11 +424,42 @@ export async function render(root, params) {
     openAddDialog(deal, {
       onAdded: () => {
         deal.watching = true;
-        draw();
+        onAdded();
       },
     });
+  };
+
+  box.addEventListener('click', (e) => {
+    if (e.target.closest('[data-reset]')) return reset();
+    const btn = e.target.closest('[data-watch]');
+    if (btn) watch(items[Number(btn.dataset.watch)], draw);
   });
 
+  // Банер вантажимо окремо: він не залежить від фільтрів і не перемальовується при їх зміні
+  let heroShown = false;
+  let stopHero = () => {};
+  async function loadHero() {
+    try {
+      const { items: featured } = await get('/api/deals/featured');
+      if (!featured.length || !root.isConnected) return;
+      heroShown = true;
+      stopHero();
+      stopHero = mountHero($('#hero', root), featured, (d, button) =>
+        watch(d, () => {
+          const pill = document.createElement('span');
+          pill.className = 'pill pill-good';
+          pill.textContent = 'У списку';
+          button.replaceWith(pill);
+        })
+      );
+    } catch {
+      // без банера вітрина однаково працює
+    }
+  }
+
   await load();
-  return () => clearTimeout(pollTimer);
+  return () => {
+    clearTimeout(pollTimer);
+    stopHero();
+  };
 }

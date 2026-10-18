@@ -7,7 +7,7 @@ import { initLogger, log } from './logger.js';
 import { SESSION_COOKIE, cleanupSessions, userBySession } from './auth.js';
 import { adminRoutes } from './routes/admin.js';
 import { authRoutes } from './routes/auth.js';
-import { dealRoutes, gamePageRoutes } from './routes/deals.js';
+import { dealRoutes, featuredRoutes, gamePageRoutes } from './routes/deals.js';
 import { gameRoutes } from './routes/games.js';
 import { profileRoutes } from './routes/profile.js';
 import { saveUsdRate } from './stores/currency.js';
@@ -59,6 +59,7 @@ export function buildServer({ dbFile, silent = false } = {}) {
   const router = new Router();
   authRoutes(router);
   gameRoutes(router);
+  featuredRoutes(router);
   dealRoutes(router);
   gamePageRoutes(router);
   profileRoutes(router);
