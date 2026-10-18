@@ -35,6 +35,7 @@ const SHELL = [
   '/js/views/search.js',
   '/js/views/share.js',
   '/js/views/showcase.js',
+  '/js/views/steamImport.js',
   '/js/qrscan.js',
   '/js/views/watchlist.js',
 ];

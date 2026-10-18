@@ -23,6 +23,7 @@ import {
 } from '../ui.js';
 import { conditionsFields, conditionsText, readConditions } from './conditions.js';
 import { shareDialog } from './share.js';
+import { steamImportDialog } from './steamImport.js';
 
 const SUGGESTIONS = ['Hades', 'Stardew Valley', 'Hollow Knight', 'Cyberpunk 2077', 'The Witcher 3'];
 
@@ -104,7 +105,10 @@ function emptyState() {
       </svg>
       <h2>Список поки порожній</h2>
       <p>Знайди гру, яку хочеш купити, і вкажи свою умову. Ми перевірятимемо ціни в Steam і GOG та повідомимо, коли настане час купувати.</p>
-      <a class="btn btn-primary" href="#/search">Знайти гру</a>
+      <div class="row" style="justify-content: center">
+        <button class="btn btn-primary" type="button" id="steam-empty-btn">Імпортувати список бажаного Steam</button>
+        <a class="btn" href="#/search">Знайти гру</a>
+      </div>
       <div class="suggestions">
         ${SUGGESTIONS.map((s) => html`<a class="btn btn-sm" href="#/search?q=${encodeURIComponent(s)}">${s}</a>`)}
       </div>
@@ -424,6 +428,7 @@ export async function render(root) {
               : html`<p>Тут будуть ігри, за цінами яких ти стежиш.</p>`}
           </div>
           <div class="row">
+            <button class="btn" type="button" id="steam-btn">Імпорт зі Steam</button>
             <button class="btn" type="button" id="share-btn">Поділитися</button>
             <button class="btn" type="button" id="files-btn">Таблиці</button>
             ${items.length ? html`<a class="btn btn-primary" href="#/search">Додати гру</a>` : ''}
@@ -440,6 +445,13 @@ export async function render(root) {
   };
 
   root.onclick = async (e) => {
+    if (e.target.closest('#steam-btn, #steam-empty-btn')) {
+      steamImportDialog(async () => {
+        items = (await get('/api/watch')).items;
+        draw();
+      });
+      return;
+    }
     if (e.target.closest('#share-btn')) {
       shareDialog();
       return;

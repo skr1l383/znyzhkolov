@@ -109,6 +109,7 @@ export function publicUser(u) {
     notifyEpicFree: Boolean(u.notify_epic_free),
     avatarUrl: u.avatar ? `/api/avatars/${u.avatar}` : null,
     emailVerified: Boolean(u.email_verified_at),
+    steamId: u.steam_id || null,
     notifyEmail: Boolean(u.notify_email ?? 1),
     createdAt: u.created_at,
   };

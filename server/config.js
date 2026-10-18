@@ -58,6 +58,12 @@ export const config = {
 
   sessionDays: num(env.SESSION_DAYS, 30),
 
+  // Адреси Steam для списку бажаного (в автотестах підміняються тестовим сервером)
+  steam: {
+    apiBase: (env.STEAM_API_URL || 'https://api.steampowered.com').replace(/\/$/, ''),
+    communityBase: (env.STEAM_COMMUNITY_URL || 'https://steamcommunity.com').replace(/\/$/, ''),
+  },
+
   // Листи: Brevo (BREVO_API_KEY + MAIL_FROM — підтверджена в Brevo адреса) або Resend (RESEND_API_KEY).
   // Без ключів листи складаються в тестову скриньку, яку видно в адмін-панелі.
   mail: {

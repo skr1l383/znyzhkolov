@@ -23,7 +23,7 @@ import * as v from '../validate.js';
 
 const MAX_WATCH_ITEMS = 200;
 
-function cleanOffer(o) {
+export function cleanOffer(o) {
   if (!o || typeof o !== 'object') throw new HttpError(400, 'Не вказано гру');
   if (!SEARCHABLE.includes(o.store)) throw new HttpError(400, 'Цей магазин не підтримується');
   const storeId = String(o.storeId ?? '');
@@ -68,7 +68,7 @@ function ensureSomeCondition(c) {
 }
 
 /** Додає гру до списку користувача (і звичайне додавання, і імпорт). Перша пропозиція — основна. */
-function createWatch(userId, offers, conditions) {
+export function createWatch(userId, offers, conditions) {
   const count = db.prepare('SELECT COUNT(*) AS n FROM watch_items WHERE user_id = ?').get(userId).n;
   if (count >= MAX_WATCH_ITEMS) throw new HttpError(400, `У списку може бути не більше ${MAX_WATCH_ITEMS} ігор`);
 

@@ -1867,6 +1867,119 @@ p {
   }
 }
 
+/* ---------- Імпорт списку бажаного Steam ---------- */
+.wish-profile {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.wish-profile img {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+}
+
+.wish-profile h2,
+.wish-profile p {
+  margin: 0;
+}
+
+.wish-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wish-cond {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.wish-cond .select {
+  width: auto;
+  min-height: 38px;
+}
+
+.wish-list {
+  display: grid;
+  gap: 4px;
+  max-height: min(52vh, 460px);
+  overflow: auto;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.wish-row {
+  display: grid;
+  grid-template-columns: auto 92px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.wish-row:hover {
+  background: var(--surface-2);
+}
+
+.wish-row.in-list {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.wish-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.wish-row img {
+  width: 92px;
+  aspect-ratio: 231 / 87;
+  border-radius: 5px;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.wish-title {
+  display: grid;
+  min-width: 0;
+}
+
+.wish-title b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wish-price {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .wish-row {
+    grid-template-columns: auto 64px minmax(0, 1fr);
+  }
+  .wish-row img {
+    width: 64px;
+  }
+  .wish-price {
+    grid-column: 3;
+  }
+}
+
 /* ---------- Поділитися списком і сканер QR ---------- */
 .share-grid {
   display: grid;

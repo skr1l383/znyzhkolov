@@ -66,8 +66,69 @@ async function stopApp() {
   mod.closeDb();
 }
 
+// ---- Тестовий «Steam»: профілі, список бажаного і дані ігор (як справжні відповіді Steam) ----
+const STEAM_GAMES = {
+  367520: { name: 'Hollow Knight', final: 27900 },
+  413150: { name: 'Stardew Valley', final: 17175, original: 22900, pct: 25 },
+  105600: { name: 'Terraria', final: 18900 },
+  999999: { name: 'Майбутня гра', coming: true },
+};
+const fakeSteam = http.createServer((req, res) => {
+  const url = new URL(req.url, 'http://x');
+  const send = (type, body) => {
+    res.writeHead(200, { 'Content-Type': type });
+    res.end(typeof body === 'string' ? body : JSON.stringify(body));
+  };
+  const profileXml = (id, name, privacy) =>
+    `<?xml version="1.0"?><profile><steamID64>${id}</steamID64><steamID><![CDATA[${name}]]></steamID><privacyState>${privacy}</privacyState></profile>`;
+  if (url.pathname === '/id/testgamer') return send('text/xml', profileXml('76561190000000001', 'Тестовий гравець', 'public'));
+  if (url.pathname === '/id/privategamer') return send('text/xml', profileXml('76561190000000002', 'Прихований', 'private'));
+  if (url.pathname.startsWith('/id/')) return send('text/xml', '<?xml version="1.0"?><response><error><![CDATA[The specified profile could not be found.]]></error></response>');
+  if (url.pathname === '/IWishlistService/GetWishlist/v1/') {
+    if (url.searchParams.get('steamid') !== '76561190000000001') return send('application/json', { response: {} });
+    return send('application/json', {
+      response: {
+        items: [
+          { appid: 105600, priority: 0, date_added: 1700000000 },
+          { appid: 413150, priority: 1, date_added: 1600000000 },
+          { appid: 999999, priority: 0, date_added: 1750000000 },
+          { appid: 367520, priority: 2, date_added: 1650000000 },
+        ],
+      },
+    });
+  }
+  if (url.pathname === '/IStoreBrowseService/GetItems/v1/') {
+    const ids = JSON.parse(url.searchParams.get('input_json')).ids.map((i) => i.appid);
+    return send('application/json', {
+      response: {
+        store_items: ids.map((appid) => {
+          const g = STEAM_GAMES[appid];
+          return {
+            appid,
+            success: 1,
+            name: g.name,
+            assets: { asset_url_format: `steam/apps/${appid}/\${FILENAME}?t=1`, small_capsule: 'capsule_231x87.jpg', header: 'header.jpg' },
+            release: g.coming ? { is_coming_soon: true } : { steam_release_date: 1500000000 },
+            best_purchase_option: g.coming
+              ? undefined
+              : {
+                  final_price_in_cents: String(g.final),
+                  ...(g.original ? { original_price_in_cents: String(g.original), discount_pct: g.pct, active_discounts: [{ discount_end_date: 1893456000 }] } : {}),
+                },
+          };
+        }),
+      },
+    });
+  }
+  res.writeHead(404);
+  res.end();
+});
+
 before(async () => {
   await new Promise((r) => fakeTelegram.listen(0, r));
+  await new Promise((r) => fakeSteam.listen(0, r));
+  process.env.STEAM_API_URL = `http://127.0.0.1:${fakeSteam.address().port}`;
+  process.env.STEAM_COMMUNITY_URL = `http://127.0.0.1:${fakeSteam.address().port}`;
   process.env.DEMO_STORES = '1';
   process.env.DEALS_SOURCE = 'demo';
   process.env.DATA_DIR = tmp;
@@ -86,6 +147,7 @@ after(async () => {
   mod.stopBot();
   await stopApp();
   fakeTelegram.close();
+  fakeSteam.close();
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
@@ -535,7 +597,56 @@ test('Пошта: лист при реєстрації, підтвердженн
   }).catch(() => null);
   assert.ok(dealLetter, 'лист про знижку');
   assert.match(dealLetter.subject, /Terraria/);
-  assert.ok(dealLetter.links.some((l) => l.includes('steampowered.com')), 'у листі посилання на магазин');
+  // У гри є пропозиції і Steam, і GOG; демо-ціни випадкові, тож лист може бути про будь-який із магазинів
+  assert.ok(dealLetter.links.some((l) => /steampowered\.com|gog\.com/.test(l)), 'у листі посилання на магазин');
+});
+
+test('Імпорт списку бажаного Steam: перегляд, закритий профіль, додавання і пошук у GOG', async () => {
+  assert.equal((await client()('GET', '/api/steam/wishlist?profile=testgamer')).status, 401, 'лише після входу');
+  let r = await user('GET', '/api/steam/wishlist?profile=це не посилання');
+  assert.equal(r.status, 400);
+
+  r = await user('GET', `/api/steam/wishlist?profile=${encodeURIComponent('https://steamcommunity.com/id/testgamer/')}`);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.profile.name, 'Тестовий гравець');
+  assert.equal(r.data.total, 4);
+  assert.deepEqual(
+    r.data.items.map((i) => i.title),
+    ['Stardew Valley', 'Hollow Knight', 'Майбутня гра', 'Terraria'],
+    'порядок як у Steam: спершу впорядковані, далі нові зверху'
+  );
+  const stardew = r.data.items[0];
+  assert.deepEqual([stardew.price, stardew.basePrice, stardew.discount], [17175, 22900, 25]);
+  assert.ok(stardew.discountEndsAt, 'є дата завершення знижки');
+  assert.equal(stardew.imageUrl, 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/413150/capsule_231x87.jpg?t=1');
+  assert.equal(r.data.items[1].inList, true, 'Hollow Knight уже у списку');
+  assert.equal(r.data.items[2].comingSoon, true);
+  assert.equal((await user('GET', '/api/me')).data.user.steamId, '76561190000000001', 'профіль запам’ятовано');
+
+  r = await user('GET', '/api/steam/wishlist?profile=privategamer');
+  assert.equal(r.status, 404);
+  assert.match(r.data.error, /прихований/);
+  assert.equal((await user('GET', '/api/steam/wishlist?profile=nosuchgamer')).status, 404);
+
+  // Додаємо три ігри: одна вже є, дві нові — з умовою «знижка від 30%»
+  const before = (await user('GET', '/api/watch')).data.items.length;
+  r = await user('POST', '/api/steam/wishlist/import', { appids: ['413150', '105600', '367520'], minDiscount: 30 });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.data.added.map((a) => a.title).sort(), ['Stardew Valley', 'Terraria']);
+  assert.deepEqual(r.data.skipped, [{ title: 'Hollow Knight', reason: 'уже є у списку' }]);
+  const list = (await user('GET', '/api/watch')).data.items;
+  assert.equal(list.length, before + 2);
+  assert.equal(list.find((i) => i.title === 'Terraria').minDiscount, 30);
+
+  // У фоні та сама гра знаходиться в GOG і додається для порівняння цін
+  const linked = await waitFor(async () => {
+    const items = (await user('GET', '/api/watch')).data.items;
+    return items.find((i) => i.title === 'Stardew Valley' && i.offers.some((o) => o.store === 'gog'));
+  }, 5000);
+  assert.ok(linked);
+
+  assert.equal((await user('POST', '/api/steam/wishlist/import', { appids: [] })).status, 400);
+  assert.equal((await user('POST', '/api/steam/wishlist/import', { appids: ['413150'], minDiscount: 500 })).status, 400);
 });
 
 test('Банер на головній: популярні ігри з великою знижкою і добрими відгуками', async () => {

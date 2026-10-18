@@ -194,6 +194,7 @@ const ADDED_COLUMNS = [
   ['users', 'share_token', 'TEXT'], // ключ публічного посилання на список гравця
   ['users', 'email_verified_at', 'TEXT'], // коли користувач підтвердив пошту
   ['users', 'notify_email', 'INTEGER NOT NULL DEFAULT 1'], // сповіщення про знижки на пошту
+  ['users', 'steam_id', 'TEXT'], // профіль Steam, з якого імпортували список бажаного
   ['notifications', 'sent_email', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
