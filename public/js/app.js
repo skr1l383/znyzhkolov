@@ -192,6 +192,16 @@ export async function clearPrivateCache() {
 function setupPwa() {
   // Service worker працює лише на https або localhost
   if ('serviceWorker' in navigator && window.isSecureContext) {
+    // Нова версія service worker повідомляє, що активувалася, — перезавантажуємо сторінку один раз,
+    // щоб вона одразу працювала з новою версією (інакше знадобилося б оновити вручну двічі).
+    // Повідомлення браузер притримує, доки сторінка не підпишеться, тож воно не загубиться.
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data?.type !== 'sw-activated' || !hadController || reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 

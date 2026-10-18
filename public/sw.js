@@ -5,7 +5,9 @@
 //  • обкладинки ігор і шрифти з інших сайтів — «спершу кеш»: вони не змінюються, а сторінка відкривається швидше;
 //  • відео, POST-запити тощо не чіпаємо.
 
-const VERSION = 'v1';
+// Будь-яка зміна цього файлу (наприклад, версії) змушує браузер встановити service worker заново.
+// v2: перша версія могла встановитися із суворою CSP і блокувати обкладинки — нова її замінює.
+const VERSION = 'v2';
 const SHELL_CACHE = `zk-shell-${VERSION}`;
 const API_CACHE = 'zk-api'; // очищається при виході з акаунта
 const IMAGE_CACHE = 'zk-images';
@@ -53,6 +55,9 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k.startsWith('zk-shell-') && k !== SHELL_CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+      // Сторінкам, відкритим ще зі старою версією, кажемо перезавантажитися
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then((clients) => clients.forEach((c) => c.postMessage({ type: 'sw-activated', version: VERSION })))
   );
 });
 
@@ -66,7 +71,8 @@ async function markOffline(response) {
 async function networkFirst(request, cacheName, { fallbackUrl } = {}) {
   const cache = await caches.open(cacheName);
   try {
-    const response = await fetch(request);
+    // no-cache: завжди питаємо сервер, а не звичайний кеш браузера — нова версія сайту доходить одразу
+    const response = await fetch(request, { cache: 'no-cache' });
     if (response.ok) cache.put(request, response.clone());
     return response;
   } catch {
