@@ -5,6 +5,7 @@ import { log } from '../logger.js';
 import { requireAdmin } from '../auth.js';
 import { getUsdRate } from '../stores/currency.js';
 import { jobsStatus, runJob } from '../services/scheduler.js';
+import { listOutbox, mailProvider } from '../services/mailer.js';
 import { botStatus } from '../services/telegram.js';
 import * as v from '../validate.js';
 
@@ -51,6 +52,20 @@ export function adminRoutes(router) {
     log.info('admin.role', `${ctx.user.email} змінив роль ${target.email} на ${role}`, { userId: ctx.user.id });
     return { ok: true };
   });
+
+  // Тестова поштова скринька: листи, які «надіслав» би сайт, поки не налаштовано поштовий сервіс
+  router.get('/api/admin/outbox', requireAdmin, () => ({
+    provider: mailProvider(),
+    items: listOutbox(30).map((m) => ({
+      id: m.id,
+      to: m.to_email,
+      subject: m.subject,
+      kind: m.kind,
+      createdAt: m.created_at,
+      html: m.html,
+      links: [...new Set([...m.text.matchAll(/https?:\/\/\S+/g)].map((x) => x[0]))],
+    })),
+  }));
 
   router.get('/api/admin/events', requireAdmin, (ctx) => {
     const where = [];

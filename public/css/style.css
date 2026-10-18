@@ -169,6 +169,65 @@ p {
 }
 
 /* ---------- Верхня панель ---------- */
+.verify-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.verify-banner[hidden] {
+  display: none;
+}
+
+.verify-banner .icon-btn {
+  width: 30px;
+  height: 30px;
+  font-size: 18px;
+}
+
+.outbox {
+  display: grid;
+  gap: 8px;
+}
+
+.outbox-item {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.outbox-item summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.outbox-item .row {
+  margin: 10px 0;
+}
+
+.outbox-preview {
+  width: 100%;
+  height: 460px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f2f4f8;
+}
+
+.auth-narrow {
+  grid-template-columns: minmax(0, 440px);
+  justify-content: center;
+}
+
 .offline-banner {
   background: var(--fg);
   color: var(--bg);

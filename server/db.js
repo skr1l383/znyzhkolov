@@ -149,6 +149,28 @@ CREATE TABLE IF NOT EXISTS deals (
   PRIMARY KEY (store, store_id)
 );
 
+-- Одноразові ключі з листів: підтвердження пошти (verify) і відновлення пароля (reset).
+-- Як і для сесій, у базі лише хеш ключа: навіть маючи копію бази, посилання з листа не підробиш.
+CREATE TABLE IF NOT EXISTS email_tokens (
+  token_hash TEXT PRIMARY KEY,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  purpose    TEXT NOT NULL CHECK (purpose IN ('verify', 'reset')),
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at    TEXT
+);
+
+-- Тестова поштова скринька: сюди складаються листи, поки не налаштовано поштовий сервіс
+CREATE TABLE IF NOT EXISTS outbox (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  to_email   TEXT NOT NULL,
+  subject    TEXT NOT NULL,
+  html       TEXT NOT NULL,
+  text       TEXT NOT NULL,
+  kind       TEXT,
+  created_at TEXT NOT NULL
+);
+
 -- Сторінки ігор: опис, скриншоти, трейлери з магазинів. Кеш на кілька годин, щоб не питати магазини щоразу.
 CREATE TABLE IF NOT EXISTS game_details (
   store      TEXT NOT NULL,
@@ -170,6 +192,9 @@ CREATE TABLE IF NOT EXISTS settings (
 const ADDED_COLUMNS = [
   ['users', 'avatar', 'TEXT'],
   ['users', 'share_token', 'TEXT'], // ключ публічного посилання на список гравця
+  ['users', 'email_verified_at', 'TEXT'], // коли користувач підтвердив пошту
+  ['users', 'notify_email', 'INTEGER NOT NULL DEFAULT 1'], // сповіщення про знижки на пошту
+  ['notifications', 'sent_email', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 function migrate() {

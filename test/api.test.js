@@ -44,7 +44,7 @@ function userSays(chatId, text) {
 async function waitFor(check, ms = 3000) {
   const started = Date.now();
   while (Date.now() - started < ms) {
-    const value = check();
+    const value = await check(); // перевірка може бути й асинхронною
     if (value) return value;
     await new Promise((r) => setTimeout(r, 30));
   }
@@ -476,6 +476,66 @@ test('PDF-звіт: правильна будова файлу, вбудован
   assert.ok(entries.length > 10);
   entries.forEach((offset, i) => assert.ok(text.startsWith(`${i + 1} 0 obj`, offset), `об'єкт ${i + 1}`));
   assert.ok(pdf.length < 80 * 1024, `без обкладинок файл маленький (${pdf.length} байт): у ньому лише потрібні літери шрифту`);
+});
+
+test('Пошта: лист при реєстрації, підтвердження, відновлення пароля', async () => {
+  const lastLetter = async (to, kind) => {
+    const { items } = (await admin('GET', '/api/admin/outbox')).data;
+    return items.find((m) => m.to === to && m.kind === kind);
+  };
+  const tokenFrom = (letter, route) => new URL(letter.links.find((l) => l.includes(`#/${route}`)).replace('#/', '')).searchParams.get('token');
+
+  const ivan = client();
+  let r = await ivan('POST', '/api/auth/register', { name: 'Іван', email: 'ivan@test.ua', password: 'password123' });
+  assert.equal(r.data.user.emailVerified, false);
+  const verifyLetter = await lastLetter('ivan@test.ua', 'verify');
+  assert.ok(verifyLetter, 'після реєстрації в скриньці лист');
+  assert.equal(verifyLetter.subject, 'Підтвердь пошту в Знижколові');
+  assert.match(verifyLetter.html, /Підтвердити пошту/);
+
+  // Підтвердження працює навіть без входу (лист могли відкрити на телефоні) і лише один раз
+  const verifyToken = tokenFrom(verifyLetter, 'verify');
+  r = await client()('POST', '/api/auth/verify', { token: verifyToken });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.user.emailVerified, true);
+  assert.equal((await client()('POST', '/api/auth/verify', { token: verifyToken })).status, 400, 'вдруге посилання не працює');
+  assert.equal((await client()('POST', '/api/auth/verify', { token: 'вигаданий' })).status, 400);
+  assert.equal((await ivan('GET', '/api/me')).data.user.emailVerified, true);
+
+  // «Забули пароль?» — однакова відповідь для наявної і неіснуючої пошти
+  const stranger = client();
+  const known = await stranger('POST', '/api/auth/forgot', { email: 'ivan@test.ua' });
+  const unknown = await stranger('POST', '/api/auth/forgot', { email: 'nobody@test.ua' });
+  assert.equal(known.status, 200);
+  assert.deepEqual(known.data, unknown.data, 'не можна дізнатися, чи є така пошта');
+  assert.equal((await stranger('POST', '/api/auth/forgot', { email: 'ivan@test.ua' })).status, 429, 'не частіше разу на хвилину');
+  assert.equal((await stranger('POST', '/api/auth/forgot', { email: '' })).status, 400, 'порожня пошта');
+
+  const resetToken = tokenFrom(await lastLetter('ivan@test.ua', 'reset'), 'reset');
+  assert.equal((await stranger('POST', '/api/auth/reset', { token: resetToken, password: '123' })).status, 400, 'короткий пароль');
+  r = await stranger('POST', '/api/auth/reset', { token: resetToken, password: 'new-password-1' });
+  assert.equal(r.status, 200, 'пароль змінено');
+  assert.equal((await stranger('GET', '/api/me')).data.user.email, 'ivan@test.ua', 'після зміни — одразу вхід');
+  assert.equal((await ivan('GET', '/api/watch')).status, 401, 'стара сесія на іншому пристрої завершена');
+  assert.equal((await stranger('POST', '/api/auth/reset', { token: resetToken, password: 'another-pass-2' })).status, 400, 'посилання одноразове');
+  assert.equal((await client()('POST', '/api/auth/login', { email: 'ivan@test.ua', password: 'password123' })).status, 401, 'старий пароль не працює');
+  assert.equal((await client()('POST', '/api/auth/login', { email: 'ivan@test.ua', password: 'new-password-1' })).status, 200);
+
+  const { events } = (await admin('GET', '/api/admin/events?type=auth.reset')).data;
+  assert.ok(events.some((e) => e.message.includes('ivan@test.ua')), 'зміну пароля записано в журнал');
+
+  // Сповіщення про знижку приходить і листом (пошту підтверджено, листи не вимкнено)
+  const { results } = (await stranger('GET', '/api/search?q=terraria&store=steam')).data;
+  r = await stranger('POST', '/api/watch', { offer: results[0], extra: [], minDiscount: null, maxPriceUah: 100000, notifyFree: true });
+  assert.equal(r.status, 200);
+  await admin('POST', '/api/admin/jobs/prices/run');
+  const dealLetter = await waitFor(async () => {
+    const { items } = (await admin('GET', '/api/admin/outbox')).data;
+    return items.find((m) => m.to === 'ivan@test.ua' && ['deal', 'free'].includes(m.kind));
+  }).catch(() => null);
+  assert.ok(dealLetter, 'лист про знижку');
+  assert.match(dealLetter.subject, /Terraria/);
+  assert.ok(dealLetter.links.some((l) => l.includes('steampowered.com')), 'у листі посилання на магазин');
 });
 
 test('Банер на головній: популярні ігри з великою знижкою і добрими відгуками', async () => {

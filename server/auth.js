@@ -50,6 +50,36 @@ export function userBySession(token) {
   );
 }
 
+/** Вийти на всіх пристроях — після зміни пароля старі сесії не повинні працювати. */
+export function destroyUserSessions(userId) {
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+}
+
+// ---------- Одноразові ключі для посилань з листів ----------
+
+/** Новий ключ для листа (попередні такого ж призначення скасовуються). У базі — лише хеш. */
+export function createEmailToken(userId, purpose, minutes) {
+  const token = crypto.randomBytes(32).toString('base64url');
+  db.prepare('DELETE FROM email_tokens WHERE user_id = ? AND purpose = ?').run(userId, purpose);
+  db.prepare('INSERT INTO email_tokens (token_hash, user_id, purpose, created_at, expires_at) VALUES (?, ?, ?, ?, ?)').run(
+    sha256(token),
+    userId,
+    purpose,
+    now(),
+    new Date(Date.now() + minutes * 60000).toISOString()
+  );
+  return token;
+}
+
+/** Перевіряє ключ і «гасить» його: вдруге те саме посилання не спрацює. Повертає id користувача або null. */
+export function useEmailToken(token, purpose) {
+  if (typeof token !== 'string' || !/^[\w-]{20,100}$/.test(token)) return null;
+  const row = db.prepare('SELECT * FROM email_tokens WHERE token_hash = ? AND purpose = ?').get(sha256(token), purpose);
+  if (!row || row.used_at || row.expires_at <= now()) return null;
+  db.prepare('UPDATE email_tokens SET used_at = ? WHERE token_hash = ?').run(now(), row.token_hash);
+  return row.user_id;
+}
+
 export function cleanupSessions() {
   return db.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(now()).changes;
 }
@@ -78,6 +108,8 @@ export function publicUser(u) {
     telegramUsername: u.telegram_username || null,
     notifyEpicFree: Boolean(u.notify_epic_free),
     avatarUrl: u.avatar ? `/api/avatars/${u.avatar}` : null,
+    emailVerified: Boolean(u.email_verified_at),
+    notifyEmail: Boolean(u.notify_email ?? 1),
     createdAt: u.created_at,
   };
 }

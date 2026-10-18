@@ -4,7 +4,10 @@ import { log } from '../logger.js';
 import { toUah } from '../stores/currency.js';
 import { STORE_NAMES } from '../stores/index.js';
 import { formatUah } from '../stores/util.js';
+import { emailLayout, sendMail, siteLink } from './mailer.js';
 import { escapeHtml, sendMessage } from './telegram.js';
+
+const EMAIL_KINDS = new Set(['deal', 'free', 'epic']);
 
 export async function notifyUser(user, { kind, gameId = null, title, body, html, url }) {
   const info = db
@@ -19,11 +22,24 @@ export async function notifyUser(user, { kind, gameId = null, title, body, html,
     sent = await sendMessage(user.telegram_chat_id, html || escapeHtml(`${title}\n${body || ''}`));
     if (sent) db.prepare('UPDATE notifications SET sent_telegram = 1 WHERE id = ?').run(info.lastInsertRowid);
   }
-  log.info('notify.sent', `Сповіщення «${title}» для ${user.email}${sent ? ' (+Telegram)' : ''}`, {
+
+  // Лист — лише про знижки й роздачі і лише на підтверджену пошту
+  let emailed = false;
+  if (EMAIL_KINDS.has(kind) && user.email_verified_at && user.notify_email !== 0) {
+    const mail = emailLayout({
+      heading: title,
+      paragraphs: [body].filter(Boolean),
+      button: url ? { label: kind === 'epic' ? 'Забрати в Epic Games' : 'Відкрити в магазині', url } : null,
+      footnote: `Ти отримав цей лист, бо стежиш за цінами в Знижколові. Вимкнути листи можна в профілі: ${siteLink('#/profile')}`,
+    });
+    emailed = (await sendMail({ to: user.email, subject: title, ...mail, kind, userId: user.id })).ok;
+    if (emailed) db.prepare('UPDATE notifications SET sent_email = 1 WHERE id = ?').run(info.lastInsertRowid);
+  }
+  log.info('notify.sent', `Сповіщення «${title}» для ${user.email}${sent ? ' (+Telegram)' : ''}${emailed ? ' (+лист)' : ''}`, {
     userId: user.id,
     meta: { kind, gameId },
   });
-  return { id: Number(info.lastInsertRowid), telegram: sent };
+  return { id: Number(info.lastInsertRowid), telegram: sent, email: emailed };
 }
 
 function conditionText(watch) {

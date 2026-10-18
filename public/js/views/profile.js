@@ -133,7 +133,15 @@ export async function render(root) {
             <input type="checkbox" id="p-epic" ${u.notifyEpicFree ? 'checked' : ''} />
             <span>Повідомляти про нові безкоштовні роздачі Epic Games</span>
           </label>
-          <p class="hint">Про знижки на ігри зі списку повідомляємо завжди, коли виконується твоя умова.</p>
+          <label class="check">
+            <input type="checkbox" id="p-email" ${u.notifyEmail ? 'checked' : ''} ${u.emailVerified ? '' : 'disabled'} />
+            <span>Надсилати сповіщення про знижки й роздачі на пошту</span>
+          </label>
+          ${u.emailVerified
+            ? html`<p class="hint"><span class="pill pill-good">Пошту підтверджено</span> Листи приходять на ${u.email}.</p>`
+            : html`<p class="hint">Щоб отримувати листи, підтверди пошту ${u.email}.
+                <button class="btn btn-sm" type="button" id="p-resend">Надіслати лист ще раз</button></p>`}
+          <p class="hint">Про знижки на ігри зі списку повідомляємо на сайті завжди, коли виконується твоя умова.</p>
         </section>
       </div>
     `
@@ -164,6 +172,27 @@ export async function render(root) {
       }
     });
   });
+
+  $('#p-email', root).addEventListener('change', async (e) => {
+    try {
+      const { user } = await patch('/api/me', { notifyEmail: e.target.checked });
+      state.user = user;
+      toast(user.notifyEmail ? 'Листи про знижки увімкнено' : 'Листи про знижки вимкнено');
+    } catch (err) {
+      e.target.checked = !e.target.checked;
+      toast(err.message, 'error');
+    }
+  });
+  $('#p-resend', root)?.addEventListener('click', (e) =>
+    withLoading(e.currentTarget, async () => {
+      try {
+        await post('/api/auth/verify/resend');
+        toast(state.app.mail === 'outbox' ? 'Лист у тестовій скриньці (адмін-панель)' : 'Лист надіслано — перевір пошту');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    })
+  );
 
   $('#p-epic', root).addEventListener('change', async (e) => {
     try {

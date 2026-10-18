@@ -107,6 +107,9 @@ export async function render(root) {
         </table>
       </div>
 
+      <div class="section-title"><h2>Листи</h2></div>
+      <div id="outbox"></div>
+
       <div class="section-title"><h2>Журнал подій</h2></div>
       <form class="row" id="events-filter" style="margin-bottom:12px">
         <select class="select" name="level" aria-label="Рівень" style="width:auto">
@@ -121,6 +124,34 @@ export async function render(root) {
       <div id="events"></div>
     `
   );
+
+  // Листи: поки не налаштовано поштовий сервіс, вони лежать тут, і з них можна перейти за посиланням
+  const KIND = { verify: 'Підтвердження пошти', reset: 'Відновлення пароля', deal: 'Знижка', free: 'Безкоштовно', epic: 'Роздача Epic' };
+  const loadOutbox = async () => {
+    const { provider, items } = await get('/api/admin/outbox');
+    setHtml(
+      $('#outbox', root),
+      html`
+        <p class="hint">${provider === 'outbox'
+          ? 'Поштовий сервіс не налаштовано (BREVO_API_KEY або RESEND_API_KEY у .env), тому листи не надсилаються, а складаються сюди — це тестова скринька.'
+          : `Листи надсилаються через ${provider === 'brevo' ? 'Brevo' : 'Resend'}. Нижче — листи, збережені до налаштування сервісу.`}</p>
+        ${items.length
+          ? html`<div class="outbox">${items.map(
+              (m) => html`<details class="outbox-item">
+                <summary>
+                  <span class="pill">${KIND[m.kind] || m.kind || 'Лист'}</span>
+                  <b>${m.subject}</b>
+                  <span class="muted">→ ${m.to} · ${timeAgo(m.createdAt)}</span>
+                </summary>
+                <div class="row">${m.links.map((l) => html`<a class="btn btn-sm" href="${l}" target="_blank" rel="noopener">${l.includes('#/verify') ? 'Підтвердити пошту' : l.includes('#/reset') ? 'Змінити пароль' : 'Відкрити посилання'}</a>`)}</div>
+                <iframe class="outbox-preview" sandbox srcdoc="${m.html}" title="Лист: ${m.subject}"></iframe>
+              </details>`
+            )}</div>`
+          : html`<p class="muted">Листів поки немає.</p>`}
+      `
+    );
+  };
+  loadOutbox().catch(() => setHtml($('#outbox', root), html`<p class="muted">Не вдалося завантажити листи.</p>`));
 
   const loadEvents = async () => {
     const f = $('#events-filter', root);

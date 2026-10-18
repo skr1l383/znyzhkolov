@@ -1,6 +1,6 @@
 // Головний модуль інтерфейсу: стан користувача, навігація між сторінками, тема.
-import { get } from './api.js';
-import { $, $$, avatar, closeDialog, html, initials, setHtml } from './ui.js';
+import { get, post } from './api.js';
+import { $, $$, avatar, closeDialog, html, initials, setHtml, toast } from './ui.js';
 import * as admin from './views/admin.js';
 import * as auth from './views/auth.js';
 import * as epic from './views/epic.js';
@@ -20,6 +20,9 @@ export const state = {
 const routes = {
   login: { view: auth.renderLogin, public: true, title: 'Вхід' },
   register: { view: auth.renderRegister, public: true, title: 'Реєстрація' },
+  forgot: { view: auth.renderForgot, public: true, title: 'Відновлення пароля' },
+  reset: { view: auth.renderReset, open: true, title: 'Новий пароль' },
+  verify: { view: auth.renderVerify, open: true, title: 'Підтвердження пошти' },
   // open — сторінка доступна і гостям, і тим, хто увійшов
   '': { view: showcase.render, nav: 'showcase', title: 'Знижки зараз', open: true },
   list: { view: watchlist.render, nav: 'watch', title: 'Мій список' },
@@ -93,6 +96,15 @@ function renderChrome(activeNav) {
   $('#nav-profile').hidden = !loggedIn;
   $('#nav-admin').hidden = state.user?.role !== 'admin';
   $('#demo-banner').hidden = !state.app.demo;
+  // Нагадування про непідтверджену пошту (можна сховати до кінця сеансу)
+  let hidden = false;
+  try {
+    hidden = sessionStorage.getItem('zk-verify-hidden') === '1';
+  } catch {
+    // без sessionStorage просто показуємо
+  }
+  $('#verify-banner').hidden = !loggedIn || state.user.emailVerified || hidden;
+  if (loggedIn) $('#verify-email').textContent = state.user.email;
   if (loggedIn) setHtml($('#nav-profile'), avatar(state.user));
   if (activeNav !== undefined) {
     $$('[data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === activeNav));
@@ -191,6 +203,29 @@ export async function clearPrivateCache() {
   }
 }
 
+function setupVerifyBanner() {
+  $('#verify-resend').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      await post('/api/auth/verify/resend');
+      toast(state.app.mail === 'outbox' ? 'Лист у тестовій скриньці (адмін-панель)' : 'Лист надіслано — перевір пошту і папку «Спам»');
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setTimeout(() => (btn.disabled = false), 3000);
+    }
+  });
+  $('#verify-hide').addEventListener('click', () => {
+    $('#verify-banner').hidden = true;
+    try {
+      sessionStorage.setItem('zk-verify-hidden', '1');
+    } catch {
+      // нагадування знову з'явиться після перезавантаження — не страшно
+    }
+  });
+}
+
 function setupPwa() {
   // Service worker працює лише на https або localhost
   if ('serviceWorker' in navigator && window.isSecureContext) {
@@ -243,6 +278,7 @@ function setupPwa() {
 async function start() {
   applyThemeColor();
   setupPwa();
+  setupVerifyBanner();
   try {
     await refreshMe();
   } catch (err) {

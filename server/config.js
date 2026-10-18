@@ -57,6 +57,15 @@ export const config = {
   dealsSource: env.DEALS_SOURCE === 'demo' ? 'demo' : 'live',
 
   sessionDays: num(env.SESSION_DAYS, 30),
+
+  // Листи: Brevo (BREVO_API_KEY + MAIL_FROM — підтверджена в Brevo адреса) або Resend (RESEND_API_KEY).
+  // Без ключів листи складаються в тестову скриньку, яку видно в адмін-панелі.
+  mail: {
+    brevoKey: (env.BREVO_API_KEY || '').trim(),
+    resendKey: (env.RESEND_API_KEY || '').trim(),
+    from: (env.MAIL_FROM || '').trim(),
+    fromName: (env.MAIL_FROM_NAME || 'Знижколов').trim(),
+  },
 };
 
 export const isHttps = config.baseUrl.startsWith('https://');
