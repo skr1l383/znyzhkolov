@@ -1,6 +1,6 @@
 // Адмін-панель: доступна лише користувачам з роллю admin.
 import { db } from '../db.js';
-import { HttpError } from '../http.js';
+import { HttpError, templateError } from '../http.js';
 import { log } from '../logger.js';
 import { requireAdmin } from '../auth.js';
 import { getUsdRate } from '../stores/currency.js';
@@ -95,7 +95,7 @@ export function adminRoutes(router) {
     try {
       return { result: await runJob(name, 'manual') };
     } catch (err) {
-      throw new HttpError(502, `Задача завершилась з помилкою: ${err.message}`);
+      throw templateError(502, 'Задача завершилась з помилкою: {error}', { error: err.message });
     }
   });
 }

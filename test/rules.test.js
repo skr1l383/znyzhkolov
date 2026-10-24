@@ -51,6 +51,18 @@ test('Умова: безкоштовна роздача; недоступні т
   assert.equal(evaluateWatch(watch, [offer({ is_free: 1, price: 0, price_uah: 0, discount: 100 })]).met, true);
 });
 
+test('Захист від перебору паролів: після 10 невдалих спроб вхід з цієї адреси блокується', async () => {
+  const { checkLoginRate, registerLoginFailure, resetLoginFailures } = await import('../server/auth.js');
+  const ip = '203.0.113.7';
+  for (let i = 0; i < 9; i++) registerLoginFailure(ip);
+  assert.doesNotThrow(() => checkLoginRate(ip), '9 спроб — ще можна');
+  registerLoginFailure(ip);
+  assert.throws(() => checkLoginRate(ip), (err) => err.status === 429 && /Забагато спроб входу\. Спробуйте через 15 хв/.test(err.message));
+  assert.doesNotThrow(() => checkLoginRate('198.51.100.1'), 'інших адрес блокування не стосується');
+  resetLoginFailures(ip); // успішний вхід скидає лічильник
+  assert.doesNotThrow(() => checkLoginRate(ip));
+});
+
 test('Найкраща ціна серед магазинів', () => {
   const best = bestOffer([offer({ store: 'steam', price_uah: 51500 }), offer({ store: 'gog', price_uah: 41000 }), offer({ store: 'x', price_uah: null })]);
   assert.equal(best.store, 'gog');

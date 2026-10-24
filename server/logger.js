@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
-import { db, now } from './db.js';
+import { db, isDbOpen, now } from './db.js';
 
 let logFile = null;
 let quiet = false;
@@ -18,13 +18,15 @@ function write(level, type, message, { userId = null, meta = null } = {}) {
   const createdAt = now();
   const metaJson = meta ? JSON.stringify(meta) : null;
 
-  try {
-    db?.prepare(
-      'INSERT INTO event_log (level, type, message, user_id, meta, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(level, type, message, userId, metaJson, createdAt);
-  } catch (err) {
-    // Якщо база недоступна, подія все одно потрапить у файл і консоль
-    if (!quiet) console.error('[log] не вдалося записати подію в БД:', err.message);
+  // Якщо база недоступна, подія все одно потрапить у файл і консоль
+  if (isDbOpen()) {
+    try {
+      db.prepare(
+        'INSERT INTO event_log (level, type, message, user_id, meta, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+      ).run(level, type, message, userId, metaJson, createdAt);
+    } catch (err) {
+      if (!quiet) console.error('[log] не вдалося записати подію в БД:', err.message);
+    }
   }
 
   if (logFile) {

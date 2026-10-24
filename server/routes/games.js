@@ -1,5 +1,5 @@
 import { db, now } from '../db.js';
-import { HttpError, readUpload, sendFile } from '../http.js';
+import { HttpError, readUpload, sendFile, templateError } from '../http.js';
 import { log } from '../logger.js';
 import { requireAuth } from '../auth.js';
 import { SEARCHABLE, STORE_NAMES, store } from '../stores/index.js';
@@ -70,7 +70,7 @@ function ensureSomeCondition(c) {
 /** Додає гру до списку користувача (і звичайне додавання, і імпорт). Перша пропозиція — основна. */
 export function createWatch(userId, offers, conditions) {
   const count = db.prepare('SELECT COUNT(*) AS n FROM watch_items WHERE user_id = ?').get(userId).n;
-  if (count >= MAX_WATCH_ITEMS) throw new HttpError(400, `У списку може бути не більше ${MAX_WATCH_ITEMS} ігор`);
+  if (count >= MAX_WATCH_ITEMS) throw templateError(400, 'У списку може бути не більше {max} ігор', { max: MAX_WATCH_ITEMS });
 
   const [offer, ...extra] = offers;
   const gameId = upsertGameWithOffers([offer, ...extra.filter((e) => e.store !== offer.store)]);
@@ -157,7 +157,7 @@ export function gameRoutes(router) {
       results = (await store(storeName).search(q)).slice(0, 20);
     } catch (err) {
       log.warn('search.error', `Пошук у ${STORE_NAMES[storeName]} не вдався: ${err.message}`, { userId: ctx.user.id });
-      throw new HttpError(502, `${STORE_NAMES[storeName]} зараз не відповідає. Спробуйте пізніше або пошукайте в іншому магазині`);
+      throw templateError(502, '{store} зараз не відповідає. Спробуйте пізніше або пошукайте в іншому магазині', { store: STORE_NAMES[storeName] });
     }
 
     const watching = new Set(
@@ -306,7 +306,7 @@ export function gameRoutes(router) {
     const offer = cleanOffer(ctx.body.offer);
 
     const existing = offersForGame(row.game_id);
-    if (existing.some((o) => o.store === offer.store)) throw new HttpError(409, `${STORE_NAMES[offer.store]} уже підключено до цієї гри`);
+    if (existing.some((o) => o.store === offer.store)) throw templateError(409, '{store} уже підключено до цієї гри', { store: STORE_NAMES[offer.store] });
     const taken = db.prepare('SELECT game_id FROM offers WHERE store = ? AND store_id = ?').get(offer.store, offer.storeId);
     if (taken && taken.game_id !== row.game_id) throw new HttpError(409, 'Ця пропозиція вже прив’язана до іншої гри');
 

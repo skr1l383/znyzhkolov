@@ -7,8 +7,8 @@
 
 // Будь-яка зміна цього файлу (наприклад, версії) змушує браузер встановити service worker заново.
 // v2: перша версія могла встановитися із суворою CSP і блокувати обкладинки — нова її замінює.
-// v4: додано файли перекладу (i18n).
-const VERSION = 'v4';
+// v4: додано файли перекладу (i18n). v5: при 503 (база недоступна) — збережені дані.
+const VERSION = 'v5';
 const SHELL_CACHE = `zk-shell-${VERSION}`;
 const API_CACHE = 'zk-api'; // очищається при виході з акаунта
 const IMAGE_CACHE = 'zk-images';
@@ -82,6 +82,11 @@ async function networkFirst(request, cacheName, { fallbackUrl } = {}) {
     // no-cache: завжди питаємо сервер, а не звичайний кеш браузера — нова версія сайту доходить одразу
     const response = await fetch(request, { cache: 'no-cache' });
     if (response.ok) cache.put(request, response.clone());
+    // Сервер працює, але база даних недоступна (503) — краще показати збережені дані, ніж помилку
+    if (response.status === 503 && request.url.includes('/api/')) {
+      const cached = await cache.match(request);
+      if (cached) return markOffline(cached);
+    }
     return response;
   } catch {
     const cached = (await cache.match(request)) || (fallbackUrl && (await caches.match(fallbackUrl)));

@@ -242,6 +242,23 @@ test('Вхід: неправильний пароль і неіснуючий к
   assert.equal(r.status, 200);
 });
 
+test('Порожні поля: вхід, пошук, ім’я в профілі', async () => {
+  const guest = client();
+  let r = await guest('POST', '/api/auth/login', { email: '', password: '' });
+  assert.equal(r.status, 400);
+  assert.equal(r.data.details.field, 'email');
+  r = await guest('POST', '/api/auth/login', { email: 'sasha@test.ua', password: '' });
+  assert.equal(r.status, 400);
+  assert.equal(r.data.details.field, 'password');
+  r = await user('GET', '/api/search?q=&store=steam');
+  assert.equal(r.status, 400);
+  assert.equal(r.data.details.field, 'q');
+  r = await user('PATCH', '/api/me', { name: '   ' });
+  assert.equal(r.status, 400);
+  assert.equal(r.data.details.field, 'name');
+  assert.equal((await user('GET', '/api/me')).data.user.name, 'Оля', 'ім’я не змінилось');
+});
+
 test('Ролі: адмін-панель недоступна гостю і звичайному користувачу', async () => {
   assert.equal((await client()('GET', '/api/admin/overview')).status, 401);
   assert.equal((await user('GET', '/api/admin/overview')).status, 403);
@@ -747,6 +764,36 @@ test('PWA: маніфест, іконки і service worker', async () => {
   assert.equal(sw.headers.get('cache-control'), 'no-cache', 'нова версія service worker підхоплюється одразу');
   assert.match(sw.headers.get('content-security-policy'), /connect-src 'self' https:/, 'service worker може зберігати обкладинки магазинів');
   assert.match((await fetch(baseUrl)).headers.get('content-security-policy'), /connect-src 'self' https:\/\/video/, 'сторінки — із суворими правилами');
+});
+
+test('База даних недоступна: 503 з поясненням, сайт працює, після відновлення все повертається без перезапуску', async () => {
+  const guest = client();
+  // Як після збою диска: файл бази не відкривається (на його місці тека)
+  mod.closeDb();
+  fs.renameSync(dbFile, `${dbFile}.saved`);
+  fs.mkdirSync(dbFile);
+  try {
+    let r = await user('GET', '/api/watch');
+    assert.equal(r.status, 503);
+    assert.equal(r.data.error, 'База даних тимчасово недоступна. Спробуй трохи пізніше');
+    assert.equal(r.data.details.code, 'db_unavailable');
+    r = await guest('POST', '/api/auth/login', { email: 'olia@test.ua', password: 'password123' });
+    assert.equal(r.status, 503);
+    assert.equal((await guest('GET', '/api/health')).status, 503);
+    // Сервер не впав: сторінки сайту віддаються, і браузер покаже збережені дані
+    assert.equal((await fetch(`${baseUrl}/`)).status, 200);
+    // Подія записана у файл журналу (у базу її записати не можна)
+    const logText = fs.readFileSync(path.join(tmp, 'app.log'), 'utf8');
+    assert.match(logText, /"type":"db\.unavailable"/);
+  } finally {
+    fs.rmdirSync(dbFile);
+    fs.renameSync(`${dbFile}.saved`, dbFile);
+  }
+  // Базу повернули — сервер сам її відкриває, дані на місці
+  const r = await user('GET', '/api/watch');
+  assert.equal(r.status, 200);
+  assert.ok(r.data.items.some((i) => i.title === 'Hollow Knight'));
+  assert.deepEqual((await guest('GET', '/api/health')).data.db, 'ok');
 });
 
 test('Дані зберігаються після перезапуску сервера', async () => {

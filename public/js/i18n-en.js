@@ -590,6 +590,7 @@ export const EN = {
   'Очищення старих сесій': 'Old session cleanup',
 
   // ---- Повідомлення сервера ----
+  'База даних тимчасово недоступна. Спробуй трохи пізніше': 'The database is temporarily unavailable. Please try again a bit later',
   'Потрібно увійти в акаунт': 'Please sign in',
   'Доступно лише адміністратору': 'Administrators only',
   'Запит завеликий': 'The request is too large',
@@ -599,6 +600,15 @@ export const EN = {
   'Такого API не існує': 'No such API',
   'Метод не підтримується': 'Method not supported',
   'Запит з іншого сайту заблоковано': 'A request from another site was blocked',
+  'Файл завеликий: максимум {mb} МБ': 'The file is too large: maximum {mb} MB',
+  'Забагато спроб входу. Спробуйте через {minutes} хв.': 'Too many sign-in attempts. Try again in {minutes} min.',
+  'Задача завершилась з помилкою: {error}': 'The job failed: {error}',
+  'У списку може бути не більше {max} ігор': 'The list can hold at most {max} games',
+  '{store} зараз не відповідає. Спробуйте пізніше або пошукайте в іншому магазині': '{store} is not responding right now. Try later or search another store',
+  '{store} уже підключено до цієї гри': '{store} is already linked to this game',
+  'Не вдалося прочитати файл Excel: {error}': 'Could not read the Excel file: {error}',
+  'Забагато рядків: {rows}. За один раз можна імпортувати до {max} ігор': 'Too many rows: {rows}. You can import up to {max} games at a time',
+  'За один раз можна до {max} ігор': 'Up to {max} games at a time',
   'Заповніть поле «{label}»': 'Fill in the “{label}” field',
   'Поле «{label}» має містити щонайменше {min} символів': 'The “{label}” field must be at least {min} characters long',
   'Поле «{label}» має містити не більше {max} символів': 'The “{label}” field must be at most {max} characters long',

@@ -216,17 +216,74 @@ function migrate() {
 
 /** @type {DatabaseSync} */
 export let db;
+let dbFile = null;
+let open = false;
+let lastError = null;
 
+/** Закрите з'єднання-заглушка: будь-який запит до нього кидає «database is not open», і сервер відповідає 503. */
+function closedConnection() {
+  const conn = new DatabaseSync(':memory:');
+  conn.close();
+  return conn;
+}
+
+/** Відкриває базу. Якщо не вдалося, кидає помилку, а db стає заглушкою (див. ensureDb). */
 export function initDb(file) {
-  if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
-  db = new DatabaseSync(file);
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
-  db.exec(SCHEMA);
-  migrate();
+  closeDb(); // попереднє з'єднання, якщо було
+  dbFile = file;
+  let conn = null;
+  try {
+    if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
+    conn = new DatabaseSync(file);
+    db = conn;
+    db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
+    db.exec(SCHEMA);
+    migrate();
+  } catch (err) {
+    try {
+      conn?.close();
+    } catch {
+      // з'єднання не відкрилось повністю
+    }
+    db = closedConnection();
+    lastError = err;
+    throw err;
+  }
+  open = true;
+  lastError = null;
   return db;
 }
 
+/**
+ * Чи працює база. Якщо вона не відкрилась (диск недоступний, файл зайнятий чи пошкоджений),
+ * пробуємо відкрити її знову — так сервер оживає сам, щойно базу полагодять, без перезапуску.
+ */
+export function ensureDb() {
+  if (open) return true;
+  if (!dbFile) return false;
+  try {
+    initDb(dbFile);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const isDbOpen = () => open;
+export const dbError = () => lastError;
+
+// Основні коди SQLite, коли винна не логіка програми, а сама база: зайнята іншою програмою,
+// лише для читання, збій диска, пошкоджена, диск заповнений, не відкривається, «це не база даних»
+const UNAVAILABLE_CODES = new Set([5, 6, 8, 10, 11, 13, 14, 26]);
+
+/** Помилка означає, що база недоступна (а не, скажімо, порушення унікальності). */
+export function isDbUnavailable(err) {
+  if (err?.code === 'ERR_INVALID_STATE') return /database is not open/i.test(err.message);
+  return err?.code === 'ERR_SQLITE_ERROR' && UNAVAILABLE_CODES.has(err.errcode & 0xff);
+}
+
 export function closeDb() {
+  open = false;
   try {
     db?.close();
   } catch {

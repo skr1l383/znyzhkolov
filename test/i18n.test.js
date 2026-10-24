@@ -186,6 +186,14 @@ test('Переклад: підстановки {…} однакові в ори�
   assert.deepEqual(bad, []);
 });
 
+test('Переклад: повідомлення сервера зі значеннями складаються через templateError', () => {
+  // `Текст ${значення}` у HttpError не перекласти словником — для такого є шаблон із {назвами}
+  const bad = walk('server').flatMap((rel) =>
+    [...read(rel).matchAll(/HttpError\(\s*\d+\s*,\s*`([^`]*)`/g)].filter((m) => CYR.test(m[1])).map((m) => `${rel}: ${m[1]}`)
+  );
+  assert.deepEqual(bad, []);
+});
+
 test('Переклад: у словнику немає зайвих фраз', () => {
   const stale = Object.keys(EN).filter((k) => !all.has(k) && !client.plurals.has(k));
   assert.deepEqual(stale, []);

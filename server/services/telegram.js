@@ -177,7 +177,12 @@ async function handleMessage(msg) {
 }
 
 async function pollLoop() {
-  let offset = Number(getSetting('telegram:offset', 0)) || 0;
+  let offset = 0;
+  try {
+    offset = Number(getSetting('telegram:offset', 0)) || 0;
+  } catch {
+    // база недоступна — почнемо з нових повідомлень
+  }
   let backoff = 1000;
   while (state.running) {
     try {

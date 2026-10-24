@@ -1,5 +1,5 @@
 // Експорт списку ігор у CSV/Excel та імпорт списку з таких файлів.
-import { HttpError } from '../http.js';
+import { HttpError, templateError } from '../http.js';
 import { toCsv, parseCsv, decodeText } from '../formats/csv.js';
 import { detectTable } from '../formats/detect.js';
 import { parseXlsx, toXlsx } from '../formats/xlsx.js';
@@ -89,7 +89,7 @@ export function readTable(buffer) {
     try {
       return parseXlsx(buffer);
     } catch (err) {
-      throw new HttpError(415, `Не вдалося прочитати файл Excel: ${err.message}`);
+      throw templateError(415, 'Не вдалося прочитати файл Excel: {error}', { error: err.message });
     }
   }
   if (kind === 'csv') return parseCsv(decodeText(buffer));
@@ -148,7 +148,7 @@ export function parseImportRows(table) {
   const nonEmpty = body.filter(({ row }) => row.some((c) => String(c).trim()));
   if (!nonEmpty.length) throw new HttpError(400, 'У файлі немає жодної гри');
   if (nonEmpty.length > IMPORT_MAX_ROWS) {
-    throw new HttpError(400, `Забагато рядків: ${nonEmpty.length}. За один раз можна імпортувати до ${IMPORT_MAX_ROWS} ігор`);
+    throw templateError(400, 'Забагато рядків: {rows}. За один раз можна імпортувати до {max} ігор', { rows: nonEmpty.length, max: IMPORT_MAX_ROWS });
   }
 
   return nonEmpty.map(({ row, line }) => {
@@ -248,7 +248,7 @@ export async function resolveEntry(entry) {
 export function entriesFromTitles(titles) {
   const list = (Array.isArray(titles) ? titles : []).map((t) => String(t ?? '').trim().slice(0, 200)).filter(Boolean);
   if (!list.length) throw new HttpError(400, 'Додай хоча б одну гру');
-  if (list.length > IMPORT_MAX_ROWS) throw new HttpError(400, `За один раз можна до ${IMPORT_MAX_ROWS} ігор`);
+  if (list.length > IMPORT_MAX_ROWS) throw templateError(400, 'За один раз можна до {max} ігор', { max: IMPORT_MAX_ROWS });
   return list.map((title, i) => ({
     line: i + 1,
     title,

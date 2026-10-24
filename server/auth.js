@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { promisify } from 'node:util';
 import { config, isHttps } from './config.js';
 import { db, now } from './db.js';
-import { HttpError, serializeCookie } from './http.js';
+import { HttpError, serializeCookie, templateError } from './http.js';
 
 const scrypt = promisify(crypto.scrypt);
 export const SESSION_COOKIE = 'zk_session';
@@ -139,7 +139,7 @@ export function checkLoginRate(ip) {
   const entry = attempts.get(ip);
   if (entry && entry.resetAt > Date.now() && entry.count >= MAX_ATTEMPTS) {
     const minutes = Math.ceil((entry.resetAt - Date.now()) / 60000);
-    throw new HttpError(429, `Забагато спроб входу. Спробуйте через ${minutes} хв.`);
+    throw templateError(429, 'Забагато спроб входу. Спробуйте через {minutes} хв.', { minutes });
   }
 }
 

@@ -1,7 +1,8 @@
 // Збирає застосунок: база даних, маршрути API, задачі за розкладом.
 import http from 'node:http';
 import { config } from './config.js';
-import { initDb } from './db.js';
+import { initDb, isDbUnavailable } from './db.js';
+import { dbAvailable, dbDownError, mapDbError } from './health.js';
 import { createApp, Router } from './http.js';
 import { initLogger, log } from './logger.js';
 import { SESSION_COOKIE, cleanupSessions, userBySession } from './auth.js';
@@ -54,12 +55,19 @@ function defineJobs() {
 }
 
 export function buildServer({ dbFile, silent = false } = {}) {
-  initDb(dbFile);
   initLogger({ silent });
-  repairImages();
+  try {
+    initDb(dbFile);
+  } catch {
+    // Сервер однаково запускається: сайт відкривається, API відповідає 503 «база недоступна»,
+    // а щойно базу полагодять — запрацює сам (dbAvailable щоразу пробує відкрити її знову)
+  }
+  if (dbAvailable()) repairImages(); // якщо база не відкрилась, dbAvailable запише це в журнал
   defineJobs();
 
   const router = new Router();
+  // Перевірка для хостингу й моніторингу: 200 — усе гаразд, 503 — база недоступна
+  router.get('/api/health', () => ({ ok: true, db: 'ok', uptime: Math.round(process.uptime()) }));
   authRoutes(router);
   gameRoutes(router);
   featuredRoutes(router);
@@ -75,10 +83,12 @@ export function buildServer({ dbFile, silent = false } = {}) {
     router,
     publicDir: config.publicDir,
     beforeRoute: (ctx) => {
+      if (!dbAvailable()) throw dbDownError();
       ctx.user = userBySession(ctx.cookies[SESSION_COOKIE]);
     },
+    mapError: mapDbError,
     onError: (err, ctx) => {
-      log.error('http.error', `${ctx.method} ${ctx.path}: ${err.message}`, {
+      log.error(isDbUnavailable(err) ? 'db.error' : 'http.error', `${ctx.method} ${ctx.path}: ${err.message}`, {
         userId: ctx.user?.id ?? null,
         meta: { stack: String(err.stack || '').split('\n').slice(0, 4).join(' | ') },
       });

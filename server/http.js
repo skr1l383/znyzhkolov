@@ -118,7 +118,7 @@ async function readJson(req) {
   }
 }
 
-const formatMb = (bytes) => `${Math.round((bytes / 1024 / 1024) * 10) / 10} МБ`;
+const toMb = (bytes) => Math.round((bytes / 1024 / 1024) * 10) / 10;
 
 /**
  * Читає файл, надісланий у тілі запиту (маршрути router.upload).
@@ -126,7 +126,7 @@ const formatMb = (bytes) => `${Math.round((bytes / 1024 / 1024) * 10) / 10} МБ
  * і під час читання, якщо заголовок збрехав або його немає.
  */
 export async function readUpload(req, { maxBytes }) {
-  const tooBig = () => new HttpError(413, `Файл завеликий: максимум ${formatMb(maxBytes)}`);
+  const tooBig = () => templateError(413, 'Файл завеликий: максимум {mb} МБ', { mb: toMb(maxBytes) });
   const declared = Number(req.headers['content-length']);
   if (declared > maxBytes) {
     req.resume(); // дочитуємо й відкидаємо, щоб браузер отримав зрозумілу відповідь
@@ -249,7 +249,11 @@ function serveStatic(publicDir, pathname, req, res) {
  * або кидає HttpError. Проміжні обробники (наприклад, перевірка входу)
  * повертають undefined, і тоді виконується наступний.
  */
-export function createApp({ router, publicDir, onError, beforeRoute }) {
+/**
+ * mapError(err) — можна перетворити неочікувану помилку на зрозумілу HttpError
+ * (наприклад, «база даних недоступна» → 503); подробиці однаково йдуть в onError.
+ */
+export function createApp({ router, publicDir, onError, beforeRoute, mapError }) {
   return async function handler(req, res) {
     const url = new URL(req.url, 'http://localhost');
     const pathname = url.pathname;
@@ -311,10 +315,11 @@ export function createApp({ router, publicDir, onError, beforeRoute }) {
       // Очікувані помилки (HttpError) показуємо як є; неочікувані — записуємо в журнал
       // і не розкриваємо подробиць користувачу
       const expected = err instanceof HttpError;
-      const status = expected ? err.status : 500;
       if (!expected && onError) onError(err, ctx);
-      const message = expected ? err.message : 'Внутрішня помилка сервера';
-      sendJson(res, status, { error: message, details: err.details }, ctx.setHeaders);
+      const known = expected ? err : mapError?.(err);
+      const status = known ? known.status : 500;
+      const message = known ? known.message : 'Внутрішня помилка сервера';
+      sendJson(res, status, { error: message, details: known?.details }, ctx.setHeaders);
     }
   };
 }

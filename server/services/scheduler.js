@@ -2,6 +2,7 @@
 // Час останнього запуску зберігається в базі, тому після перезапуску сервера
 // задачі не виконуються зайвий раз.
 import { getSetting, setSetting } from '../db.js';
+import { dbAvailable } from '../health.js';
 import { log } from '../logger.js';
 
 const jobs = new Map();
@@ -17,8 +18,9 @@ export async function runJob(name, trigger = 'schedule') {
   if (!job) throw new Error(`Невідома задача: ${name}`);
   if (job.running) return { skipped: true, reason: 'вже виконується' };
   job.running = true;
-  setSetting(`job:${name}:last_run`, new Date().toISOString());
   try {
+    // Усередині try: якщо база недоступна, задача не «зависне» з позначкою «виконується»
+    setSetting(`job:${name}:last_run`, new Date().toISOString());
     job.lastResult = await job.run({ trigger });
     job.lastError = null;
     return job.lastResult;
@@ -37,12 +39,18 @@ function isDue(job) {
   return Date.now() - new Date(last).getTime() >= job.everyMinutes * 60 * 1000;
 }
 
-// Задачі виконуються по черзі в тому порядку, в якому їх оголошено
+// Задачі виконуються по черзі в тому порядку, в якому їх оголошено.
+// Поки база недоступна, розклад чекає (про це вже є запис у журналі), а не падає разом із сервером.
 async function tick() {
-  for (const job of jobs.values()) {
-    if (!job.running && isDue(job)) {
-      await runJob(job.name).catch(() => {}); // помилка вже записана в журнал
+  if (!dbAvailable()) return;
+  try {
+    for (const job of jobs.values()) {
+      if (!job.running && isDue(job)) {
+        await runJob(job.name).catch(() => {}); // помилка вже записана в журнал
+      }
     }
+  } catch (err) {
+    log.error('scheduler.tick', `Розклад пропустив перевірку: ${err.message}`);
   }
 }
 

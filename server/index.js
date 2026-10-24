@@ -43,5 +43,12 @@ function shutdown(signal) {
   setTimeout(() => process.exit(0), 3000).unref();
 }
 
+// Страховка: необроблена помилка у фоновій задачі потрапляє в журнал, а не вимикає весь сервер
+process.on('unhandledRejection', (err) => {
+  log.error('server.unhandled', `Необроблена помилка: ${err?.message || err}`, {
+    meta: { stack: String(err?.stack || '').split('\n').slice(0, 4).join(' | ') },
+  });
+});
+
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
