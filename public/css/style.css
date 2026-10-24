@@ -2336,6 +2336,356 @@ a.profile-stat:hover {
   mask-image: linear-gradient(#000 60%, transparent);
 }
 
+/* ---------- Ціни в інших країнах (карта) ---------- */
+.game-regional {
+  /* Від «набагато дешевше, ніж в Україні» (зелений) до «набагато дорожче» (червоний) */
+  --tone-1: #2e9e5b;
+  --tone-2: #8ccf9f;
+  --tone-3: #e3cf86;
+  --tone-4: #f0a07d;
+  --tone-5: #d9534f;
+}
+
+.game-regional .section-title {
+  margin-top: 8px;
+}
+
+.game-regional > .hint {
+  margin: -6px 0 14px;
+}
+
+.regional-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.regional-fact {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.regional-fact span,
+.regional-fact small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.regional-fact span {
+  font-weight: 700;
+}
+
+.regional-fact b {
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.regional-fact.is-good b {
+  color: var(--good);
+}
+
+.map-wrap {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-2) 35%, var(--surface));
+}
+
+.world-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.world-map.zoomed {
+  touch-action: none;
+}
+
+.land {
+  fill: var(--surface-2);
+  stroke: var(--surface);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.land.has-data {
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.land.tone-1 {
+  fill: var(--tone-1);
+}
+
+.land.tone-2 {
+  fill: var(--tone-2);
+}
+
+.land.tone-3 {
+  fill: var(--tone-3);
+}
+
+.land.tone-4 {
+  fill: var(--tone-4);
+}
+
+.land.tone-5 {
+  fill: var(--tone-5);
+}
+
+.land.hl,
+.land.has-data:focus-visible {
+  outline: none;
+  filter: brightness(1.12) saturate(1.2);
+  stroke: var(--fg);
+  stroke-width: 1.2;
+}
+
+.land.is-home,
+.land.selected {
+  stroke: var(--fg);
+  stroke-width: 1.6;
+}
+
+.map-tip {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  max-width: 260px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 13px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+.map-tip small {
+  opacity: 0.8;
+}
+
+.map-zoom {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.map-zoom .icon-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-legend i,
+.regional-bar i {
+  display: block;
+  background: var(--surface-2);
+}
+
+.map-legend i {
+  width: 14px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.map-legend i.no-data {
+  border: 1px solid var(--border);
+}
+
+:is(.map-legend, .regional-bar) i.tone-1 {
+  background: var(--tone-1);
+}
+
+:is(.map-legend, .regional-bar) i.tone-2 {
+  background: var(--tone-2);
+}
+
+:is(.map-legend, .regional-bar) i.tone-3 {
+  background: var(--tone-3);
+}
+
+:is(.map-legend, .regional-bar) i.tone-4 {
+  background: var(--tone-4);
+}
+
+:is(.map-legend, .regional-bar) i.tone-5 {
+  background: var(--tone-5);
+}
+
+.regional-pick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--pick, var(--border));
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.regional-pick.tone-1 {
+  --pick: var(--tone-1);
+}
+
+.regional-pick.tone-2 {
+  --pick: var(--tone-2);
+}
+
+.regional-pick.tone-3 {
+  --pick: var(--tone-3);
+}
+
+.regional-pick.tone-4 {
+  --pick: var(--tone-4);
+}
+
+.regional-pick.tone-5 {
+  --pick: var(--tone-5);
+}
+
+.regional-pick > div {
+  display: grid;
+  gap: 2px;
+}
+
+.regional-pick-price {
+  text-align: right;
+}
+
+.regional-pick-price b {
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.regional-pick-price span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.regional-all {
+  margin: 12px 0 8px;
+}
+
+.regional-all summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.regional-list {
+  display: grid;
+  gap: 2px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.regional-row {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) minmax(0, 1fr) 92px 52px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.regional-row:hover {
+  background: var(--surface-2);
+}
+
+.regional-row.is-home {
+  font-weight: 800;
+}
+
+.regional-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.regional-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--surface-2);
+}
+
+.regional-bar i {
+  height: 100%;
+  border-radius: 99px;
+}
+
+.regional-row-price,
+.regional-row-diff {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.regional-row-price {
+  font-weight: 700;
+}
+
+.regional-row-diff {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+@media (max-width: 600px) {
+  .regional-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+  .regional-fact:first-child {
+    grid-column: 1 / -1;
+  }
+  .regional-row {
+    grid-template-columns: minmax(0, 1fr) 60px 78px 44px;
+    gap: 8px;
+  }
+  .regional-pick {
+    flex-wrap: wrap;
+  }
+}
+
 /* ---------- Коментарі до гри ---------- */
 .game-comments .section-title {
   margin-top: 8px;

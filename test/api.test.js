@@ -300,6 +300,25 @@ test('Чужу гру не можна змінити або видалити', a
   assert.equal(r.data.item.minDiscount, 50);
 });
 
+test('Карта цін: регіони Steam у гривнях, Україна — точка відліку, відповідь зберігається на добу', async () => {
+  const guest = client();
+  const r = await guest('GET', '/api/games/steam/367520/regional');
+  assert.equal(r.status, 200);
+  assert.equal(r.data.home, 'UA');
+  assert.equal(r.data.regions.length, 25);
+  const prices = r.data.regions.map((x) => x.priceUah);
+  assert.deepEqual(prices, [...prices].sort((a, b) => a - b), 'від найдешевшого до найдорожчого');
+  const ua = r.data.regions.find((x) => x.id === 'UA');
+  assert.equal(ua.currency, 'UAH');
+  assert.equal(ua.diff, 0);
+  const us = r.data.regions.find((x) => x.id === 'US');
+  assert.equal(us.diff, Math.round(((us.priceUah - ua.priceUah) / ua.priceUah) * 100));
+  assert.ok(r.data.regions.find((x) => x.id === 'EU').countries.includes('FR'));
+  // Повторний запит — із збереженої відповіді (час оновлення той самий)
+  assert.equal((await guest('GET', '/api/games/steam/367520/regional')).data.updatedAt, r.data.updatedAt);
+  assert.equal((await guest('GET', '/api/games/steam/abc/regional')).status, 404);
+});
+
 test('Коментарі: гість читає, користувач пише й видаляє свій, адмін модерує, захист від флуду', async () => {
   const url = '/api/games/steam/367520/comments';
   const guest = client();

@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import { parseSteamPrices, parseSteamSearch } from '../server/stores/steam.js';
 import { parseGogCatalog } from '../server/stores/gog.js';
 import { parseEpicFreebies } from '../server/stores/epic.js';
-import { parseNbuRate } from '../server/stores/currency.js';
+import { parseNbuRate, parseNbuRates, toUahAny } from '../server/stores/currency.js';
+import { parsePriceOverview, REGIONS } from '../server/stores/regional.js';
 import { parseGogDeals, parseSteamSpecials } from '../server/stores/deals.js';
 import { discountPercent, formatUah, safeImageUrl, toMinor } from '../server/stores/util.js';
 
@@ -123,6 +124,35 @@ test('НБУ: курс долара', () => {
     date: '12.10.2026',
   });
   assert.equal(parseNbuRate([]), null);
+});
+
+test('НБУ: курси всіх валют і перерахунок у гривні', () => {
+  const rates = parseNbuRates([
+    { r030: 840, cc: 'USD', rate: 45.2021 },
+    { r030: 978, cc: 'EUR', rate: 50.5766 },
+    { r030: 392, cc: 'JPY', rate: 0.28812 },
+    { r030: 959, cc: 'XAU', rate: 0 }, // золото без курсу — пропускаємо
+    { txt: 'зіпсований рядок' },
+  ]);
+  assert.deepEqual(rates, { USD: 45.2021, EUR: 50.5766, JPY: 0.28812 });
+  assert.equal(toUahAny(1479, 'EUR', rates), 74803, '14,79 € ≈ 748,03 ₴');
+  assert.equal(toUahAny(170000, 'JPY', rates), 48980, 'Steam віддає єни теж у сотих: ¥1700 ≈ 489,80 ₴');
+  assert.equal(toUahAny(32500, 'UAH', rates), 32500);
+  assert.equal(toUahAny(4699, 'BRL', rates), null, 'курсу реала НБУ не публікує');
+  assert.deepEqual(parseNbuRates(null), {});
+});
+
+test('Steam: ціна в окремій країні (карта цін)', () => {
+  const ok = { 367520: { success: true, data: { price_overview: { currency: 'PLN', initial: 6799, final: 3399, discount_percent: 50 } } } };
+  assert.deepEqual(parsePriceOverview(ok, '367520'), { currency: 'PLN', price: 3399, basePrice: 6799, discount: 50 });
+  assert.equal(parsePriceOverview({ 570: { success: true, data: [] } }, '570'), null, 'безкоштовна гра — ціни немає');
+  assert.equal(parsePriceOverview({ 1: { success: false } }, '1'), null, 'не продається в цій країні');
+  assert.equal(parsePriceOverview(null, '1'), null);
+  // Україна — перший регіон; євро в Steam беруть і країни ЄС без власної валюти
+  assert.equal(REGIONS[0].id, 'UA');
+  const eu = REGIONS.find((r) => r.id === 'EU');
+  assert.equal(eu.cc, 'DE');
+  assert.ok(['FR', 'ES', 'CZ', 'SE'].every((c) => eu.countries.includes(c)));
 });
 
 test('Гроші: копійки, відсотки, формат', () => {

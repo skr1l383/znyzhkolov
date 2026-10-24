@@ -154,4 +154,33 @@ export async function demoEpicFreebies() {
   ].map(({ steamId, ...f }) => ({ ...f, url: 'https://store.epicgames.com/uk/free-games', imageUrl: steamHeader(steamId), currency: 'UAH' }));
 }
 
-export const demoUsdRate = async () => ({ rate: 41.45, date: new Date().toLocaleDateString('uk-UA') });
+export const demoUsdRate = async () => ({ rate: 41.45, date: new Date().toLocaleDateString('uk-UA'), rates: demoUsdRates() });
+
+// Курси для демо-режиму (гривень за одиницю валюти), щоб карта цін працювала без інтернету
+const DEMO_RATES = {
+  USD: 41.45, EUR: 45.1, GBP: 53.9, PLN: 10.4, NOK: 3.9, CHF: 46.8, KZT: 0.083, ILS: 11.2, SAR: 11.05, AED: 11.3, ZAR: 2.3,
+  INR: 0.49, CNY: 5.7, JPY: 0.27, KRW: 0.03, IDR: 0.0026, VND: 0.0016, THB: 1.2, AUD: 27.1, NZD: 24.5, CAD: 30.3, MXN: 2.2,
+};
+
+// Типові регіональні ціни Steam відносно США: валюта регіону і множник ціни
+const DEMO_REGIONS = {
+  UA: ['UAH', 0.55], EU: ['EUR', 0.99], US: ['USD', 1], GB: ['GBP', 0.85], PL: ['PLN', 0.8], NO: ['NOK', 1.05], CH: ['CHF', 1.1],
+  TR: ['USD', 0.4], KZ: ['KZT', 0.6], IL: ['ILS', 0.9], SA: ['SAR', 0.75], AE: ['AED', 0.8], ZA: ['ZAR', 0.6], IN: ['INR', 0.45],
+  CN: ['CNY', 0.5], JP: ['JPY', 0.85], KR: ['KRW', 0.8], ID: ['IDR', 0.5], VN: ['VND', 0.45], TH: ['THB', 0.55], AU: ['AUD', 1.05],
+  NZ: ['NZD', 1.05], CA: ['CAD', 0.95], MX: ['MXN', 0.6], AR: ['USD', 0.33],
+};
+
+export const demoUsdRates = () => ({ ...DEMO_RATES });
+
+/** Регіональні ціни для демо-режиму: однакові для тієї самої гри, без запитів до Steam. */
+export function demoRegionalPrices(appId) {
+  const usd = 999 + (Number(appId) % 30) * 100; // ціна в США, центи
+  const sale = Number(appId) % 3 === 0 ? 50 : 0;
+  return Object.fromEntries(
+    Object.entries(DEMO_REGIONS).map(([id, [currency, k]]) => {
+      const uah = usd * k * DEMO_RATES.USD;
+      const basePrice = currency === 'UAH' ? Math.round(uah / 100) * 100 : Math.round(uah / DEMO_RATES[currency] / 100) * 100 - 1;
+      return [id, { currency, price: Math.round((basePrice * (100 - sale)) / 100), basePrice, discount: sale }];
+    })
+  );
+}

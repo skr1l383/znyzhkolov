@@ -1,6 +1,7 @@
 import { HttpError } from '../http.js';
 import { getGameDetails } from '../services/gameDetails.js';
 import { listFreebies } from '../services/epicFree.js';
+import { getRegionalPrices } from '../services/regional.js';
 import { dealsStatus, featuredDeals, listDeals } from '../services/deals.js';
 import { runJob } from '../services/scheduler.js';
 
@@ -49,5 +50,11 @@ export function gamePageRoutes(router) {
     const { store, id } = ctx.params;
     if (!['steam', 'gog'].includes(store) || !/^\d{1,12}$/.test(id)) throw new HttpError(404, 'Гру не знайдено');
     return getGameDetails(store, id, ctx.user?.id ?? null, ctx.query.lang === 'en' ? 'en' : 'uk');
+  });
+
+  // Карта цін: скільки гра коштує в Steam у різних країнах
+  router.get('/api/games/steam/:id/regional', (ctx) => {
+    if (!/^\d{1,12}$/.test(ctx.params.id)) throw new HttpError(404, 'Гру не знайдено');
+    return getRegionalPrices(ctx.params.id);
   });
 }

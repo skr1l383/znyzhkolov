@@ -6,6 +6,7 @@ import { go, state } from '../app.js';
 import { $, STORE_NAMES, formatMoney, formatUah, html, setHtml, toast } from '../ui.js';
 import { openAddDialog } from './search.js';
 import { commentsSection, mountComments } from './comments.js';
+import { mountRegional, regionalSection } from './regional.js';
 
 // Підсумок відгуків Steam приходить англійською; українською — переклад, англійською — як є
 const REVIEWS_UK = {
@@ -77,6 +78,7 @@ export async function render(root, params) {
   const priced = g.offers.filter((o) => o.priceUah != null);
   const best = priced.length > 1 ? priced.reduce((a, b) => (b.priceUah < a.priceUah ? b : a)) : null;
   const meta = [g.developers.join(', '), g.releaseDate, g.platforms.map((p) => PLATFORMS[p] || p).join(' · ')].filter(Boolean);
+  const steam = g.offers.find((o) => o.store === 'steam');
 
   setHtml(
     root,
@@ -111,6 +113,8 @@ export async function render(root, params) {
                     ${g.description.length > DESCRIPTION_PREVIEW ? html`<button class="btn btn-ghost btn-sm" type="button" id="more-desc">${t('Читати далі')}</button>` : ''}`
                 : html`<p class="muted">${g.limited ? t('Магазин зараз не відповідає, тому показуємо лише основне. Спробуй оновити сторінку пізніше.') : t('Опису поки немає.')}</p>`}
             </section>
+
+            ${steam ? regionalSection() : ''}
 
             ${commentsSection()}
           </div>
@@ -155,6 +159,7 @@ export async function render(root, params) {
 
   // Коментарі прив'язані до головної пропозиції сторінки (Steam, якщо гра там є)
   mountComments(root, g.offers[0]);
+  if (steam) mountRegional(root, steam.storeId);
 
   $('#more-desc', root)?.addEventListener('click', (e) => {
     $('.description', root).classList.remove('collapsed');
