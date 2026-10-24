@@ -5,7 +5,7 @@ import { config, ROOT } from '../config.js';
 import { PdfDocument } from '../formats/pdf.js';
 import { getUsdRate } from '../stores/currency.js';
 import { formatUah } from '../stores/util.js';
-import { listWatch } from './watch.js';
+import { listWatch, summarizeWatch } from './watch.js';
 
 const FONT_DIR = path.join(ROOT, 'server', 'assets', 'fonts');
 const C = {
@@ -42,25 +42,6 @@ async function loadCovers(urls, { timeoutMs = 4000 } = {}) {
   return result;
 }
 
-function summarize(items) {
-  const rows = items.map((item) => {
-    const priced = item.offers.filter((o) => o.available && o.priceUah != null);
-    const best = priced.sort((a, b) => a.priceUah - b.priceUah)[0] || null;
-    const by = (store) => item.offers.find((o) => o.store === store);
-    return { item, best, steam: by('steam'), gog: by('gog') };
-  });
-  const priced = rows.filter((r) => r.best);
-  const now = priced.reduce((s, r) => s + r.best.priceUah, 0);
-  const regular = priced.reduce((s, r) => s + (r.best.basePriceUah ?? r.best.priceUah), 0);
-  return {
-    rows,
-    now,
-    regular,
-    savings: regular - now,
-    met: items.filter((i) => i.active && i.conditionMet).length,
-  };
-}
-
 const conditionText = (item) =>
   [
     item.minDiscount ? `знижка від ${item.minDiscount}%` : null,
@@ -72,7 +53,7 @@ const conditionText = (item) =>
 
 export async function buildReport(user, { covers = true } = {}) {
   const items = listWatch(user.id);
-  const s = summarize(items);
+  const s = summarizeWatch(items);
   const created = new Date();
   const doc = new PdfDocument({ title: `Знижколов — звіт про список ігор (${user.name})`, author: user.name });
   doc.addFont('regular', fs.readFileSync(path.join(FONT_DIR, 'Manrope-400Regular.ttf')), 'Manrope-Regular');

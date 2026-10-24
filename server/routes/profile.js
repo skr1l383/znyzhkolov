@@ -10,6 +10,7 @@ import { publicUser, requireAuth } from '../auth.js';
 import { listFreebies } from '../services/epicFree.js';
 import { notifyUser } from '../services/notifier.js';
 import { runJob } from '../services/scheduler.js';
+import { listWatch, summarizeWatch } from '../services/watch.js';
 import { botStatus, ensureBotUsername, linkUrl } from '../services/telegram.js';
 import * as v from '../validate.js';
 
@@ -24,6 +25,22 @@ function removeAvatarFile(fileName) {
 }
 
 export function profileRoutes(router) {
+  // Підсумок для шапки профілю: скільки ігор, скільки умов виконано, сповіщень і скільки можна заощадити
+  router.get('/api/me/summary', requireAuth, (ctx) => {
+    const items = listWatch(ctx.user.id);
+    const s = summarizeWatch(items);
+    const count = (sql) => db.prepare(sql).get(ctx.user.id).n;
+    return {
+      games: items.length,
+      met: s.met,
+      alerts: count('SELECT COUNT(*) AS n FROM notifications WHERE user_id = ?'),
+      unread: count('SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read_at IS NULL'),
+      savingsUah: s.savings,
+      // Обкладинки ігор зі списку — для фону шапки профілю
+      covers: items.map((i) => i.imageUrl).filter(Boolean).slice(0, 6),
+    };
+  });
+
   router.patch('/api/me', requireAuth, (ctx) => {
     const changes = {};
     if ('name' in ctx.body) changes.name = v.text(ctx.body.name, { field: 'name', label: "Ім'я", min: 2, max: 40 });

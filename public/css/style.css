@@ -470,28 +470,6 @@ p {
   object-fit: cover;
 }
 
-/* ---------- Фото профілю ---------- */
-.avatar-edit {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 18px;
-  align-items: start;
-}
-
-.avatar-big {
-  display: grid;
-  place-items: center;
-  width: 96px;
-  height: 96px;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-family: var(--font-display);
-  font-size: 40px;
-  font-weight: 800;
-}
-
 /* ---------- Зона перетягування файлу ---------- */
 .dropzone {
   position: relative;
@@ -1245,11 +1223,581 @@ p {
 }
 
 /* ---------- Профіль ---------- */
-.profile-grid {
+.ico {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.profile-hero {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow);
+}
+
+.profile-cover {
+  position: relative;
+  overflow: hidden;
+  height: 150px;
+  background:
+    radial-gradient(110% 150% at 0% 0%, rgb(245 165 63 / 0.55), transparent 60%),
+    radial-gradient(80% 130% at 100% 0%, rgb(192 138 240 / 0.4), transparent 65%),
+    linear-gradient(135deg, #1b2437, #0c111d);
+}
+
+/* Обкладинки ігор зі списку: притемнені, щоб фото профілю на їхньому тлі добре виднілося */
+.profile-covers {
+  position: absolute;
+  inset: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(var(--n), 1fr);
+}
+
+.profile-covers img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.5;
+  filter: blur(3px) saturate(1.3);
+  transform: scale(1.08);
+}
+
+.profile-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(12 17 29 / 0.15), rgb(12 17 29 / 0.65));
+}
+
+.profile-id {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 0 24px 20px;
+}
+
+.profile-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 128px;
+  height: 128px;
+  margin-top: -58px;
+  border: 5px solid var(--surface);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.profile-avatar-img {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 800;
+  transition: filter 0.15s;
+}
+
+.profile-avatar:hover .profile-avatar-img {
+  filter: brightness(0.82);
+}
+
+.profile-avatar:focus-within {
+  box-shadow: var(--ring);
+}
+
+.profile-avatar-badge {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.profile-avatar-badge .ico {
+  width: 17px;
+  height: 17px;
+}
+
+/* Поки фото завантажується — крутилка поверх нього */
+.profile-hero.busy .profile-avatar-img {
+  filter: brightness(0.6);
+}
+
+.profile-hero.busy .profile-avatar::after {
+  content: '';
+  position: absolute;
+  inset: 38%;
+  border: 3px solid #fff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.profile-who {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding-top: 16px;
+}
+
+.profile-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-name h1 {
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  overflow-wrap: anywhere;
+}
+
+.profile-email {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.profile-who .muted {
+  font-size: 14px;
+}
+
+.profile-logout {
+  margin-top: 16px;
+}
+
+/* Перетягування картинки на шапку */
+.profile-hero.dragging {
+  outline: 2px dashed var(--accent);
+  outline-offset: -8px;
+}
+
+.profile-drop-hint {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: none;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  font-weight: 800;
+  font-size: 18px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.profile-hero.dragging .profile-drop-hint {
+  display: grid;
+}
+
+.profile-drop-error {
+  display: block;
+  margin: -6px 24px 16px;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--border);
+}
+
+.profile-stat {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 16px 24px;
+  border-left: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.profile-stat:first-child {
+  border-left: 0;
+}
+
+a.profile-stat:hover {
+  background: var(--surface-2);
+}
+
+.profile-stat b {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.profile-stat span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profile-stat em {
+  font-style: normal;
+  color: var(--accent-strong);
+}
+
+.profile-stat.is-good b {
+  color: var(--good);
+}
+
+.profile-stat.is-accent b {
+  color: var(--accent-strong);
+}
+
+.profile-stat.skeleton {
+  height: 78px;
+  border-radius: 0;
+}
+
+/* Вкладки зліва, вміст справа */
+.profile-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
+}
+
+.profile-tabs {
+  position: sticky;
+  top: calc(var(--topbar-h) + 16px);
+  display: grid;
+  gap: 4px;
+}
+
+.profile-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-tabs button:hover {
+  background: var(--surface-2);
+  color: var(--fg);
+}
+
+.profile-tabs button[aria-selected='true'] {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--fg);
+  box-shadow: var(--shadow);
+}
+
+.profile-tabs button[aria-selected='true'] .ico {
+  color: var(--accent);
+}
+
+.profile-tabs .ico {
+  width: 20px;
+  height: 20px;
+}
+
+.profile-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-panel .segmented {
+  justify-self: start;
+}
+
+.profile-panel-pair {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
+}
+
+.panel-head {
+  display: grid;
+  gap: 4px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.input-with-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-with-action .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.pill-warn {
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+  color: var(--warn);
+}
+
+/* Канали сповіщень: сайт, Telegram, пошта */
+.channels {
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.channel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.channel:first-child {
+  border-top: 0;
+}
+
+.channel-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--fg);
+}
+
+.channel-icon .ico {
+  width: 20px;
+  height: 20px;
+}
+
+.channel-icon.is-telegram {
+  background: rgb(42 171 238 / 0.16);
+  color: #2aabee;
+}
+
+.channel-text {
+  display: grid;
+  gap: 4px;
+}
+
+.channel-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.channel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Перемикач «увімкнено / вимкнено» — звичайний checkbox, лише інакше намальований */
+.switch {
+  display: inline-flex;
+  padding-top: 8px;
+  cursor: pointer;
+}
+
+.switch input {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  appearance: none;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.switch input::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.switch input:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch input:checked::before {
+  transform: translateX(20px);
+  background: var(--on-accent);
+}
+
+.switch input:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.switch input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Підключення Telegram: QR-код і команда для бота */
+.tg-connect {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.tg-connect .tg-code {
+  background: var(--surface);
+}
+
+.tg-qr {
+  flex-shrink: 0;
+  padding: 6px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.dot-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+  animation: dot-pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes dot-pulse {
+  50% {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+}
+
+@media (max-width: 760px) {
+  .profile-cover {
+    height: 110px;
+  }
+  .profile-id {
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    padding: 0 16px 16px;
+  }
+  .profile-avatar {
+    width: 100px;
+    height: 100px;
+    margin-top: -46px;
+  }
+  .profile-avatar-img {
+    font-size: 38px;
+  }
+  .profile-logout {
+    order: 1;
+    margin: 12px 0 0 auto;
+  }
+  .profile-who {
+    order: 2;
+    flex-basis: 100%;
+    padding-top: 0;
+  }
+  .profile-drop-error {
+    margin: -4px 16px 14px;
+  }
+  .profile-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .profile-stat {
+    padding: 12px 16px;
+  }
+  .profile-stat:nth-child(3) {
+    border-left: 0;
+  }
+  .profile-stat:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+  .profile-stat b {
+    font-size: 20px;
+  }
+  .profile-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .profile-tabs {
+    position: static;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .profile-tabs button {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    min-height: 58px;
+    padding: 6px 4px;
+    font-size: 12px;
+    text-align: center;
+  }
+  .profile-tabs button span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .channel-actions {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+  }
+  .tg-connect {
+    flex-direction: column;
+    align-items: center;
+  }
 }
 
 .tg-code {
@@ -2136,17 +2684,6 @@ p {
 
 .scan-result p {
   margin: 0;
-}
-
-.tg-qr {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.tg-qr img {
-  border-radius: 8px;
-  background: #fff;
 }
 
 @media (max-width: 600px) {

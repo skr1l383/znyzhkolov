@@ -331,6 +331,19 @@ test('Перевірка цін за розкладом надсилає спо�
   assert.ok(n.data.items.some((i) => i.kind === 'deal' && i.telegram));
 });
 
+test('Підсумок для шапки профілю: ігри, виконані умови, сповіщення, економія', async () => {
+  assert.equal((await client()('GET', '/api/me/summary')).status, 401);
+  const s = (await user('GET', '/api/me/summary')).data;
+  const list = (await user('GET', '/api/watch')).data.items;
+  const alerts = (await user('GET', '/api/notifications')).data;
+  assert.equal(s.games, list.length);
+  assert.equal(s.met, list.filter((i) => i.active && i.conditionMet).length);
+  assert.equal(s.alerts, alerts.items.length);
+  assert.equal(s.unread, alerts.unread);
+  assert.ok(Number.isInteger(s.savingsUah) && s.savingsUah >= 0);
+  assert.deepEqual(s.covers, list.map((i) => i.imageUrl).filter(Boolean).slice(0, 6));
+});
+
 test('Журнал подій записує входи та помилки входу', async () => {
   const r = await admin('GET', '/api/admin/events?type=auth');
   const types = r.data.events.map((e) => e.type);

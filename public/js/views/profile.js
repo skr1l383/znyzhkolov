@@ -1,158 +1,330 @@
-// Профіль: ім'я, підключення Telegram, налаштування сповіщень, вихід.
+// Профіль: шапка з фото й підсумком списку та вкладки «Профіль», «Сповіщення», «Безпека», «Мої дані».
 import { del, get, patch, post, upload } from '../api.js';
-import { t } from '../i18n.js';
-import { clearPrivateCache, go, refreshMe, reload, state } from '../app.js';
-import { accountPanels, bindAccount } from './account.js';
-import {
-  $,
-  avatar,
-  bindDropZone,
-  clearFormErrors,
-  dropZone,
-  formatDate,
-  formatSize,
-  html,
-  setHtml,
-  showFormError,
-  toast,
-  withLoading,
-} from '../ui.js';
+import { getLang, LANGS, t, tp } from '../i18n.js';
+import { clearPrivateCache, go, refreshMe, reload, state, switchLang } from '../app.js';
+import { bindAccount, dataPanels, securityPanels } from './account.js';
+import { $, avatar, bindDropZone, clearFormErrors, formatDate, formatSize, formatUah, html, setHtml, showFormError, toast, withLoading } from '../ui.js';
 
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024; // те саме обмеження, що й на сервері
 
-function avatarPanel(u) {
+const svg = (path) => html`<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
+const ICONS = {
+  user: svg(html`<circle cx="12" cy="8" r="4" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" />`),
+  bell: svg(html`<path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15Z" /><path d="M10 20.5a2.2 2.2 0 0 0 4 0" />`),
+  lock: svg(html`<rect x="5" y="10.5" width="14" height="10" rx="2" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />`),
+  data: svg(html`<ellipse cx="12" cy="6" rx="7" ry="2.8" /><path d="M5 6v6c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8V6M5 12v6c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-6" />`),
+  camera: svg(html`<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z" /><circle cx="12" cy="12.5" r="3.5" />`),
+  telegram: svg(html`<path d="m21 4-3 16-6.5-5.5L18 8l-8.5 5.5L3 11.5Z" />`),
+  mail: svg(html`<rect x="3" y="5.5" width="18" height="13" rx="2" /><path d="m4 7 8 6 8-6" />`),
+  gift: svg(html`<rect x="4" y="9" width="16" height="11" rx="1.5" /><path d="M3 9h18M12 9v11M12 9c-1.5-3-5-4-5-1.5S10 9 12 9Zm0 0c1.5-3 5-4 5-1.5S14 9 12 9Z" />`),
+  tag: svg(html`<path d="M3 12V4.5A1.5 1.5 0 0 1 4.5 3H12l9 9-9 9Z" /><circle cx="7.5" cy="7.5" r="1.5" />`),
+  logout: svg(html`<path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h10" />`),
+};
+
+const TABS = [
+  ['main', 'Профіль', ICONS.user],
+  ['alerts', 'Сповіщення', ICONS.bell],
+  ['security', 'Безпека', ICONS.lock],
+  ['data', 'Мої дані', ICONS.data],
+];
+
+// ---------- Шапка ----------
+
+function hero(u) {
   return html`
-    <h2>${t('Фото профілю')}</h2>
-    <div class="avatar-edit">
-      <div class="avatar-big">${avatar(u)}</div>
-      <div class="stack">
-        ${dropZone({
-          title: u.avatarUrl ? t('Замінити фото') : t('Завантажити фото'),
-          hint: t('Перетягни картинку сюди або натисни, щоб вибрати. PNG, JPG або WEBP, до {size}', { size: formatSize(AVATAR_MAX_BYTES) }),
-          accept: 'image/png,image/jpeg,image/webp',
-        })}
-        ${u.avatarUrl ? html`<div><button class="btn btn-sm btn-ghost btn-danger" type="button" id="avatar-remove">${t('Видалити фото')}</button></div>` : ''}
+    <section class="profile-hero" id="profile-hero">
+      <div class="profile-cover" id="profile-cover" aria-hidden="true"></div>
+      <div class="profile-id">
+        <label class="profile-avatar" title="${t('Змінити фото')}">
+          <input class="visually-hidden" type="file" id="avatar-input" accept="image/png,image/jpeg,image/webp" aria-label="${t('Змінити фото')}" />
+          <span class="profile-avatar-img">${avatar(u)}</span>
+          <span class="profile-avatar-badge">${ICONS.camera}</span>
+        </label>
+        <div class="profile-who">
+          <div class="profile-name">
+            <h1>${u.name}</h1>
+            ${u.role === 'admin' ? html`<span class="pill pill-accent">${t('Адміністратор')}</span>` : ''}
+          </div>
+          <p class="profile-email">
+            <span>${u.email}</span>
+            ${u.emailVerified
+              ? html`<span class="pill pill-good">${t('підтверджено')}</span>`
+              : html`<span class="pill pill-warn">${t('не підтверджено')}</span>`}
+          </p>
+          <p class="muted">${t('З нами з {date}', { date: formatDate(u.createdAt) })}</p>
+        </div>
+        <button class="btn profile-logout" type="button" id="logout">${ICONS.logout}<span>${t('Вийти')}</span></button>
       </div>
+      <span class="dropzone-error profile-drop-error" role="alert" hidden></span>
+      <div class="profile-drop-hint" aria-hidden="true">${t('Відпусти, щоб зробити це фото профілю')}</div>
+      <div class="profile-stats" id="profile-stats">
+        ${[1, 2, 3, 4].map(() => html`<div class="profile-stat skeleton"></div>`)}
+      </div>
+    </section>
+  `;
+}
+
+function stats(s) {
+  return html`
+    <a class="profile-stat" href="#/list">
+      <b>${s.games}</b><span>${t('{games} у списку', { games: tp(s.games, 'гра', 'гри', 'ігор') })}</span>
+    </a>
+    <a class="profile-stat ${s.met ? 'is-good' : ''}" href="#/list">
+      <b>${s.met}</b><span>${tp(s.met, 'умова виконана', 'умови виконано', 'умов виконано')}</span>
+    </a>
+    <a class="profile-stat" href="#/notifications">
+      <b>${s.alerts}</b><span>${tp(s.alerts, 'сповіщення', 'сповіщення', 'сповіщень')}${s.unread ? html` · <em>${t('нових: {n}', { n: s.unread })}</em>` : ''}</span>
+    </a>
+    <div class="profile-stat ${s.savingsUah > 0 ? 'is-accent' : ''}">
+      <b>${formatUah(s.savingsUah)}</b><span>${t('можна заощадити зараз')}</span>
     </div>
   `;
 }
 
-/** Малює блок фото і підключає до нього завантаження та видалення. */
-function mountAvatar(box) {
-  setHtml(box, avatarPanel(state.user));
-  const updated = (user, message) => {
-    state.user = user;
-    refreshMe().catch(() => {});
-    mountAvatar(box);
-    toast(message);
-  };
-  bindDropZone($('.dropzone', box), {
-    extensions: ['png', 'jpg', 'jpeg', 'webp'],
-    maxBytes: AVATAR_MAX_BYTES,
-    typeError: t('Цей формат не підтримується. Вибери картинку PNG, JPG або WEBP'),
-    onFile: async (file) => updated((await upload('/api/me/avatar', file)).user, t('Фото профілю оновлено')),
-  });
-  $('#avatar-remove', box)?.addEventListener('click', async () => {
-    try {
-      updated((await del('/api/me/avatar')).user, t('Фото видалено'));
-    } catch (err) {
-      toast(err.message, 'error');
-    }
-  });
+/** Фон шапки — обкладинки ігор зі списку; якщо список порожній, лишається кольоровий градієнт. */
+function cover(urls) {
+  if (!urls.length) return '';
+  return html`<div class="profile-covers" style="--n: ${urls.length}">${urls.map((src) => html`<img src="${src}" alt="" loading="lazy" />`)}</div>`;
 }
 
-function telegramPanel() {
+// ---------- Вкладка «Профіль» ----------
+
+function mainTab(u) {
+  return html`
+    <form class="panel stack" id="profile-form" novalidate>
+      <div class="panel-head">
+        <h2>${t('Особисті дані')}</h2>
+        <p class="hint">${t('Ім’я бачать друзі, яким ти надішлеш посилання на свій список.')}</p>
+      </div>
+      <div class="form-error" role="alert" hidden></div>
+      <div class="field-grid">
+        <div class="field">
+          <label for="p-name">${t("Ім'я")}</label>
+          <input class="input" id="p-name" name="name" value="${u.name}" maxlength="40" autocomplete="nickname" required />
+        </div>
+        <div class="field">
+          <label for="p-email-view">${t('Електронна пошта')}</label>
+          <div class="input-with-action">
+            <input class="input" id="p-email-view" value="${u.email}" disabled />
+            <button class="btn btn-sm btn-ghost" type="button" data-goto="security">${t('Змінити')}</button>
+          </div>
+        </div>
+      </div>
+      <div><button class="btn btn-primary" type="submit">${t('Зберегти')}</button></div>
+    </form>
+
+    <section class="panel stack">
+      <div class="panel-head">
+        <h2>${t('Фото профілю')}</h2>
+        <p class="hint">
+          ${t('Натисни на фото в шапці профілю або перетягни на шапку картинку. PNG, JPG або WEBP, до {size}.', { size: formatSize(AVATAR_MAX_BYTES) })}
+        </p>
+      </div>
+      <div class="row">
+        <label class="btn" for="avatar-input">${ICONS.camera}<span>${u.avatarUrl ? t('Замінити фото') : t('Завантажити фото')}</span></label>
+        ${u.avatarUrl ? html`<button class="btn btn-ghost btn-danger" type="button" id="avatar-remove">${t('Видалити фото')}</button>` : ''}
+      </div>
+    </section>
+
+    <section class="panel stack">
+      <div class="panel-head">
+        <h2>${t('Мова інтерфейсу')}</h2>
+        <p class="hint">${t('Запам’ятовується в профілі — на інших пристроях сайт відкриється цією ж мовою.')}</p>
+      </div>
+      <div class="segmented" role="group" aria-label="${t('Мова інтерфейсу')}">
+        ${Object.entries(LANGS).map(([code, l]) => html`<button type="button" data-lang="${code}" aria-pressed="${String(getLang() === code)}">${l.name}</button>`)}
+      </div>
+    </section>
+  `;
+}
+
+// ---------- Вкладка «Сповіщення» ----------
+
+function telegramChannel() {
   const tg = state.app.telegram;
   const u = state.user;
+  let status;
+  let actions = '';
   if (!tg.enabled) {
-    return html`
-      <p class="muted">${t('Telegram-бот ще не налаштований на цьому сервері.')}</p>
-      <p class="hint">${t('Адміністратору потрібно створити бота через @BotFather і вписати токен у файл .env (TELEGRAM_BOT_TOKEN). Покрокова інструкція є в README.')}</p>
-    `;
-  }
-  if (u.telegramLinked) {
-    return html`
-      <div class="row"><span class="pill pill-good">${t('Підключено')}</span>${u.telegramUsername ? html`<span class="muted">@${u.telegramUsername}</span>` : ''}</div>
-      <p class="muted">${t('Сповіщення про знижки та роздачі приходять у Telegram. У боті працюють команди /list і /free.')}</p>
-      <div class="row">
-        <button class="btn" type="button" id="tg-test">${t('Надіслати тестове повідомлення')}</button>
-        <button class="btn btn-ghost btn-danger" type="button" id="tg-unlink">${t('Відключити')}</button>
-      </div>
-    `;
+    status = html`<span class="pill">${t('бот не налаштований')}</span>`;
+  } else if (u.telegramLinked) {
+    status = html`<span class="pill pill-good">${t('Підключено')}${u.telegramUsername ? ` · @${u.telegramUsername}` : ''}</span>`;
+    actions = html`
+      <button class="btn btn-sm" type="button" id="tg-test">${t('Тестове повідомлення')}</button>
+      <button class="btn btn-sm btn-ghost btn-danger" type="button" id="tg-unlink">${t('Відключити')}</button>`;
+  } else {
+    status = html`<span class="pill">${t('не підключено')}</span>`;
+    actions = html`<button class="btn btn-sm btn-primary" type="button" id="tg-link">${t('Підключити')}</button>`;
   }
   return html`
-    <p class="muted">${t('Підключи Telegram, щоб отримувати сповіщення на телефон миттєво.')}</p>
-    <div id="tg-link-box" class="stack">
-      <button class="btn btn-primary" type="button" id="tg-link">${t('Підключити Telegram')}</button>
+    <div class="channel">
+      <span class="channel-icon is-telegram">${ICONS.telegram}</span>
+      <div class="channel-text">
+        <div class="channel-title"><b>Telegram</b>${status}</div>
+        <p class="hint">
+          ${!tg.enabled
+            ? t('Адміністратору потрібно створити бота через @BotFather і вписати токен у файл .env (TELEGRAM_BOT_TOKEN). Покрокова інструкція є в README.')
+            : u.telegramLinked
+              ? t('Сповіщення приходять миттєво. У боті працюють команди /list і /free.')
+              : t('Миттєві сповіщення на телефон — найзручніший спосіб.')}
+        </p>
+        <div id="tg-link-box" class="stack"></div>
+      </div>
+      <div class="channel-actions">${actions}</div>
     </div>
   `;
 }
 
-export async function render(root) {
+function alertsTab(u) {
+  return html`
+    <section class="panel stack">
+      <div class="panel-head">
+        <h2>${t('Куди надсилати')}</h2>
+        <p class="hint">${t('Сповіщення про знижку приходить у всі підключені канали одразу.')}</p>
+      </div>
+      <div class="channels">
+        <div class="channel">
+          <span class="channel-icon">${ICONS.bell}</span>
+          <div class="channel-text">
+            <div class="channel-title"><b>${t('На сайті')}</b><span class="pill pill-good">${t('завжди')}</span></div>
+            <p class="hint">${t('Розділ «Сповіщення» в меню, з лічильником нових.')}</p>
+          </div>
+        </div>
+        ${telegramChannel()}
+        <div class="channel">
+          <span class="channel-icon">${ICONS.mail}</span>
+          <div class="channel-text">
+            <div class="channel-title"><b>${t('Пошта')}</b></div>
+            <p class="hint">
+              ${u.emailVerified
+                ? t('Листи приходять на {email}.', { email: u.email })
+                : t('Щоб отримувати листи, підтверди пошту {email}.', { email: u.email })}
+            </p>
+            ${u.emailVerified ? '' : html`<div><button class="btn btn-sm" type="button" id="p-resend">${t('Надіслати лист ще раз')}</button></div>`}
+          </div>
+          <label class="switch" title="${t('Надсилати сповіщення про знижки й роздачі на пошту')}">
+            <input type="checkbox" role="switch" id="p-notify-email" ${u.notifyEmail && u.emailVerified ? 'checked' : ''} ${u.emailVerified ? '' : 'disabled'}
+              aria-label="${t('Надсилати сповіщення про знижки й роздачі на пошту')}" />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel stack">
+      <div class="panel-head"><h2>${t('Про що повідомляти')}</h2></div>
+      <div class="channels">
+        <div class="channel">
+          <span class="channel-icon">${ICONS.tag}</span>
+          <div class="channel-text">
+            <div class="channel-title"><b>${t('Знижки на ігри зі списку')}</b><span class="pill pill-good">${t('завжди')}</span></div>
+            <p class="hint">${t('Коли виконується умова, яку ти задав для гри. Умови змінюються в розділі')} <a href="#/list">${t('Мій список')}</a>.</p>
+          </div>
+        </div>
+        <div class="channel">
+          <span class="channel-icon">${ICONS.gift}</span>
+          <div class="channel-text">
+            <div class="channel-title"><b>${t('Роздачі Epic Games')}</b></div>
+            <p class="hint">${t('Щотижня Epic віддає ігри безкоштовно — повідомимо про кожну нову.')}</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" role="switch" id="p-epic" ${u.notifyEpicFree ? 'checked' : ''} aria-label="${t('Повідомляти про нові безкоштовні роздачі Epic Games')}" />
+          </label>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+// ---------- Сторінка ----------
+
+export async function render(root, params) {
   await refreshMe();
   const u = state.user;
+  const first = TABS.some(([name]) => name === params.tab) ? params.tab : 'main';
   let poll = null;
 
   setHtml(
     root,
     html`
-      <div class="page-head">
-        <div>
-          <h1>${t('Профіль')}</h1>
-          <p>${t('Акаунт створено {date}', { date: formatDate(u.createdAt) })}</p>
+      ${hero(u)}
+      <div class="profile-layout">
+        <nav class="profile-tabs" role="tablist" aria-label="${t('Розділи профілю')}">
+          ${TABS.map(
+            ([name, label, icon]) => html`<button type="button" role="tab" id="tab-${name}" data-tab="${name}" aria-controls="panel-${name}"
+              aria-selected="${String(name === first)}" tabindex="${name === first ? '0' : '-1'}">${icon}<span>${t(label)}</span></button>`
+          )}
+        </nav>
+        <div class="profile-panels">
+          <div class="profile-panel" role="tabpanel" id="panel-main" data-panel="main" aria-labelledby="tab-main">${mainTab(u)}</div>
+          <div class="profile-panel" role="tabpanel" id="panel-alerts" data-panel="alerts" aria-labelledby="tab-alerts">${alertsTab(u)}</div>
+          <div class="profile-panel profile-panel-pair" role="tabpanel" id="panel-security" data-panel="security" aria-labelledby="tab-security">${securityPanels(u)}</div>
+          <div class="profile-panel" role="tabpanel" id="panel-data" data-panel="data" aria-labelledby="tab-data">${dataPanels()}</div>
         </div>
-        <button class="btn" type="button" id="logout">${t('Вийти з акаунта')}</button>
-      </div>
-
-      <div class="profile-grid">
-        <form class="panel stack" id="profile-form" novalidate>
-          <h2>${t('Особисті дані')}</h2>
-          <div class="form-error" role="alert" hidden></div>
-          <div class="field">
-            <label for="p-name">${t("Ім'я")}</label>
-            <input class="input" id="p-name" name="name" value="${u.name}" maxlength="40" required />
-          </div>
-          <div class="field">
-            <label for="p-email">${t('Електронна пошта')}</label>
-            <input class="input" id="p-email" value="${u.email}" disabled />
-          </div>
-          <div class="row">
-            <span class="pill ${u.role === 'admin' ? 'pill-accent' : ''}">${u.role === 'admin' ? t('Адміністратор') : t('Користувач')}</span>
-          </div>
-          <div><button class="btn btn-primary" type="submit">${t('Зберегти')}</button></div>
-        </form>
-
-        <section class="panel stack" id="avatar-box"></section>
-
-        <section class="panel stack">
-          <h2>${t('Telegram')}</h2>
-          ${telegramPanel()}
-        </section>
-
-        <section class="panel stack">
-          <h2>${t('Сповіщення')}</h2>
-          <label class="check">
-            <input type="checkbox" id="p-epic" ${u.notifyEpicFree ? 'checked' : ''} />
-            <span>${t('Повідомляти про нові безкоштовні роздачі Epic Games')}</span>
-          </label>
-          <label class="check">
-            <input type="checkbox" id="p-email" ${u.notifyEmail ? 'checked' : ''} ${u.emailVerified ? '' : 'disabled'} />
-            <span>${t('Надсилати сповіщення про знижки й роздачі на пошту')}</span>
-          </label>
-          ${u.emailVerified
-            ? html`<p class="hint"><span class="pill pill-good">${t('Пошту підтверджено')}</span> ${t('Листи приходять на {email}.', { email: u.email })}</p>`
-            : html`<p class="hint">${t('Щоб отримувати листи, підтверди пошту {email}.', { email: u.email })}
-                <button class="btn btn-sm" type="button" id="p-resend">${t('Надіслати лист ще раз')}</button></p>`}
-          <p class="hint">${t('Про знижки на ігри зі списку повідомляємо на сайті завжди, коли виконується твоя умова.')}</p>
-        </section>
-
-        ${accountPanels(u)}
       </div>
     `
   );
 
-  mountAvatar($('#avatar-box', root));
-  bindAccount(root);
+  // ---- Вкладки: адреса запам'ятовує відкриту, стрілки на клавіатурі перемикають ----
+  const tabs = [...root.querySelectorAll('[data-tab]')];
+  const selectTab = (name, focus = false) => {
+    for (const tab of tabs) {
+      const on = tab.dataset.tab === name;
+      tab.setAttribute('aria-selected', String(on));
+      tab.tabIndex = on ? 0 : -1;
+      if (on && focus) tab.focus();
+    }
+    root.querySelectorAll('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== name));
+    history.replaceState(null, '', name === 'main' ? '#/profile' : `#/profile?tab=${name}`);
+  };
+  selectTab(first);
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => selectTab(tab.dataset.tab));
+    tab.addEventListener('keydown', (e) => {
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      selectTab(tabs[(i + step + tabs.length) % tabs.length].dataset.tab, true);
+    });
+  });
+  root.querySelectorAll('[data-goto]').forEach((b) =>
+    b.addEventListener('click', () => {
+      selectTab(b.dataset.goto);
+      $('#email-card', root)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      $('#em-new', root)?.focus({ preventScroll: true });
+    })
+  );
+
+  // ---- Підсумок у шапці ----
+  get('/api/me/summary')
+    .then((s) => {
+      setHtml($('#profile-stats', root), stats(s));
+      setHtml($('#profile-cover', root), cover(s.covers));
+    })
+    .catch(() => ($('#profile-stats', root).hidden = true));
+
+  // ---- Фото: натиснути на нього або перетягнути картинку на шапку ----
+  const heroBox = $('#profile-hero', root);
+  bindDropZone(heroBox, {
+    extensions: ['png', 'jpg', 'jpeg', 'webp'],
+    maxBytes: AVATAR_MAX_BYTES,
+    typeError: t('Цей формат не підтримується. Вибери картинку PNG, JPG або WEBP'),
+    onFile: async (file) => {
+      state.user = (await upload('/api/me/avatar', file)).user;
+      await refreshMe().catch(() => {});
+      toast(t('Фото профілю оновлено'));
+      reload();
+    },
+  });
+  $('#avatar-remove', root)?.addEventListener('click', async () => {
+    try {
+      state.user = (await del('/api/me/avatar')).user;
+      await refreshMe().catch(() => {});
+      toast(t('Фото видалено'));
+      reload();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
 
   $('#logout', root).addEventListener('click', async () => {
     await post('/api/auth/logout').catch(() => {});
@@ -162,6 +334,7 @@ export async function render(root) {
     go('#/login');
   });
 
+  // ---- Особисті дані й мова ----
   const form = $('#profile-form', root);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -171,23 +344,32 @@ export async function render(root) {
         const { user } = await patch('/api/me', { name: form.elements.name.value });
         state.user = user;
         await refreshMe();
+        $('.profile-name h1', root).textContent = user.name;
         toast(t('Збережено'));
       } catch (err) {
         showFormError(form, err);
       }
     });
   });
+  root.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => switchLang(b.dataset.lang)));
 
-  $('#p-email', root).addEventListener('change', async (e) => {
-    try {
-      const { user } = await patch('/api/me', { notifyEmail: e.target.checked });
-      state.user = user;
-      toast(user.notifyEmail ? t('Листи про знижки увімкнено') : t('Листи про знижки вимкнено'));
-    } catch (err) {
-      e.target.checked = !e.target.checked;
-      toast(err.message, 'error');
-    }
-  });
+  bindAccount(root);
+
+  // ---- Сповіщення ----
+  const toggle = (input, field, message) =>
+    input?.addEventListener('change', async () => {
+      try {
+        const { user } = await patch('/api/me', { [field]: input.checked });
+        state.user = user;
+        toast(message(user));
+      } catch (err) {
+        input.checked = !input.checked;
+        toast(err.message, 'error');
+      }
+    });
+  toggle($('#p-notify-email', root), 'notifyEmail', (user) => (user.notifyEmail ? t('Листи про знижки увімкнено') : t('Листи про знижки вимкнено')));
+  toggle($('#p-epic', root), 'notifyEpicFree', (user) => (user.notifyEpicFree ? t('Повідомлятимемо про нові роздачі') : t('Сповіщення про роздачі вимкнено')));
+
   $('#p-resend', root)?.addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {
       try {
@@ -198,17 +380,6 @@ export async function render(root) {
       }
     })
   );
-
-  $('#p-epic', root).addEventListener('change', async (e) => {
-    try {
-      const { user } = await patch('/api/me', { notifyEpicFree: e.target.checked });
-      state.user = user;
-      toast(t('Налаштування збережено'));
-    } catch (err) {
-      e.target.checked = !e.target.checked;
-      toast(err.message, 'error');
-    }
-  });
 
   $('#tg-test', root)?.addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {
@@ -237,16 +408,23 @@ export async function render(root) {
       try {
         const { code, url } = await post('/api/me/telegram/link');
         const command = `/start ${code}`;
+        btn.hidden = true;
         setHtml(
           $('#tg-link-box', root),
           html`
-            ${url ? html`<a class="btn btn-primary" href="${url}" target="_blank" rel="noopener noreferrer">${t('Відкрити бота в Telegram')}</a>
-              <div class="tg-qr"><img src="/api/qr.svg?text=${encodeURIComponent(url)}" alt="${t('QR-код для відкриття бота')}" width="140" height="140" />
-                <p class="hint">${t('Або відскануй код телефоном — бот відкриється в Telegram на телефоні.')}</p></div>` : ''}
-            <p class="hint">${t('Натисни «Start» у боті. Якщо кнопка не відкрилась, надішли боту цю команду:')}</p>
-            <div class="tg-code"><span id="tg-command">${command}</span>
-              <button class="btn btn-sm" type="button" id="tg-copy">${t('Копіювати')}</button></div>
-            <p class="hint" id="tg-wait">${t('Чекаємо підтвердження від бота…')}</p>
+            <div class="tg-connect">
+              ${url
+                ? html`<img class="tg-qr" src="/api/qr.svg?text=${encodeURIComponent(url)}" alt="${t('QR-код для відкриття бота')}" width="132" height="132" />`
+                : ''}
+              <div class="stack">
+                ${url ? html`<div><a class="btn btn-primary" href="${url}" target="_blank" rel="noopener noreferrer">${t('Відкрити бота в Telegram')}</a></div>
+                  <p class="hint">${t('Або відскануй код телефоном — бот відкриється в Telegram на телефоні.')}</p>` : ''}
+                <p class="hint">${t('Натисни «Start» у боті. Якщо кнопка не відкрилась, надішли боту цю команду:')}</p>
+                <div class="tg-code"><span id="tg-command">${command}</span>
+                  <button class="btn btn-sm" type="button" id="tg-copy">${t('Копіювати')}</button></div>
+                <p class="hint" id="tg-wait"><span class="dot-pulse" aria-hidden="true"></span> ${t('Чекаємо підтвердження від бота…')}</p>
+              </div>
+            </div>
           `
         );
         $('#tg-copy', root).addEventListener('click', async () => {

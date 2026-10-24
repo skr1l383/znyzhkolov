@@ -1,10 +1,10 @@
-// Панелі профілю «Пароль і пошта», «Мої дані», «Видалення акаунта» та їхня поведінка.
+// Вкладки профілю «Безпека» (пароль і пошта) та «Мої дані» (завантаження й видалення акаунта) і їхня поведінка.
 import { post } from '../api.js';
 import { t } from '../i18n.js';
 import { clearPrivateCache, go, refreshMe, state } from '../app.js';
 import { $, clearFormErrors, closeDialog, html, openDialog, showFormError, toast, withLoading } from '../ui.js';
 
-export function accountPanels(u) {
+export function securityPanels(u) {
   return html`
     <section class="panel stack">
       <h2>${t('Пароль')}</h2>
@@ -28,7 +28,7 @@ export function accountPanels(u) {
       </form>
     </section>
 
-    <section class="panel stack">
+    <section class="panel stack" id="email-card">
       <h2>${t('Пошта')}</h2>
       <form class="stack" id="email-form" novalidate>
         <p class="muted">${t('Зараз:')} <b>${u.email}</b>${u.emailVerified ? html` <span class="pill pill-good">${t('підтверджено')}</span>` : ''}</p>
@@ -45,14 +45,18 @@ export function accountPanels(u) {
         <p class="hint">${t('На нову пошту прийде лист для підтвердження, на стару — попередження про зміну.')}</p>
       </form>
     </section>
+  `;
+}
 
+export function dataPanels() {
+  return html`
     <section class="panel stack">
       <h2>${t('Мої дані')}</h2>
       <p class="muted">
         ${t('Усе, що Знижколов знає про тебе: профіль, список ігор з умовами, сповіщення й активні входи — одним файлом JSON.')}
       </p>
       <div><a class="btn" href="/api/me/export.json" download>${t('Завантажити мої дані')}</a></div>
-      <p class="hint">${t('Як ми зберігаємо й використовуємо дані — на сторінці')} <a href="#/privacy">«${t('Конфіденційність')}»</a>.</p>
+      <p class="hint">${t('Як ми зберігаємо й використовуємо дані — на сторінці')} <a href="#/privacy">${t('Конфіденційність')}</a>.</p>
     </section>
 
     <section class="panel stack danger-zone">

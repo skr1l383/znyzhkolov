@@ -104,3 +104,23 @@ export function getWatch(userId, id) {
     .get(userId, id);
   return w ? publicWatch(w, offersForGame(w.game_id)) : null;
 }
+
+/** Підсумок списку: найдешевша пропозиція кожної гри, скільки все коштує зараз і без знижок, скільки умов виконано. */
+export function summarizeWatch(items) {
+  const rows = items.map((item) => {
+    const priced = item.offers.filter((o) => o.available && o.priceUah != null);
+    const best = priced.sort((a, b) => a.priceUah - b.priceUah)[0] || null;
+    const by = (store) => item.offers.find((o) => o.store === store);
+    return { item, best, steam: by('steam'), gog: by('gog') };
+  });
+  const priced = rows.filter((r) => r.best);
+  const now = priced.reduce((s, r) => s + r.best.priceUah, 0);
+  const regular = priced.reduce((s, r) => s + (r.best.basePriceUah ?? r.best.priceUah), 0);
+  return {
+    rows,
+    now,
+    regular,
+    savings: regular - now,
+    met: items.filter((i) => i.active && i.conditionMet).length,
+  };
+}
