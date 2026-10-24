@@ -430,6 +430,8 @@ export const EN = {
   'Умови сповіщення': 'Alert conditions',
   'Умови збережено': 'Conditions saved',
   'Завантажити таблицю з цінами': 'Download the price table',
+  Друкувати: 'Print',
+  'Список ігор · {name} · {date}': 'Game list · {name} · {date}',
   Додано: 'Added',
   Знайдено: 'Found',
   Пропущено: 'Skipped',

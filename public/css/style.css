@@ -3551,3 +3551,143 @@ textarea.input {
     transform: none;
   }
 }
+
+/* ---------- Друк ---------- */
+/* Лише для паперу: шапка з назвою сайту, ім'ям і датою */
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* На папері завжди світла тема, хоч би яку вибрано на екрані */
+  :root,
+  :root[data-theme],
+  :root:not([data-theme='light']) {
+    --bg: #fff;
+    --surface: #fff;
+    --surface-2: #f1f3f7;
+    --border: #c9d0dc;
+    --fg: #000;
+    --muted: #4a5366;
+    --accent: #f29a2e;
+    --accent-strong: #9a5300;
+    --good: #0d6630;
+    --good-bg: #dcf4e3;
+    --danger: #b3261e;
+    --shadow: none;
+  }
+
+  @page {
+    margin: 14mm 12mm;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .topbar,
+  .nav,
+  .site-footer,
+  .demo-banner,
+  .verify-banner,
+  .offline-banner,
+  .toasts,
+  .dialog,
+  .page-head .row,
+  .game-actions,
+  .back-link,
+  .watch-box,
+  .comment-form,
+  .comment-guest,
+  .comment-delete,
+  .media-strip,
+  .media-viewer {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .print-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #000;
+    font-size: 12px;
+  }
+
+  .print-head b {
+    font-family: var(--font-display);
+  }
+
+  main.container {
+    max-width: none;
+    padding: 0;
+  }
+
+  .page-head {
+    margin-bottom: 10px;
+  }
+
+  /* Картка гри: обкладинка, назва з умовою, ціни — і не розривається між сторінками */
+  .game-list {
+    gap: 8px;
+  }
+
+  .game-card {
+    grid-template-columns: 104px minmax(0, 1fr) 280px;
+    gap: 12px;
+    padding: 10px;
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  .game-card .cover {
+    border-radius: 4px;
+  }
+
+  .game-card .prices {
+    grid-column: auto; /* аркуш вузький, як планшет, але ціни лишаємо в рядку з назвою */
+  }
+
+  .game-card .game-main {
+    gap: 4px;
+  }
+
+  .buy-box .btn {
+    display: none;
+  }
+
+  .price-row {
+    padding: 4px 8px;
+    color: #000;
+    text-decoration: none;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  .comment,
+  .panel,
+  .game-side {
+    break-inside: avoid;
+  }
+
+  .game-side {
+    position: static;
+  }
+
+  .description.collapsed {
+    max-height: none;
+    mask-image: none;
+  }
+
+  #more-desc {
+    display: none;
+  }
+}

@@ -10,6 +10,7 @@ import {
   closeDialog,
   confirmDialog,
   cover,
+  formatDate,
   formatMoney,
   formatUah,
   gameHref,
@@ -22,6 +23,7 @@ import {
   withLoading,
 } from '../ui.js';
 import { t, tp } from '../i18n.js';
+import { state } from '../app.js';
 import { conditionsFields, conditionsText, readConditions } from './conditions.js';
 import { shareDialog } from './share.js';
 import { steamImportDialog } from './steamImport.js';
@@ -418,6 +420,10 @@ export async function render(root) {
     setHtml(
       root,
       html`
+        <div class="print-only print-head">
+          <b>${t('Знижколов')}</b>
+          <span>${t('Список ігор · {name} · {date}', { name: state.user?.name || '', date: formatDate(new Date().toISOString()) })}</span>
+        </div>
         <div class="page-head">
           <div>
             <h1>${t('Мій список')}</h1>
@@ -432,6 +438,7 @@ export async function render(root) {
             <button class="btn" type="button" id="steam-btn">${t('Імпорт зі Steam')}</button>
             <button class="btn" type="button" id="share-btn">${t('Поділитися')}</button>
             <button class="btn" type="button" id="files-btn">${t('Таблиці')}</button>
+            ${items.length ? html`<button class="btn" type="button" id="print-btn">${t('Друкувати')}</button>` : ''}
             ${items.length ? html`<a class="btn btn-primary" href="#/search">${t('Додати гру')}</a>` : ''}
           </div>
         </div>
@@ -455,6 +462,10 @@ export async function render(root) {
     }
     if (e.target.closest('#share-btn')) {
       shareDialog();
+      return;
+    }
+    if (e.target.closest('#print-btn')) {
+      window.print(); // вигляд для паперу — у правилах @media print у style.css
       return;
     }
     if (e.target.closest('#files-btn')) {
