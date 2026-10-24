@@ -1,4 +1,5 @@
 // Допоміжні функції інтерфейсу: безпечні шаблони HTML, форматування, сповіщення, діалоги.
+import { locale, t } from './i18n.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
@@ -48,7 +49,7 @@ export function formatUah(kopecks) {
   if (kopecks == null) return '—';
   const value = kopecks / 100;
   return (
-    new Intl.NumberFormat('uk-UA', {
+    new Intl.NumberFormat(locale(), {
       minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
       maximumFractionDigits: 2,
     }).format(value) + ' ₴'
@@ -61,22 +62,21 @@ export function formatMoney(minor, currency) {
   return formatUah(minor);
 }
 
-const rtf = new Intl.RelativeTimeFormat('uk', { numeric: 'auto' });
-
 export function timeAgo(iso) {
   if (!iso) return '';
+  const rtf = new Intl.RelativeTimeFormat(locale(), { numeric: 'auto' });
   const diff = (new Date(iso).getTime() - Date.now()) / 1000;
   const abs = Math.abs(diff);
-  if (abs < 45) return diff < 0 ? 'щойно' : 'за мить';
+  if (abs < 45) return diff < 0 ? t('щойно') : t('за мить');
   if (abs < 3600) return rtf.format(Math.round(diff / 60), 'minute');
   if (abs < 86400) return rtf.format(Math.round(diff / 3600), 'hour');
   if (abs < 86400 * 30) return rtf.format(Math.round(diff / 86400), 'day');
-  return new Date(iso).toLocaleDateString('uk-UA');
+  return new Date(iso).toLocaleDateString(locale());
 }
 
 export function formatDate(iso, withTime = false) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString('uk-UA', {
+  return new Date(iso).toLocaleString(locale(), {
     day: 'numeric',
     month: 'long',
     ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
@@ -107,7 +107,7 @@ export function toast(message, type = 'info') {
   const el = document.createElement('div');
   el.className = `toast ${type === 'error' ? 'error' : ''}`;
   el.setAttribute('role', type === 'error' ? 'alert' : 'status');
-  el.textContent = message;
+  el.textContent = t(message); // повідомлення сервера теж перекладаються, якщо є у словнику
   box.append(el);
   setTimeout(() => el.remove(), type === 'error' ? 6000 : 3500);
 }
@@ -127,14 +127,14 @@ export function closeDialog() {
 }
 
 /** Підтвердження дії всередині сторінки (замість стандартного confirm). */
-export function confirmDialog({ title, text, confirmText = 'Так', danger = false }) {
+export function confirmDialog({ title, text, confirmText = t('Так'), danger = false }) {
   return new Promise((resolve) => {
     const dialog = openDialog(html`
       <form class="dialog-body" method="dialog">
         <h2>${title}</h2>
         ${text ? html`<p class="muted">${text}</p>` : ''}
         <div class="dialog-foot">
-          <button class="btn" value="cancel" type="submit">Скасувати</button>
+          <button class="btn" value="cancel" type="submit">${t('Скасувати')}</button>
           <button class="btn ${danger ? 'btn-danger solid' : 'btn-primary'}" value="ok" type="submit">${confirmText}</button>
         </div>
       </form>
@@ -172,14 +172,14 @@ export function showFormError(form, err) {
     field.classList.add('invalid');
     const msg = document.createElement('div');
     msg.className = 'field-error';
-    msg.textContent = err.message;
+    msg.textContent = t(err.message);
     field.closest('.field')?.append(msg);
     field.focus();
   } else if (general) {
-    general.textContent = err?.message || 'Щось пішло не так';
+    general.textContent = t(err?.message || 'Щось пішло не так');
     general.hidden = false;
   } else {
-    toast(err?.message || 'Щось пішло не так', 'error');
+    toast(t(err?.message || 'Щось пішло не так'), 'error');
   }
 }
 
@@ -195,9 +195,9 @@ export const gameHref = (store, storeId) => `#/game?store=${encodeURIComponent(s
 
 /** Розмір файлу людською мовою: 2 097 152 → «2 МБ». */
 export function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} Б`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`;
-  return `${Math.round((bytes / 1024 / 1024) * 10) / 10} МБ`.replace('.', ',');
+  if (bytes < 1024) return `${bytes} ${t('Б')}`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} ${t('КБ')}`;
+  return new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 }).format(bytes / 1024 / 1024) + ` ${t('МБ')}`;
 }
 
 /** Аватар користувача: фото або перша літера імені. */
@@ -241,7 +241,7 @@ export function bindDropZone(zone, { extensions, maxBytes, typeError, onFile }) 
     const ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
     if (!extensions.includes(ext)) return showError(typeError);
     if (file.size > maxBytes) {
-      return showError(`Файл завеликий: ${formatSize(file.size)}. Максимум — ${formatSize(maxBytes)}`);
+      return showError(t('Файл завеликий: {size}. Максимум — {max}', { size: formatSize(file.size), max: formatSize(maxBytes) }));
     }
     zone.classList.add('busy');
     try {
@@ -268,7 +268,7 @@ export function bindDropZone(zone, { extensions, maxBytes, typeError, onFile }) 
   zone.addEventListener('drop', (e) => {
     e.preventDefault();
     zone.classList.remove('dragging');
-    if (e.dataTransfer.files.length > 1) return showError('Перетягни лише один файл');
+    if (e.dataTransfer.files.length > 1) return showError(t('Перетягни лише один файл'));
     take(e.dataTransfer.files[0]);
   });
   return { showError };

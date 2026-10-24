@@ -1,5 +1,6 @@
 // Історія сповіщень. Ті самі повідомлення надходять у Telegram, якщо його підключено.
 import { get, post } from '../api.js';
+import { t } from '../i18n.js';
 import { setUnread, state } from '../app.js';
 import { formatDate, html, setHtml, timeAgo } from '../ui.js';
 
@@ -14,8 +15,8 @@ function notice(n) {
         ${n.body ? html`<div class="notice-body">${n.body}</div>` : ''}
         <div class="notice-meta">
           <time datetime="${n.createdAt}" title="${formatDate(n.createdAt, true)}">${timeAgo(n.createdAt)}</time>
-          ${n.telegram ? html`<span>надіслано в Telegram</span>` : ''}
-          ${n.url ? html`<a href="${n.url}" target="_blank" rel="noopener noreferrer">Відкрити магазин</a>` : ''}
+          ${n.telegram ? html`<span>${t('надіслано в Telegram')}</span>` : ''}
+          ${n.url ? html`<a href="${n.url}" target="_blank" rel="noopener noreferrer">${t('Відкрити магазин')}</a>` : ''}
         </div>
       </div>
     </article>
@@ -31,17 +32,17 @@ export async function render(root) {
     html`
       <div class="page-head">
         <div>
-          <h1>Сповіщення</h1>
+          <h1>${t('Сповіщення')}</h1>
           <p>
             ${state.user.telegramLinked
-              ? 'Усі сповіщення також надходять тобі в Telegram.'
-              : html`Підключи Telegram у <a href="#/profile">профілі</a>, щоб отримувати їх миттєво на телефон.`}
+              ? t('Усі сповіщення також надходять тобі в Telegram.')
+              : html`${t('Підключи Telegram у')} <a href="#/profile">${t('профілі')}</a>${t(', щоб отримувати їх миттєво на телефон.')}`}
           </p>
         </div>
       </div>
       ${items.length
         ? html`<div class="notice-list">${items.map(notice)}</div>`
-        : html`<div class="empty"><h2>Сповіщень ще немає</h2><p>Тут з'являться знижки на ігри з твого списку та нові роздачі Epic Games.</p></div>`}
+        : html`<div class="empty"><h2>${t('Сповіщень ще немає')}</h2><p>${t("Тут з'являться знижки на ігри з твого списку та нові роздачі Epic Games.")}</p></div>`}
     `
   );
 

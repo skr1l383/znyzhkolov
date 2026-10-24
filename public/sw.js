@@ -7,7 +7,8 @@
 
 // Будь-яка зміна цього файлу (наприклад, версії) змушує браузер встановити service worker заново.
 // v2: перша версія могла встановитися із суворою CSP і блокувати обкладинки — нова її замінює.
-const VERSION = 'v3';
+// v4: додано файли перекладу (i18n).
+const VERSION = 'v4';
 const SHELL_CACHE = `zk-shell-${VERSION}`;
 const API_CACHE = 'zk-api'; // очищається при виході з акаунта
 const IMAGE_CACHE = 'zk-images';
@@ -24,6 +25,8 @@ const SHELL = [
   '/js/app.js',
   '/js/api.js',
   '/js/ui.js',
+  '/js/i18n.js',
+  '/js/i18n-en.js',
   '/js/chart.js',
   '/js/views/account.js',
   '/js/views/admin.js',

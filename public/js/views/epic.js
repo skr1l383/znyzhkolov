@@ -1,15 +1,16 @@
 // Безкоштовні роздачі Epic Games: що можна забрати зараз і що буде далі.
 import { get, patch } from '../api.js';
+import { t } from '../i18n.js';
 import { state } from '../app.js';
 import { $, cover, formatDate, formatUah, html, setHtml, timeAgo, toast } from '../ui.js';
 
 function timeLeft(iso) {
   const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return 'закінчилась';
+  if (ms <= 0) return t('закінчилась');
   const days = Math.floor(ms / 864e5);
   const hours = Math.floor((ms % 864e5) / 36e5);
-  if (days > 0) return `ще ${days} дн. ${hours} год.`;
-  return `ще ${hours} год.`;
+  if (days > 0) return t('ще {days} дн. {hours} год.', { days, hours });
+  return t('ще {hours} год.', { hours });
 }
 
 function freebieCard(f) {
@@ -20,10 +21,10 @@ function freebieCard(f) {
         ${cover(f.imageUrl, f.title)}
         <h3>${f.title}</h3>
         <div class="freebie-meta">
-          <span class="price-values"><span class="pill pill-good">Безкоштовно</span> ${usual}</span>
+          <span class="price-values"><span class="pill pill-good">${t('Безкоштовно')}</span> ${usual}</span>
           <span class="hint">${timeLeft(f.endsAt)}</span>
         </div>
-        <a class="btn btn-primary" href="${f.url}" target="_blank" rel="noopener noreferrer">Забрати в Epic Games</a>
+        <a class="btn btn-primary" href="${f.url}" target="_blank" rel="noopener noreferrer">${t('Забрати в Epic Games')}</a>
       </article>
     `;
   }
@@ -32,10 +33,10 @@ function freebieCard(f) {
       ${cover(f.imageUrl, f.title)}
       <h3>${f.title}</h3>
       <div class="freebie-meta">
-        <span class="pill pill-accent">З ${formatDate(f.startsAt)}</span>
+        <span class="pill pill-accent">${t('З {date}', { date: formatDate(f.startsAt) })}</span>
         ${usual}
       </div>
-      <a class="btn" href="${f.url}" target="_blank" rel="noopener noreferrer">Сторінка гри</a>
+      <a class="btn" href="${f.url}" target="_blank" rel="noopener noreferrer">${t('Сторінка гри')}</a>
     </article>
   `;
 }
@@ -51,26 +52,26 @@ export async function render(root) {
     html`
       <div class="page-head">
         <div>
-          <h1>Роздачі Epic Games</h1>
-          <p>Щотижня Epic віддає ігри безкоштовно. Забрана гра залишається в бібліотеці назавжди.</p>
+          <h1>${t('Роздачі Epic Games')}</h1>
+          <p>${t('Щотижня Epic віддає ігри безкоштовно. Забрана гра залишається в бібліотеці назавжди.')}</p>
         </div>
         <label class="check">
           <input type="checkbox" id="epic-notify" ${state.user.notifyEpicFree ? 'checked' : ''} />
-          <span>Повідомляти мене про нові роздачі</span>
+          <span>${t('Повідомляти мене про нові роздачі')}</span>
         </label>
       </div>
 
-      <div class="section-title"><h2>Зараз безкоштовно</h2><span class="count">${current.length}</span></div>
+      <div class="section-title"><h2>${t('Зараз безкоштовно')}</h2><span class="count">${current.length}</span></div>
       ${current.length
         ? html`<div class="freebies">${current.map(freebieCard)}</div>`
-        : html`<div class="empty"><p>Зараз активних роздач немає або Epic Games не відповідає. Ми перевіримо ще раз автоматично.</p></div>`}
+        : html`<div class="empty"><p>${t('Зараз активних роздач немає або Epic Games не відповідає. Ми перевіримо ще раз автоматично.')}</p></div>`}
 
       ${upcoming.length
-        ? html`<div class="section-title"><h2>Скоро</h2><span class="count">${upcoming.length}</span></div>
+        ? html`<div class="section-title"><h2>${t('Скоро')}</h2><span class="count">${upcoming.length}</span></div>
             <div class="freebies">${upcoming.map(freebieCard)}</div>`
         : ''}
 
-      ${lastCheck ? html`<p class="hint" style="margin-top:24px">Дані оновлено ${timeAgo(lastCheck)}. Перевіряємо автоматично кілька разів на день.</p>` : ''}
+      ${lastCheck ? html`<p class="hint" style="margin-top:24px">${t('Дані оновлено {when}. Перевіряємо автоматично кілька разів на день.', { when: timeAgo(lastCheck) })}</p>` : ''}
     `
   );
 
@@ -78,7 +79,7 @@ export async function render(root) {
     try {
       const { user } = await patch('/api/me', { notifyEpicFree: e.target.checked });
       state.user = user;
-      toast(user.notifyEpicFree ? 'Повідомлятимемо про нові роздачі' : 'Сповіщення про роздачі вимкнено');
+      toast(user.notifyEpicFree ? t('Повідомлятимемо про нові роздачі') : t('Сповіщення про роздачі вимкнено'));
     } catch (err) {
       e.target.checked = !e.target.checked;
       toast(err.message, 'error');

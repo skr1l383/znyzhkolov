@@ -54,7 +54,7 @@ export function parseSteamDetails(json, appId) {
     videos: (d.movies || [])
       .filter((m) => m.hls_h264)
       .slice(0, 6)
-      .map((m) => ({ kind: 'hls', src: m.hls_h264, poster: https(m.thumbnail), title: String(m.name || 'Трейлер') })),
+      .map((m) => ({ kind: 'hls', src: m.hls_h264, poster: https(m.thumbnail), title: m.name ? String(m.name) : null })),
     genres: (d.genres || []).map((g) => g.description).filter(Boolean),
     developers: d.developers || [],
     publishers: d.publishers || [],
@@ -79,10 +79,11 @@ export async function fetchSteamEnglishTitle(appId) {
   return json?.[appId]?.data?.name || null;
 }
 
-export async function fetchSteamDetails(appId) {
+export async function fetchSteamDetails(appId, lang = 'uk') {
   const cc = config.stores.steamCountry;
+  const language = lang === 'en' ? 'english' : config.stores.steamLanguage;
   const [details, reviews] = await Promise.all([
-    fetchJson('Steam', `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=${cc}&l=${config.stores.steamLanguage}`),
+    fetchJson('Steam', `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=${cc}&l=${language}`),
     fetchJson('Steam', `https://store.steampowered.com/appreviews/${appId}?json=1&language=all&purchase_type=all&num_per_page=0`).catch(() => null),
   ]);
   const parsed = parseSteamDetails(details, appId);
@@ -93,10 +94,10 @@ export async function fetchSteamDetails(appId) {
 /** Відео GOG: YouTube показуємо через youtube-nocookie (без стеження за глядачем). */
 function gogVideo(v) {
   const id = /youtube\.com\/embed\/([\w-]{6,20})/.exec(v?.video_url || '')?.[1];
-  return id ? { kind: 'youtube', src: `https://www.youtube-nocookie.com/embed/${id}`, poster: https(v.thumbnail_url), title: 'Трейлер' } : null;
+  return id ? { kind: 'youtube', src: `https://www.youtube-nocookie.com/embed/${id}`, poster: https(v.thumbnail_url), title: null } : null;
 }
 
-export function parseGogProduct(json) {
+export function parseGogProduct(json, lang = 'uk') {
   if (!json?.id || !json.title) return null;
   const screenshot = (s, formatter) => https(String(s.formatter_template_url || '').replace('{formatter}', formatter).replace(/\.png$/, '.jpg'));
   return {
@@ -113,7 +114,9 @@ export function parseGogProduct(json) {
     genres: [],
     developers: [],
     publishers: [],
-    releaseDate: json.release_date ? new Date(json.release_date).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', year: 'numeric' }) : null,
+    releaseDate: json.release_date
+      ? new Date(json.release_date).toLocaleDateString(lang === 'en' ? 'en-GB' : 'uk-UA', { day: 'numeric', month: 'short', year: 'numeric' })
+      : null,
     comingSoon: Boolean(json.in_development?.active || json.is_pre_order),
     metacritic: null,
     platforms: Object.entries(json.content_system_compatibility || {}).filter(([, on]) => on).map(([p]) => (p === 'osx' ? 'mac' : p)),
@@ -122,8 +125,9 @@ export function parseGogProduct(json) {
   };
 }
 
-export async function fetchGogDetails(productId) {
+export async function fetchGogDetails(productId, lang = 'uk') {
   return parseGogProduct(
-    await fetchJson('GOG', `https://api.gog.com/products/${productId}?expand=description,screenshots,videos&locale=en-US`)
+    await fetchJson('GOG', `https://api.gog.com/products/${productId}?expand=description,screenshots,videos&locale=en-US`),
+    lang
   );
 }

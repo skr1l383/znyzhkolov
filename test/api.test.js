@@ -195,6 +195,9 @@ test('Реєстрація: порожні поля, короткий парол
   let r = await admin('POST', '/api/auth/register', { name: '', email: '', password: '' });
   assert.equal(r.status, 400);
   assert.equal(r.data.details.field, 'name');
+  // Разом із готовим текстом приходить шаблон — за ним інтерфейс показує переклад
+  assert.equal(r.data.error, 'Заповніть поле «Ім\'я»');
+  assert.deepEqual(r.data.details.i18n, { text: 'Заповніть поле «{label}»', vars: { label: "Ім'я" } });
 
   r = await admin('POST', '/api/auth/register', { name: 'Саша', email: 'sasha@test.ua', password: '123' });
   assert.equal(r.status, 400);
@@ -216,6 +219,16 @@ test('Реєстрація: перший користувач стає адмі�
 
   r = await user('POST', '/api/auth/register', { name: 'Оля 2', email: 'olia@test.ua', password: 'password123' });
   assert.equal(r.status, 409);
+});
+
+test('Мова інтерфейсу зберігається в профілі', async () => {
+  assert.equal((await user('GET', '/api/me')).data.user.lang, 'uk');
+  let r = await user('PATCH', '/api/me', { lang: 'en' });
+  assert.equal(r.status, 200);
+  assert.equal((await user('GET', '/api/me')).data.user.lang, 'en');
+  r = await user('PATCH', '/api/me', { lang: 'fr' });
+  assert.equal(r.status, 400);
+  assert.equal((await user('PATCH', '/api/me', { lang: 'uk' })).status, 200);
 });
 
 test('Вхід: неправильний пароль і неіснуючий користувач', async () => {

@@ -1,6 +1,7 @@
 // Розпізнавання QR-кодів з камери або з фото.
 // Якщо браузер має вбудований BarcodeDetector (Chrome на Android, macOS) — використовуємо його,
 // інакше (наприклад, Chrome на Windows) — бібліотеку jsQR, яка завантажується лише за потреби.
+import { t } from './i18n.js';
 
 let jsQRLoading = null;
 function loadJsQR() {
@@ -8,7 +9,7 @@ function loadJsQR() {
     const script = document.createElement('script');
     script.src = '/vendor/jsQR.js';
     script.onload = () => resolve(window.jsQR);
-    script.onerror = () => reject(new Error('Не вдалося завантажити розпізнавач QR-кодів'));
+    script.onerror = () => reject(new Error(t('Не вдалося завантажити розпізнавач QR-кодів')));
     document.head.append(script);
   });
   return jsQRLoading;
@@ -54,7 +55,7 @@ export async function decodeImageFile(file) {
   canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   const decode = await createDecoder();
   const result = await decode(canvas);
-  if (!result) throw new Error('На фото не знайдено QR-коду. Спробуй чіткіше фото, де код займає більшу частину кадру');
+  if (!result) throw new Error(t('На фото не знайдено QR-коду. Спробуй чіткіше фото, де код займає більшу частину кадру'));
   return result.text;
 }
 
@@ -64,7 +65,7 @@ export async function decodeImageFile(file) {
  */
 export async function startCameraScan(video, overlay, { onResult, onError }) {
   if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error('Камера недоступна: браузер не підтримує доступ до камери або сайт відкрито не через https');
+    throw new Error(t('Камера недоступна: браузер не підтримує доступ до камери або сайт відкрито не через https'));
   }
   let stream;
   try {
@@ -73,10 +74,10 @@ export async function startCameraScan(video, overlay, { onResult, onError }) {
   } catch (err) {
     throw new Error(
       err.name === 'NotAllowedError'
-        ? 'Доступ до камери заборонено. Дозволь його в налаштуваннях браузера (значок камери в адресному рядку)'
+        ? t('Доступ до камери заборонено. Дозволь його в налаштуваннях браузера (значок камери в адресному рядку)')
         : err.name === 'NotFoundError'
-          ? 'Камеру не знайдено'
-          : `Не вдалося увімкнути камеру: ${err.message}`
+          ? t('Камеру не знайдено')
+          : t('Не вдалося увімкнути камеру: {error}', { error: err.message })
     );
   }
   video.srcObject = stream;

@@ -20,7 +20,7 @@ import {
   withLoading,
 } from '../ui.js';
 import { openAddDialog } from './search.js';
-import { plural } from './watchlist.js';
+import { t, tp } from '../i18n.js';
 
 const shareLink = (token) => `${location.origin}/#/shared?token=${encodeURIComponent(token)}`;
 const qrSrc = (text) => `/api/qr.svg?text=${encodeURIComponent(text)}`;
@@ -30,27 +30,26 @@ function minePanel(token) {
   if (!token) {
     return html`
       <p class="muted">
-        Створи посилання на свій список — друзі побачать ігри, за якими ти стежиш, і їхні ціни
-        (без твоєї пошти й інших даних) і зможуть одним натисканням стежити за ними теж.
+        ${t('Створи посилання на свій список — друзі побачать ігри, за якими ти стежиш, і їхні ціни (без твоєї пошти й інших даних) і зможуть одним натисканням стежити за ними теж.')}
       </p>
-      <div><button class="btn btn-primary" type="button" id="share-create">Створити посилання</button></div>`;
+      <div><button class="btn btn-primary" type="button" id="share-create">${t('Створити посилання')}</button></div>`;
   }
   const link = shareLink(token);
   return html`
     <div class="share-grid">
-      <img class="qr-img" src="${qrSrc(link)}" alt="QR-код посилання на мій список" width="220" height="220" />
+      <img class="qr-img" src="${qrSrc(link)}" alt="${t('QR-код посилання на мій список')}" width="220" height="220" />
       <div class="stack">
-        <p class="muted">Наведи камеру телефона на код або надішли посилання.</p>
+        <p class="muted">${t('Наведи камеру телефона на код або надішли посилання.')}</p>
         <div class="copy-row">
-          <input class="input" id="share-link" value="${link}" readonly aria-label="Посилання на мій список" />
-          <button class="btn" type="button" id="share-copy">Копіювати</button>
+          <input class="input" id="share-link" value="${link}" readonly aria-label="${t('Посилання на мій список')}" />
+          <button class="btn" type="button" id="share-copy">${t('Копіювати')}</button>
         </div>
         <div class="row">
-          <a class="btn btn-sm" href="${link}" target="_blank" rel="noopener">Відкрити</a>
-          <a class="btn btn-sm" href="${qrSrc(link)}" download="znyzhkolov-qr.svg">Завантажити QR</a>
-          <button class="btn btn-sm btn-ghost btn-danger" type="button" id="share-revoke">Вимкнути посилання</button>
+          <a class="btn btn-sm" href="${link}" target="_blank" rel="noopener">${t('Відкрити')}</a>
+          <a class="btn btn-sm" href="${qrSrc(link)}" download="znyzhkolov-qr.svg">${t('Завантажити QR')}</a>
+          <button class="btn btn-sm btn-ghost btn-danger" type="button" id="share-revoke">${t('Вимкнути посилання')}</button>
         </div>
-        <p class="hint">Після вимкнення старе посилання й QR-код перестануть працювати.</p>
+        <p class="hint">${t('Після вимкнення старе посилання й QR-код перестануть працювати.')}</p>
       </div>
     </div>`;
 }
@@ -60,7 +59,7 @@ function handleScanned(text, box) {
   const token = sharedTokenFrom(text);
   if (token) {
     closeDialog();
-    toast('QR-код розпізнано — відкриваємо список');
+    toast(t('QR-код розпізнано — відкриваємо список'));
     go(`#/shared?token=${encodeURIComponent(token)}`);
     return;
   }
@@ -68,10 +67,10 @@ function handleScanned(text, box) {
   setHtml(
     box,
     html`<div class="scan-result">
-      <strong>Розпізнано QR-код</strong>
+      <strong>${t('Розпізнано QR-код')}</strong>
       <p>${text}</p>
-      ${isUrl ? html`<a class="btn btn-sm" href="${text}" target="_blank" rel="noopener noreferrer">Відкрити посилання</a>` : ''}
-      <p class="hint">Це не посилання на список у Знижколові.</p>
+      ${isUrl ? html`<a class="btn btn-sm" href="${text}" target="_blank" rel="noopener noreferrer">${t('Відкрити посилання')}</a>` : ''}
+      <p class="hint">${t('Це не посилання на список у Знижколові.')}</p>
     </div>`
   );
 }
@@ -79,31 +78,31 @@ function handleScanned(text, box) {
 export async function shareDialog() {
   const dialog = openDialog(html`
     <div class="dialog-body">
-      <div><p class="muted">Мій список</p><h2>Поділитися</h2></div>
-      <div class="segmented tabs" role="group" aria-label="Що зробити">
-        <button type="button" data-tab="mine" aria-pressed="true">Мій список</button>
-        <button type="button" data-tab="friend" aria-pressed="false">Список друга</button>
+      <div><p class="muted">${t('Мій список')}</p><h2>${t('Поділитися')}</h2></div>
+      <div class="segmented tabs" role="group" aria-label="${t('Що зробити')}">
+        <button type="button" data-tab="mine" aria-pressed="true">${t('Мій список')}</button>
+        <button type="button" data-tab="friend" aria-pressed="false">${t('Список друга')}</button>
       </div>
       <section class="stack" data-panel="mine"><div class="skeleton" style="height: 120px"></div></section>
       <section class="stack" data-panel="friend" hidden>
-        <p class="muted">Відскануй QR-код зі списком друга камерою або завантаж фото з кодом.</p>
+        <p class="muted">${t('Відскануй QR-код зі списком друга камерою або завантаж фото з кодом.')}</p>
         <div class="scan-box" hidden>
-          <video aria-label="Зображення з камери"></video>
+          <video aria-label="${t('Зображення з камери')}"></video>
           <canvas class="scan-overlay" aria-hidden="true"></canvas>
-          <span class="scan-hint">Наведи камеру на QR-код</span>
+          <span class="scan-hint">${t('Наведи камеру на QR-код')}</span>
         </div>
         <div class="row">
-          <button class="btn btn-primary" type="button" id="scan-start">Сканувати камерою</button>
-          <button class="btn" type="button" id="scan-stop" hidden>Зупинити камеру</button>
+          <button class="btn btn-primary" type="button" id="scan-start">${t('Сканувати камерою')}</button>
+          <button class="btn" type="button" id="scan-stop" hidden>${t('Зупинити камеру')}</button>
         </div>
         ${dropZone({
-          title: 'Або перетягни фото з QR-кодом',
-          hint: `чи натисни, щоб вибрати. JPG, PNG або WEBP, до ${formatSize(PHOTO_MAX_BYTES)}`,
+          title: t('Або перетягни фото з QR-кодом'),
+          hint: t('чи натисни, щоб вибрати. JPG, PNG або WEBP, до {size}', { size: formatSize(PHOTO_MAX_BYTES) }),
           accept: 'image/png,image/jpeg,image/webp',
         })}
         <div id="scan-result" aria-live="polite"></div>
       </section>
-      <div class="dialog-foot"><button class="btn" type="button" data-close>Закрити</button></div>
+      <div class="dialog-foot"><button class="btn" type="button" data-close>${t('Закрити')}</button></div>
     </div>
   `);
 
@@ -141,7 +140,7 @@ export async function shareDialog() {
       const input = $('#share-link', mine);
       try {
         await navigator.clipboard.writeText(input.value);
-        toast('Посилання скопійовано');
+        toast(t('Посилання скопійовано'));
       } catch {
         input.select(); // без доступу до буфера — виділяємо, щоб скопіювати Ctrl+C
       }
@@ -149,7 +148,7 @@ export async function shareDialog() {
     $('#share-revoke', mine)?.addEventListener('click', async () => {
       try {
         drawMine((await del('/api/me/share')).token);
-        toast('Посилання вимкнено');
+        toast(t('Посилання вимкнено'));
       } catch (err) {
         toast(err.message, 'error');
       }
@@ -188,7 +187,7 @@ export async function shareDialog() {
   bindDropZone($('.dropzone', dialog), {
     extensions: ['png', 'jpg', 'jpeg', 'webp'],
     maxBytes: PHOTO_MAX_BYTES,
-    typeError: 'Це не схоже на фото. Вибери картинку JPG, PNG або WEBP',
+    typeError: t('Це не схоже на фото. Вибери картинку JPG, PNG або WEBP'),
     onFile: async (file) => {
       setHtml(resultBox, '');
       handleScanned(await decodeImageFile(file), resultBox);
@@ -217,8 +216,8 @@ function sharedCard(item, index) {
             <span class="price">${best.priceUah != null ? `${best.currency === 'USD' ? '≈ ' : ''}${formatUah(best.priceUah)}` : '—'}</span>
           </div>
           ${item.inMyList
-            ? html`<span class="pill pill-good">У тебе в списку</span>`
-            : html`<button class="btn btn-sm btn-primary" type="button" data-follow="${index}">Стежити</button>`}
+            ? html`<span class="pill pill-good">${t('У тебе в списку')}</span>`
+            : html`<button class="btn btn-sm btn-primary" type="button" data-follow="${index}">${t('Стежити')}</button>`}
         </div>
       </div>
     </article>`;
@@ -227,7 +226,7 @@ function sharedCard(item, index) {
 export async function render(root, params) {
   const token = String(params.token || '');
   const data = await get(`/api/shared/${encodeURIComponent(token)}`);
-  document.title = `Список гравця ${data.owner.name} · Знижколов`;
+  document.title = `${t('Список гравця {name}', { name: data.owner.name })} · ${t('Знижколов')}`;
   const n = data.items.length;
   const draw = () =>
     setHtml(
@@ -235,15 +234,15 @@ export async function render(root, params) {
       html`
         <div class="page-head">
           <div>
-            <p class="muted">${data.isMine ? 'Так твій список бачать друзі' : 'Список друга'}</p>
-            <h1>Список гравця ${data.owner.name}</h1>
-            <p>${n} ${plural(n, 'гра', 'гри', 'ігор')}, за ${plural(n, 'якою', 'якими', 'якими')} ${data.isMine ? 'ти стежиш' : `стежить ${data.owner.name}`}</p>
+            <p class="muted">${data.isMine ? t('Так твій список бачать друзі') : t('Список друга')}</p>
+            <h1>${t('Список гравця {name}', { name: data.owner.name })}</h1>
+            <p>${data.isMine ? t('{n} {games}, за якими ти стежиш', { n, games: tp(n, 'гра', 'гри', 'ігор') }) : t('{n} {games}, за якими стежить {name}', { n, games: tp(n, 'гра', 'гри', 'ігор'), name: data.owner.name })}</p>
           </div>
-          ${data.isMine ? html`<a class="btn" href="#/list">До мого списку</a>` : ''}
+          ${data.isMine ? html`<a class="btn" href="#/list">${t('До мого списку')}</a>` : ''}
         </div>
         ${n
           ? html`<div class="deal-grid">${data.items.map(sharedCard)}</div>`
-          : html`<div class="empty"><h2>Список поки порожній</h2><p>Тут з'являться ігри, щойно власник їх додасть.</p></div>`}
+          : html`<div class="empty"><h2>${t('Список поки порожній')}</h2><p>${t("Тут з'являться ігри, щойно власник їх додасть.")}</p></div>`}
       `
     );
   draw();
@@ -252,7 +251,7 @@ export async function render(root, params) {
     const btn = e.target.closest('[data-follow]');
     if (!btn) return;
     if (!state.user) {
-      toast('Створи акаунт або увійди, щоб стежити за цінами');
+      toast(t('Створи акаунт або увійди, щоб стежити за цінами'));
       return go('#/register');
     }
     const item = data.items[Number(btn.dataset.follow)];

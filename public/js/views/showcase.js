@@ -3,7 +3,7 @@
 import { get } from '../api.js';
 import { go, state } from '../app.js';
 import { $, $$, STORE_NAMES, cover, gameHref, formatDate, formatMoney, formatUah, html, setHtml, timeAgo, toast } from '../ui.js';
-import { plural } from './watchlist.js';
+import { t, tp } from '../i18n.js';
 import { openAddDialog } from './search.js';
 
 const PAGE = 24;
@@ -18,7 +18,7 @@ const SORTS = [
 const DISCOUNTS = [25, 50, 75, 90];
 
 function dealCard(d, index) {
-  const usd = d.currency === 'USD' ? `${formatMoney(d.price, 'USD')} за курсом НБУ` : '';
+  const usd = d.currency === 'USD' ? t('{price} за курсом НБУ', { price: formatMoney(d.price, 'USD') }) : '';
   return html`
     <article class="deal-card" data-title="${d.title}">
       <a class="deal-cover" href="${gameHref(d.store, d.storeId)}" tabindex="-1" aria-hidden="true">
@@ -28,7 +28,7 @@ function dealCard(d, index) {
       <div class="deal-body">
         <div class="deal-meta">
           <span class="store store-${d.store}">${STORE_NAMES[d.store]}</span>
-          ${d.rating ? html`<span class="deal-rating" title="Частка схвальних відгуків">${d.rating}% схвальних</span>` : ''}
+          ${d.rating ? html`<span class="deal-rating" title="${t('Частка схвальних відгуків')}">${t('{n}% схвальних', { n: d.rating })}</span>` : ''}
         </div>
         <h3 class="deal-title">
           <a href="${gameHref(d.store, d.storeId)}">${d.title}</a>
@@ -39,8 +39,8 @@ function dealCard(d, index) {
             <span class="price">${d.currency === 'USD' ? '≈ ' : ''}${formatUah(d.priceUah)}</span>
           </div>
           ${d.watching
-            ? html`<span class="pill pill-good">У списку</span>`
-            : html`<button class="btn btn-sm btn-primary" type="button" data-watch="${index}">Стежити</button>`}
+            ? html`<span class="pill pill-good">${t('У списку')}</span>`
+            : html`<button class="btn btn-sm btn-primary" type="button" data-watch="${index}">${t('Стежити')}</button>`}
         </div>
       </div>
     </article>
@@ -50,10 +50,10 @@ function dealCard(d, index) {
 function freebiesStrip(freebies) {
   if (!freebies.length) return '';
   return html`
-    <section class="home-freebies" aria-label="Безкоштовно в Epic Games">
+    <section class="home-freebies" aria-label="${t('Безкоштовно в Epic Games')}">
       <div class="home-freebies-head">
-        <h2>Безкоштовно в Epic Games</h2>
-        <a href="#/epic" class="hint">Усі роздачі</a>
+        <h2>${t('Безкоштовно в Epic Games')}</h2>
+        <a href="#/epic" class="hint">${t('Усі роздачі')}</a>
       </div>
       <div class="home-freebies-row">
         ${freebies.map(
@@ -62,7 +62,7 @@ function freebiesStrip(freebies) {
               ${cover(f.imageUrl, f.title)}
               <span>
                 <strong>${f.title}</strong>
-                <span class="hint">Забрати до ${formatDate(f.endsAt)}${f.originalPrice ? html` · <s>${formatUah(f.originalPrice)}</s>` : ''}</span>
+                <span class="hint">${t('Забрати до {date}', { date: formatDate(f.endsAt) })}${f.originalPrice ? html` · <s>${formatUah(f.originalPrice)}</s>` : ''}</span>
               </span>
             </a>`
         )}
@@ -77,7 +77,7 @@ function heroSlide(d, i, count) {
   const usd = d.currency === 'USD' ? '≈ ' : '';
   // Картинку першого слайда вантажимо одразу, решту — коли до них дійде черга (data-src), щоб не тягнути зайві мегабайти
   return html`
-    <article class="hero-slide ${i === 0 ? 'active' : ''}" aria-roledescription="слайд" aria-label="${i + 1} з ${count}: ${d.title}"
+    <article class="hero-slide ${i === 0 ? 'active' : ''}" aria-roledescription="${t('слайд')}" aria-label="${t('{n} з {count}', { n: i + 1, count })}: ${d.title}"
       aria-hidden="${String(i !== 0)}" data-title="${d.title}">
       <img class="cover hero-img" ${i === 0 ? html`src="${d.heroImage}"` : html`data-src="${d.heroImage}"`}
         data-fallback="${d.heroFallback || ''}" alt="" referrerpolicy="no-referrer" />
@@ -85,7 +85,7 @@ function heroSlide(d, i, count) {
       <div class="hero-content">
         <div class="hero-kicker">
           <span class="store store-${d.store}">${STORE_NAMES[d.store]}</span>
-          ${d.rating ? html`<span>${d.rating}% схвальних відгуків</span>` : ''}
+          ${d.rating ? html`<span>${t('{n}% схвальних відгуків', { n: d.rating })}</span>` : ''}
         </div>
         <h2 class="hero-title">${d.title}</h2>
         <div class="hero-price">
@@ -94,10 +94,10 @@ function heroSlide(d, i, count) {
           <strong>${usd}${formatUah(d.priceUah)}</strong>
         </div>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="${gameHref(d.store, d.storeId)}" tabindex="${i === 0 ? '0' : '-1'}">Детальніше</a>
+          <a class="btn btn-primary" href="${gameHref(d.store, d.storeId)}" tabindex="${i === 0 ? '0' : '-1'}">${t('Детальніше')}</a>
           ${d.watching
-            ? html`<span class="pill pill-good">У списку</span>`
-            : html`<button class="btn hero-watch" type="button" data-hero-watch="${i}" tabindex="${i === 0 ? '0' : '-1'}">Стежити</button>`}
+            ? html`<span class="pill pill-good">${t('У списку')}</span>`
+            : html`<button class="btn hero-watch" type="button" data-hero-watch="${i}" tabindex="${i === 0 ? '0' : '-1'}">${t('Стежити')}</button>`}
         </div>
       </div>
     </article>`;
@@ -105,13 +105,13 @@ function heroSlide(d, i, count) {
 
 function heroCarousel(items) {
   return html`
-    <section class="hero" aria-roledescription="карусель" aria-label="Найкращі пропозиції зараз">
+    <section class="hero" aria-roledescription="${t('карусель')}" aria-label="${t('Найкращі пропозиції зараз')}">
       <div class="hero-track">${items.map((d, i) => heroSlide(d, i, items.length))}</div>
-      <button class="hero-arrow prev" type="button" data-hero-step="-1" aria-label="Попередня пропозиція">‹</button>
-      <button class="hero-arrow next" type="button" data-hero-step="1" aria-label="Наступна пропозиція">›</button>
+      <button class="hero-arrow prev" type="button" data-hero-step="-1" aria-label="${t('Попередня пропозиція')}">‹</button>
+      <button class="hero-arrow next" type="button" data-hero-step="1" aria-label="${t('Наступна пропозиція')}">›</button>
       <div class="hero-dots">
         ${items.map(
-          (d, i) => html`<button type="button" class="${i === 0 ? 'active' : ''}" data-hero-go="${i}" aria-label="Пропозиція ${i + 1}: ${d.title}"></button>`
+          (d, i) => html`<button type="button" class="${i === 0 ? 'active' : ''}" data-hero-go="${i}" aria-label="${t('Пропозиція {n}', { n: i + 1 })}: ${d.title}"></button>`
         )}
       </div>
     </section>`;
@@ -215,15 +215,15 @@ function pageNumbers(page, pages) {
 function pager(page, pages) {
   if (pages <= 1) return '';
   return html`
-    <nav class="pager" aria-label="Сторінки вітрини">
-      <button class="pager-btn" type="button" data-page="${page - 1}" aria-label="Попередня сторінка" ${page === 1 ? html`disabled` : ''}>‹</button>
+    <nav class="pager" aria-label="${t('Сторінки вітрини')}">
+      <button class="pager-btn" type="button" data-page="${page - 1}" aria-label="${t('Попередня сторінка')}" ${page === 1 ? html`disabled` : ''}>‹</button>
       ${pageNumbers(page, pages).map((n) =>
         n === '…'
           ? html`<span class="pager-gap" aria-hidden="true">…</span>`
           : html`<button class="pager-btn ${n === page ? 'active' : ''}" type="button" data-page="${n}"
-              aria-label="Сторінка ${n}" ${n === page ? html`aria-current="page"` : ''}>${n}</button>`
+              aria-label="${t('Сторінка {n}', { n })}" ${n === page ? html`aria-current="page"` : ''}>${n}</button>`
       )}
-      <button class="pager-btn" type="button" data-page="${page + 1}" aria-label="Наступна сторінка" ${page === pages ? html`disabled` : ''}>›</button>
+      <button class="pager-btn" type="button" data-page="${page + 1}" aria-label="${t('Наступна сторінка')}" ${page === pages ? html`disabled` : ''}>›</button>
     </nav>`;
 }
 
@@ -254,44 +254,43 @@ export async function render(root, params) {
       <div id="hero"></div>
       <div class="page-head">
         <div>
-          <h1>Знижки зараз</h1>
-          <p class="muted" id="deals-summary">Найпопулярніші ігри зі знижками в Steam і GOG</p>
+          <h1>${t('Знижки зараз')}</h1>
+          <p class="muted" id="deals-summary">${t('Найпопулярніші ігри зі знижками в Steam і GOG')}</p>
         </div>
         ${state.user
           ? ''
-          : html`<div class="row"><a class="btn" href="#/login">Увійти</a><a class="btn btn-primary" href="#/register">Створити акаунт</a></div>`}
+          : html`<div class="row"><a class="btn" href="#/login">${t('Увійти')}</a><a class="btn btn-primary" href="#/register">${t('Створити акаунт')}</a></div>`}
       </div>
       ${state.user
         ? ''
         : html`<p class="intro">
-            Знижколов стежить за цінами в Steam і GOG. Натисни «Стежити» на будь-якій грі — і ми повідомимо на сайті
-            й у Telegram, щойно вона подешевшає до твоєї ціни.
+            ${t('Знижколов стежить за цінами в Steam і GOG. Натисни «Стежити» на будь-якій грі — і ми повідомимо на сайті й у Telegram, щойно вона подешевшає до твоєї ціни.')}
           </p>`}
       <div id="freebies"></div>
 
-      <form class="filters" role="search" aria-label="Фільтри вітрини">
-        <input class="input filter-q" type="search" name="q" placeholder="Пошук за назвою" value="${filters.q}"
-          aria-label="Пошук за назвою" maxlength="80" />
-        <div class="segmented" role="group" aria-label="Магазин">
+      <form class="filters" role="search" aria-label="${t('Фільтри вітрини')}">
+        <input class="input filter-q" type="search" name="q" placeholder="${t('Пошук за назвою')}" value="${filters.q}"
+          aria-label="${t('Пошук за назвою')}" maxlength="80" />
+        <div class="segmented" role="group" aria-label="${t('Магазин')}">
           ${[
             ['', 'Усі'],
             ['steam', 'Steam'],
             ['gog', 'GOG'],
-          ].map(([v, label]) => html`<button type="button" data-store="${v}" aria-pressed="${String(filters.store === v)}">${label}</button>`)}
+          ].map(([v, label]) => html`<button type="button" data-store="${v}" aria-pressed="${String(filters.store === v)}">${t(label)}</button>`)}
         </div>
-        <select class="select" name="minDiscount" aria-label="Мінімальна знижка">
-          <option value="">Будь-яка знижка</option>
-          ${DISCOUNTS.map((d) => html`<option value="${d}" ${filters.minDiscount === String(d) ? 'selected' : ''}>від ${d}%</option>`)}
+        <select class="select" name="minDiscount" aria-label="${t('Мінімальна знижка')}">
+          <option value="">${t('Будь-яка знижка')}</option>
+          ${DISCOUNTS.map((d) => html`<option value="${d}" ${filters.minDiscount === String(d) ? 'selected' : ''}>${t('від {n}%', { n: d })}</option>`)}
         </select>
         <div class="input-suffix filter-price">
-          <input class="input num" type="number" name="maxPrice" min="0" step="1" inputmode="numeric" placeholder="Ціна до"
-            value="${filters.maxPrice}" aria-label="Максимальна ціна, гривень" />
+          <input class="input num" type="number" name="maxPrice" min="0" step="1" inputmode="numeric" placeholder="${t('Ціна до')}"
+            value="${filters.maxPrice}" aria-label="${t('Максимальна ціна, гривень')}" />
           <span>₴</span>
         </div>
-        <select class="select" name="sort" aria-label="Сортування">
-          ${SORTS.map(([v, label]) => html`<option value="${v}" ${filters.sort === v ? 'selected' : ''}>${label}</option>`)}
+        <select class="select" name="sort" aria-label="${t('Сортування')}">
+          ${SORTS.map(([v, label]) => html`<option value="${v}" ${filters.sort === v ? 'selected' : ''}>${t(label)}</option>`)}
         </select>
-        <button class="btn btn-ghost" type="reset" id="filters-reset">Скинути</button>
+        <button class="btn btn-ghost" type="reset" id="filters-reset">${t('Скинути')}</button>
       </form>
 
       <div id="deals" aria-live="polite"></div>
@@ -314,9 +313,9 @@ export async function render(root, params) {
       setHtml(
         box,
         html`<div class="empty">
-          <h2>Нічого не знайшли</h2>
-          <p>За цими фільтрами ігор зі знижкою немає. Спробуй прибрати частину умов.</p>
-          <button class="btn" type="button" data-reset>Скинути фільтри</button>
+          <h2>${t('Нічого не знайшли')}</h2>
+          <p>${t('За цими фільтрами ігор зі знижкою немає. Спробуй прибрати частину умов.')}</p>
+          <button class="btn" type="button" data-reset>${t('Скинути фільтри')}</button>
         </div>`
       );
       return;
@@ -332,14 +331,14 @@ export async function render(root, params) {
     try {
       data = await get(`/api/deals?${queryString({ ...filters, page: DEFAULTS.page }, { limit: PAGE, offset: (page() - 1) * PAGE })}`);
     } catch (err) {
-      if (id === loadId) setHtml(box, html`<div class="empty"><h2>Не вдалося завантажити вітрину</h2><p>${err.message}</p></div>`);
+      if (id === loadId) setHtml(box, html`<div class="empty"><h2>${t('Не вдалося завантажити вітрину')}</h2><p>${err.message}</p></div>`);
       return;
     }
     if (id !== loadId) return; // поки чекали, фільтри вже змінили
 
     // Перший запуск сервера: вітрину ще збирають — показуємо заглушку й перевіряємо знову
     if (data.updating && !data.total) {
-      setHtml(box, html`<p class="hint">Збираємо знижки з магазинів, це займе кілька секунд…</p>
+      setHtml(box, html`<p class="hint">${t('Збираємо знижки з магазинів, це займе кілька секунд…')}</p>
         <div class="deal-grid">${Array.from({ length: 8 }, () => html`<div class="skeleton deal-skeleton"></div>`)}</div>`);
       pollTimer = setTimeout(() => load(), 3000);
       return;
@@ -355,9 +354,9 @@ export async function render(root, params) {
     const all = Object.values(data.counts).reduce((a, b) => a + b, 0);
     const pages = Math.ceil(total / PAGE);
     $('#deals-summary', root).textContent = [
-      isDefault() ? `${all} ${plural(all, 'гра', 'гри', 'ігор')} зі знижкою в Steam і GOG` : `Знайдено ${total} з ${all}`,
-      pages > 1 ? `сторінка ${page()} з ${pages}` : '',
-      data.updatedAt ? `оновлено ${timeAgo(data.updatedAt)}` : '',
+      isDefault() ? t('{n} {games} зі знижкою в Steam і GOG', { n: all, games: tp(all, 'гра', 'гри', 'ігор') }) : t('Знайдено {n} з {all}', { n: total, all }),
+      pages > 1 ? t('сторінка {n} з {pages}', { n: page(), pages }) : '',
+      data.updatedAt ? t('оновлено {when}', { when: timeAgo(data.updatedAt) }) : '',
     ]
       .filter(Boolean)
       .join(' · ');
@@ -418,7 +417,7 @@ export async function render(root, params) {
 
   const watch = (deal, onAdded) => {
     if (!state.user) {
-      toast('Створи акаунт або увійди, щоб стежити за цінами');
+      toast(t('Створи акаунт або увійди, щоб стежити за цінами'));
       return go('#/register');
     }
     openAddDialog(deal, {
@@ -448,7 +447,7 @@ export async function render(root, params) {
         watch(d, () => {
           const pill = document.createElement('span');
           pill.className = 'pill pill-good';
-          pill.textContent = 'У списку';
+          pill.textContent = t('У списку');
           button.replaceWith(pill);
         })
       );

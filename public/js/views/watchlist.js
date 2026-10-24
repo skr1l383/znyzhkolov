@@ -21,6 +21,7 @@ import {
   toast,
   withLoading,
 } from '../ui.js';
+import { t, tp } from '../i18n.js';
 import { conditionsFields, conditionsText, readConditions } from './conditions.js';
 import { shareDialog } from './share.js';
 import { steamImportDialog } from './steamImport.js';
@@ -28,22 +29,22 @@ import { steamImportDialog } from './steamImport.js';
 const SUGGESTIONS = ['Hades', 'Stardew Valley', 'Hollow Knight', 'Cyberpunk 2077', 'The Witcher 3'];
 
 function offerNote(o, isBest) {
-  if (!o.available) return 'Недоступно в магазині для України';
-  if (o.error) return o.error;
-  if (o.price == null) return 'Ціни немає: гра безкоштовна або ще не продається';
+  if (!o.available) return t('Недоступно в магазині для України');
+  if (o.error) return t(o.error);
+  if (o.price == null) return t('Ціни немає: гра безкоштовна або ще не продається');
   const notes = [];
-  if (isBest) notes.push(html`<span class="best-label">Найдешевше</span>`);
-  if (o.currency === 'USD') notes.push(`${formatMoney(o.price, 'USD')} за курсом НБУ`);
+  if (isBest) notes.push(html`<span class="best-label">${t('Найдешевше')}</span>`);
+  if (o.currency === 'USD') notes.push(t('{price} за курсом НБУ', { price: formatMoney(o.price, 'USD') }));
   return notes.length ? html`${notes.map((n, i) => html`${i ? ' · ' : ''}${n}`)}` : '';
 }
 
 function priceRow(o, bestStore) {
   const isBest = o.store === bestStore && o.available && o.priceUah != null;
   const note = offerNote(o, isBest);
-  const value = !o.available || o.price == null ? '—' : o.isFree ? 'Безкоштовно' : formatUah(o.priceUah);
+  const value = !o.available || o.price == null ? '—' : o.isFree ? t('Безкоштовно') : formatUah(o.priceUah);
   return html`
     <a class="price-row ${isBest ? 'best' : ''}" href="${o.url}" target="_blank" rel="noopener noreferrer"
-      title="Відкрити в ${STORE_NAMES[o.store]}">
+      title="${t('Відкрити в {store}', { store: STORE_NAMES[o.store] })}">
       <span class="store store-${o.store}">${STORE_NAMES[o.store]}</span>
       <span class="price-values">
         ${o.discount > 0 && o.basePriceUah ? html`<span class="price-old">${formatUah(o.basePriceUah)}</span>` : ''}
@@ -61,9 +62,9 @@ function lastChecked(item) {
 }
 
 function statusPill(item) {
-  if (!item.active) return html`<span class="pill">На паузі</span>`;
-  if (item.conditionMet) return html`<span class="pill pill-good">Умову виконано</span>`;
-  return html`<span class="pill">Чекаємо на знижку</span>`;
+  if (!item.active) return html`<span class="pill">${t('На паузі')}</span>`;
+  if (item.conditionMet) return html`<span class="pill pill-good">${t('Умову виконано')}</span>`;
+  return html`<span class="pill">${t('Чекаємо на знижку')}</span>`;
 }
 
 function gameCard(item) {
@@ -75,22 +76,22 @@ function gameCard(item) {
       <div class="game-main">
         <div class="row">${statusPill(item)}</div>
         <h2 class="game-title"><a class="plain-link" href="${gameHref(item.offers[0]?.store, item.offers[0]?.storeId)}">${item.title}</a></h2>
-        <p class="conditions">Сповістити, коли: ${conditionsText(item)}</p>
-        ${item.lastAlertAt ? html`<p class="hint">Останнє сповіщення ${timeAgo(item.lastAlertAt)}</p>` : ''}
+        <p class="conditions">${t('Сповістити, коли:')} ${conditionsText(item)}</p>
+        ${item.lastAlertAt ? html`<p class="hint">${t('Останнє сповіщення {when}', { when: timeAgo(item.lastAlertAt) })}</p>` : ''}
         <div class="game-actions">
-          <button class="btn btn-sm" type="button" data-action="chart">Графік ціни</button>
-          <button class="btn btn-sm" type="button" data-action="refresh">Оновити ціни</button>
-          <button class="btn btn-sm" type="button" data-action="edit">Умови</button>
-          <button class="btn btn-sm" type="button" data-action="toggle">${item.active ? 'Пауза' : 'Увімкнути'}</button>
+          <button class="btn btn-sm" type="button" data-action="chart">${t('Графік ціни')}</button>
+          <button class="btn btn-sm" type="button" data-action="refresh">${t('Оновити ціни')}</button>
+          <button class="btn btn-sm" type="button" data-action="edit">${t('Умови')}</button>
+          <button class="btn btn-sm" type="button" data-action="toggle">${item.active ? t('Пауза') : t('Увімкнути')}</button>
           ${missingGog
             ? html`<a class="btn btn-sm btn-ghost" href="#/search?store=gog&q=${encodeURIComponent(item.title)}&link=${item.id}">+ GOG</a>`
             : ''}
-          <button class="btn btn-sm btn-ghost btn-danger" type="button" data-action="delete">Видалити</button>
+          <button class="btn btn-sm btn-ghost btn-danger" type="button" data-action="delete">${t('Видалити')}</button>
         </div>
       </div>
       <div class="prices">
         ${item.offers.map((o) => priceRow(o, item.bestStore))}
-        ${checked ? html`<div class="checked-at">Ціни перевірено ${timeAgo(checked)}</div>` : ''}
+        ${checked ? html`<div class="checked-at">${t('Ціни перевірено {when}', { when: timeAgo(checked) })}</div>` : ''}
       </div>
     </article>
   `;
@@ -103,11 +104,11 @@ function emptyState() {
         <path d="M3.5 6A2.5 2.5 0 0 1 6 3.5h9.3a2.5 2.5 0 0 1 1.77.73l11 11a2.5 2.5 0 0 1 0 3.54l-9.3 9.3a2.5 2.5 0 0 1-3.54 0l-11-11a2.5 2.5 0 0 1-.73-1.77Z" class="brand-tag" />
         <circle cx="9.5" cy="9.5" r="2.2" class="brand-hole" />
       </svg>
-      <h2>Список поки порожній</h2>
-      <p>Знайди гру, яку хочеш купити, і вкажи свою умову. Ми перевірятимемо ціни в Steam і GOG та повідомимо, коли настане час купувати.</p>
+      <h2>${t('Список поки порожній')}</h2>
+      <p>${t('Знайди гру, яку хочеш купити, і вкажи свою умову. Ми перевірятимемо ціни в Steam і GOG та повідомимо, коли настане час купувати.')}</p>
       <div class="row" style="justify-content: center">
-        <button class="btn btn-primary" type="button" id="steam-empty-btn">Імпортувати список бажаного Steam</button>
-        <a class="btn" href="#/search">Знайти гру</a>
+        <button class="btn btn-primary" type="button" id="steam-empty-btn">${t('Імпортувати список бажаного Steam')}</button>
+        <a class="btn" href="#/search">${t('Знайти гру')}</a>
       </div>
       <div class="suggestions">
         ${SUGGESTIONS.map((s) => html`<a class="btn btn-sm" href="#/search?q=${encodeURIComponent(s)}">${s}</a>`)}
@@ -121,13 +122,13 @@ function editDialog(item, onSaved) {
     <form class="dialog-body" novalidate>
       <div class="dialog-head">
         ${cover(item.imageUrl, item.title)}
-        <div><p class="muted">Умови сповіщення</p><h2>${item.title}</h2></div>
+        <div><p class="muted">${t('Умови сповіщення')}</p><h2>${item.title}</h2></div>
       </div>
       <div class="form-error" role="alert" hidden></div>
       ${conditionsFields(item)}
       <div class="dialog-foot">
-        <button class="btn" type="button" data-close>Скасувати</button>
-        <button class="btn btn-primary" type="submit">Зберегти</button>
+        <button class="btn" type="button" data-close>${t('Скасувати')}</button>
+        <button class="btn btn-primary" type="submit">${t('Зберегти')}</button>
       </div>
     </form>
   `);
@@ -139,7 +140,7 @@ function editDialog(item, onSaved) {
       try {
         const { item: updated } = await patch(`/api/watch/${item.id}`, readConditions(form));
         closeDialog();
-        toast('Умови збережено');
+        toast(t('Умови збережено'));
         onSaved(updated);
       } catch (err) {
         showFormError(form, err);
@@ -156,7 +157,7 @@ const MAX_ROWS = 50;
 function downloadLink(file) {
   const bytes = Uint8Array.from(atob(file.base64), (c) => c.charCodeAt(0));
   const url = URL.createObjectURL(new Blob([bytes], { type: file.type }));
-  return html`<a class="btn btn-primary" href="${url}" download="${file.name}">Завантажити таблицю з цінами</a>`;
+  return html`<a class="btn btn-primary" href="${url}" download="${file.name}">${t('Завантажити таблицю з цінами')}</a>`;
 }
 
 function importReport({ added, skipped, found, file }, { addToList, source }) {
@@ -165,31 +166,31 @@ function importReport({ added, skipped, found, file }, { addToList, source }) {
   return html`
     <div class="import-report stack">
       <div class="row">
-        <span class="pill pill-good">${addToList ? 'Додано' : 'Знайдено'}: ${ok.length}</span>
-        ${skipped.length ? html`<span class="pill">${addToList ? 'Пропущено' : 'Не знайдено'}: ${skipped.length}</span>` : ''}
+        <span class="pill pill-good">${addToList ? t('Додано') : t('Знайдено')}: ${ok.length}</span>
+        ${skipped.length ? html`<span class="pill">${addToList ? t('Пропущено') : t('Не знайдено')}: ${skipped.length}</span>` : ''}
       </div>
       <div class="row">${downloadLink(file)}</div>
       ${ok.length
         ? html`<ul class="report-list">
             ${ok.map(
               (a) => html`<li>
-                <span class="report-line">рядок ${a.line}</span>
+                <span class="report-line">${t('рядок {n}', { n: a.line })}</span>
                 <span><strong>${a.matched}</strong>${a.matched !== a.title ? html` <span class="muted">(${source}: ${a.title})</span>` : ''}
                   <span class="muted"> · ${stores(a.stores)}</span>
-                  ${a.notes?.length ? html`<span class="hint report-note">${a.notes.join('; ')}</span>` : ''}</span>
+                  ${a.notes?.length ? html`<span class="hint report-note">${a.notes.map((n) => t(n)).join('; ')}</span>` : ''}</span>
               </li>`
             )}
           </ul>`
         : ''}
       ${skipped.length
-        ? html`<h3>${addToList ? 'Не додано' : 'Не знайдено'}</h3>
+        ? html`<h3>${addToList ? t('Не додано') : t('Не знайдено')}</h3>
           <ul class="report-list">
             ${skipped.map(
-              (s) => html`<li><span class="report-line">рядок ${s.line}</span><span>${s.title || '—'} <span class="muted">— ${s.reason}</span></span></li>`
+              (s) => html`<li><span class="report-line">${t('рядок {n}', { n: s.line })}</span><span>${s.title || '—'} <span class="muted">— ${t(s.reason)}</span></span></li>`
             )}
           </ul>`
         : ''}
-      ${added.length ? html`<p class="hint">Ціни щойно доданих ігор оновлюються у фоні, за хвилину-дві вони будуть актуальні.</p>` : ''}
+      ${added.length ? html`<p class="hint">${t('Ціни щойно доданих ігор оновлюються у фоні, за хвилину-дві вони будуть актуальні.')}</p>` : ''}
     </div>
   `;
 }
@@ -197,15 +198,15 @@ function importReport({ added, skipped, found, file }, { addToList, source }) {
 const addCheckbox = (id) => html`
   <label class="check">
     <input type="checkbox" id="${id}" checked />
-    <span>Додати знайдені ігри до мого списку (сповіщення про знижку від 50%)</span>
+    <span>${t('Додати знайдені ігри до мого списку (сповіщення про знижку від 50%)')}</span>
   </label>`;
 
 const lookupRow = (n, value = '') => html`
   <div class="lookup-row">
     <span class="lookup-num">${n}</span>
-    <input class="input" type="text" maxlength="200" placeholder="Назва гри, наприклад Hollow Knight" value="${value}"
-      aria-label="Гра ${n}" />
-    <button class="icon-btn" type="button" data-remove aria-label="Прибрати рядок">×</button>
+    <input class="input" type="text" maxlength="200" placeholder="${t('Назва гри, наприклад Hollow Knight')}" value="${value}"
+      aria-label="${t('Гра {n}', { n })}" />
+    <button class="icon-btn" type="button" data-remove aria-label="${t('Прибрати рядок')}">×</button>
   </div>`;
 
 /** Вкладка «Скласти таблицю»: рядки з назвами, «+», Enter, вставка цілого списку. */
@@ -215,15 +216,15 @@ function bindLookup(panel, { onDone }) {
   const renumber = () => {
     rowsBox.querySelectorAll('.lookup-row').forEach((row, i) => {
       $('.lookup-num', row).textContent = i + 1;
-      $('input', row).setAttribute('aria-label', `Гра ${i + 1}`);
+      $('input', row).setAttribute('aria-label', t('Гра {n}', { n: i + 1 }));
     });
     const filled = inputs().filter((i) => i.value.trim()).length;
-    $('#lookup-count', panel).textContent = filled ? `${filled} з ${MAX_ROWS}` : '';
+    $('#lookup-count', panel).textContent = filled ? t('{n} з {max}', { n: filled, max: MAX_ROWS }) : '';
     $('#lookup-add', panel).disabled = inputs().length >= MAX_ROWS;
   };
   const addRow = (after = null, value = '') => {
     if (inputs().length >= MAX_ROWS) {
-      toast(`Не більше ${MAX_ROWS} ігор за раз`, 'error');
+      toast(t('Не більше {max} ігор за раз', { max: MAX_ROWS }), 'error');
       return null;
     }
     const tmp = document.createElement('div');
@@ -273,7 +274,7 @@ function bindLookup(panel, { onDone }) {
     withLoading(e.currentTarget, async () => {
       const titles = inputs().map((i) => i.value.trim()).filter(Boolean);
       if (!titles.length) {
-        toast('Впиши хоча б одну гру', 'error');
+        toast(t('Впиши хоча б одну гру'), 'error');
         inputs()[0].focus();
         return;
       }
@@ -290,37 +291,37 @@ function bindLookup(panel, { onDone }) {
 function filesDialog(hasItems, onImported) {
   const dialog = openDialog(html`
     <div class="dialog-body">
-      <div><p class="muted">Мій список</p><h2>Таблиці з іграми</h2></div>
-      <div class="segmented tabs" role="group" aria-label="Що зробити">
-        <button type="button" data-tab="lookup" aria-pressed="true">Скласти таблицю</button>
-        <button type="button" data-tab="import" aria-pressed="false">Імпорт файлу</button>
-        <button type="button" data-tab="export" aria-pressed="false">Експорт і звіт</button>
+      <div><p class="muted">${t('Мій список')}</p><h2>${t('Таблиці з іграми')}</h2></div>
+      <div class="segmented tabs" role="group" aria-label="${t('Що зробити')}">
+        <button type="button" data-tab="lookup" aria-pressed="true">${t('Скласти таблицю')}</button>
+        <button type="button" data-tab="import" aria-pressed="false">${t('Імпорт файлу')}</button>
+        <button type="button" data-tab="export" aria-pressed="false">${t('Експорт і звіт')}</button>
       </div>
 
       <section class="stack" data-panel="lookup">
         <p class="muted">
-          Впиши назви ігор — ми знайдемо кожну в Steam і GOG і повернемо таблицю з цінами, знижками й посиланнями.
-          Enter або «+» додає рядок; можна вставити цілий список, кожна гра з нового рядка.
+          ${t('Впиши назви ігор — ми знайдемо кожну в Steam і GOG і повернемо таблицю з цінами, знижками й посиланнями.')}
+          ${t('Enter або «+» додає рядок; можна вставити цілий список, кожна гра з нового рядка.')}
         </p>
         <div class="lookup-rows">${lookupRow(1)}</div>
         <div class="row">
-          <button class="btn btn-sm" type="button" id="lookup-add">+ Додати гру</button>
+          <button class="btn btn-sm" type="button" id="lookup-add">+ ${t('Додати гру')}</button>
           <span class="hint" id="lookup-count"></span>
         </div>
         ${addCheckbox('lookup-to-list')}
-        <div class="row"><button class="btn btn-primary" type="button" id="lookup-run">Заповнити таблицю</button></div>
+        <div class="row"><button class="btn btn-primary" type="button" id="lookup-run">${t('Заповнити таблицю')}</button></div>
       </section>
 
       <section class="stack" data-panel="import" hidden>
         <p class="muted">
-          Підійде файл, експортований звідси, або просто назви ігор у першому стовпці.
-          Після пошуку можна завантажити таблицю, вже заповнену цінами.
+          ${t('Підійде файл, експортований звідси, або просто назви ігор у першому стовпці.')}
+          ${t('Після пошуку можна завантажити таблицю, вже заповнену цінами.')}
         </p>
         ${addCheckbox('import-to-list')}
         <div id="import-box">
           ${dropZone({
-            title: 'Перетягни таблицю сюди',
-            hint: `або натисни, щоб вибрати файл. Excel (.xlsx) або CSV, до ${formatSize(IMPORT_MAX_BYTES)} і до ${MAX_ROWS} ігор`,
+            title: t('Перетягни таблицю сюди'),
+            hint: t('або натисни, щоб вибрати файл. Excel (.xlsx) або CSV, до {size} і до {max} ігор', { size: formatSize(IMPORT_MAX_BYTES), max: MAX_ROWS }),
             accept: '.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           })}
         </div>
@@ -328,25 +329,25 @@ function filesDialog(hasItems, onImported) {
 
       <section class="stack" data-panel="export" hidden>
         <p class="muted">${hasItems
-          ? 'Таблиця з усіма іграми списку, цінами в Steam і GOG та умовами сповіщень. Відкривається в Excel і Google Таблицях.'
-          : 'Список поки порожній — файл стане шаблоном, який можна заповнити й імпортувати.'}</p>
+          ? t('Таблиця з усіма іграми списку, цінами в Steam і GOG та умовами сповіщень. Відкривається в Excel і Google Таблицях.')
+          : t('Список поки порожній — файл стане шаблоном, який можна заповнити й імпортувати.')}</p>
         <div class="row">
           <a class="btn" href="/api/watch/export?format=xlsx" download>Excel (.xlsx)</a>
           <a class="btn" href="/api/watch/export?format=csv" download>CSV</a>
         </div>
-        <h3>PDF-звіт</h3>
-        <p class="muted">Гарний звіт для друку чи пересилання: скільки ігри коштують зараз, скільки без знижок і скільки можна заощадити.</p>
-        <div class="row"><a class="btn btn-primary" href="/api/watch/report.pdf" download>Завантажити PDF-звіт</a></div>
+        <h3>${t('PDF-звіт')}</h3>
+        <p class="muted">${t('Гарний звіт для друку чи пересилання: скільки ігри коштують зараз, скільки без знижок і скільки можна заощадити.')}</p>
+        <div class="row"><a class="btn btn-primary" href="/api/watch/report.pdf" download>${t('Завантажити PDF-звіт')}</a></div>
       </section>
 
-      <div class="dialog-foot"><button class="btn" type="button" data-close>Закрити</button></div>
+      <div class="dialog-foot"><button class="btn" type="button" data-close>${t('Закрити')}</button></div>
     </div>
   `);
   $('[data-close]', dialog).addEventListener('click', closeDialog);
 
   dialog.querySelectorAll('[data-tab]').forEach((tab) =>
     tab.addEventListener('click', () => {
-      dialog.querySelectorAll('[data-tab]').forEach((t) => t.setAttribute('aria-pressed', String(t === tab)));
+      dialog.querySelectorAll('[data-tab]').forEach((x) => x.setAttribute('aria-pressed', String(x === tab)));
       dialog.querySelectorAll('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== tab.dataset.tab));
     })
   );
@@ -356,8 +357,8 @@ function filesDialog(hasItems, onImported) {
     onDone: (result, addToList) => {
       setHtml(
         lookupPanel,
-        html`${importReport(result, { addToList, source: 'запит' })}
-          <div class="row"><button class="btn" type="button" id="lookup-again">Скласти нову таблицю</button></div>`
+        html`${importReport(result, { addToList, source: t('запит') })}
+          <div class="row"><button class="btn" type="button" id="lookup-again">${t('Скласти нову таблицю')}</button></div>`
       );
       $('#lookup-again', lookupPanel).addEventListener('click', () => filesDialog(hasItems || result.added.length > 0, onImported));
       if (result.added.length) onImported();
@@ -368,17 +369,17 @@ function filesDialog(hasItems, onImported) {
   bindDropZone($('.dropzone', box), {
     extensions: ['xlsx', 'csv'],
     maxBytes: IMPORT_MAX_BYTES,
-    typeError: 'Цей формат не підтримується. Можна Excel (.xlsx) або CSV',
+    typeError: t('Цей формат не підтримується. Можна Excel (.xlsx) або CSV'),
     onFile: async (file) => {
       const addToList = $('#import-to-list', dialog).checked;
-      $('.dropzone-hint', box).textContent = `«${file.name}»: шукаємо ігри в Steam і GOG, це може зайняти до хвилини…`;
+      $('.dropzone-hint', box).textContent = t('«{file}»: шукаємо ігри в Steam і GOG, це може зайняти до хвилини…', { file: file.name });
       try {
         const report = await upload(`/api/watch/import${addToList ? '' : '?add=0'}`, file);
-        setHtml(box, html`<h3>Результат для «${file.name}»</h3>${importReport(report, { addToList, source: 'у файлі' })}`);
+        setHtml(box, html`<h3>${t('Результат для «{file}»', { file: file.name })}</h3>${importReport(report, { addToList, source: t('у файлі') })}`);
         if (report.added.length) onImported();
       } finally {
         const hint = $('.dropzone-hint', box);
-        if (hint) hint.textContent = 'Спробуй інший файл: Excel (.xlsx) або CSV';
+        if (hint) hint.textContent = t('Спробуй інший файл: Excel (.xlsx) або CSV');
       }
     },
   });
@@ -389,10 +390,10 @@ async function chartDialog(item) {
     <div class="dialog-body">
       <div class="dialog-head">
         ${cover(item.imageUrl, item.title)}
-        <div><p class="muted">Історія ціни</p><h2>${item.title}</h2></div>
+        <div><p class="muted">${t('Історія ціни')}</p><h2>${item.title}</h2></div>
       </div>
       <div class="chart-box"><div class="skeleton"></div></div>
-      <div class="dialog-foot"><button class="btn" type="button" data-close>Закрити</button></div>
+      <div class="dialog-foot"><button class="btn" type="button" data-close>${t('Закрити')}</button></div>
     </div>
   `);
   // Графіку потрібно більше місця, ніж звичайному діалогу
@@ -419,19 +420,19 @@ export async function render(root) {
       html`
         <div class="page-head">
           <div>
-            <h1>Мій список</h1>
+            <h1>${t('Мій список')}</h1>
             ${items.length
               ? html`<div class="summary">
-                  <span class="pill">${items.length} ${plural(items.length, 'гра', 'гри', 'ігор')}</span>
-                  ${met ? html`<span class="pill pill-good">${met} з виконаною умовою</span>` : ''}
+                  <span class="pill">${items.length} ${tp(items.length, 'гра', 'гри', 'ігор')}</span>
+                  ${met ? html`<span class="pill pill-good">${t('{n} з виконаною умовою', { n: met })}</span>` : ''}
                 </div>`
-              : html`<p>Тут будуть ігри, за цінами яких ти стежиш.</p>`}
+              : html`<p>${t('Тут будуть ігри, за цінами яких ти стежиш.')}</p>`}
           </div>
           <div class="row">
-            <button class="btn" type="button" id="steam-btn">Імпорт зі Steam</button>
-            <button class="btn" type="button" id="share-btn">Поділитися</button>
-            <button class="btn" type="button" id="files-btn">Таблиці</button>
-            ${items.length ? html`<a class="btn btn-primary" href="#/search">Додати гру</a>` : ''}
+            <button class="btn" type="button" id="steam-btn">${t('Імпорт зі Steam')}</button>
+            <button class="btn" type="button" id="share-btn">${t('Поділитися')}</button>
+            <button class="btn" type="button" id="files-btn">${t('Таблиці')}</button>
+            ${items.length ? html`<a class="btn btn-primary" href="#/search">${t('Додати гру')}</a>` : ''}
           </div>
         </div>
         ${items.length ? html`<div class="game-list">${items.map(gameCard)}</div>` : emptyState()}
@@ -475,7 +476,7 @@ export async function render(root) {
         await withLoading(btn, async () => {
           const res = await post(`/api/watch/${item.id}/refresh`);
           replace(res.item);
-          toast(res.errors?.length ? `Частину цін не вдалося оновити: ${res.errors.join('; ')}` : 'Ціни оновлено', res.errors?.length ? 'error' : 'info');
+          toast(res.errors?.length ? t('Частину цін не вдалося оновити: {errors}', { errors: res.errors.map((e) => t(e)).join('; ') }) : t('Ціни оновлено'), res.errors?.length ? 'error' : 'info');
         });
       } else if (action === 'chart') {
         await chartDialog(item);
@@ -484,19 +485,19 @@ export async function render(root) {
       } else if (action === 'toggle') {
         const { item: updated } = await patch(`/api/watch/${item.id}`, { active: !item.active });
         replace(updated);
-        toast(updated.active ? 'Стеження увімкнено' : 'Стеження поставлено на паузу');
+        toast(updated.active ? t('Стеження увімкнено') : t('Стеження поставлено на паузу'));
       } else if (action === 'delete') {
         const ok = await confirmDialog({
-          title: `Прибрати «${item.title}» зі списку?`,
-          text: 'Сповіщення про цю гру більше не надходитимуть. Історія цін залишиться, якщо гру відстежує хтось інший.',
-          confirmText: 'Прибрати',
+          title: t('Прибрати «{title}» зі списку?', { title: item.title }),
+          text: t('Сповіщення про цю гру більше не надходитимуть. Історія цін залишиться, якщо гру відстежує хтось інший.'),
+          confirmText: t('Прибрати'),
           danger: true,
         });
         if (!ok) return;
         await del(`/api/watch/${item.id}`);
         items = items.filter((i) => i.id !== item.id);
         draw();
-        toast('Гру прибрано зі списку');
+        toast(t('Гру прибрано зі списку'));
       }
     } catch (err) {
       toast(err.message, 'error');
@@ -520,10 +521,5 @@ export async function render(root) {
   };
 }
 
-export function plural(n, one, few, many) {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return one;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-  return many;
-}
+// Слово після числа з урахуванням мови тепер живе в i18n.js; стару назву лишаємо для сумісності
+export const plural = tp;

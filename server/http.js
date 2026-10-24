@@ -11,6 +11,16 @@ export class HttpError extends Error {
   }
 }
 
+/**
+ * Помилка з шаблоном на кшталт «Поле «{label}» має містити не більше {max} символів».
+ * Текст підставляється українською, а шаблон зі значеннями йде в details.i18n — так інтерфейс
+ * англійською покаже переклад того самого шаблону.
+ */
+export function templateError(status, template, vars, details = {}) {
+  const message = template.replace(/\{(\w+)\}/g, (m, key) => (key in vars ? String(vars[key]) : m));
+  return new HttpError(status, message, { ...details, i18n: { text: template, vars } });
+}
+
 const MAX_BODY = 1024 * 1024; // 1 МБ для JSON-запитів
 
 const MIME = {

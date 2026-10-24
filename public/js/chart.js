@@ -1,6 +1,7 @@
 // Графік історії ціни. Малюється вручну в SVG, без бібліотек:
 // по лінії на кожен магазин, перехрестя з підказкою при наведенні, позначка мінімуму.
 import { $, STORE_NAMES, formatUah, html, setHtml } from './ui.js';
+import { locale, t } from './i18n.js';
 
 const DAY = 864e5;
 const HEIGHT = 260;
@@ -11,10 +12,10 @@ const RANGES = [
   { days: 0, label: 'Усе' },
 ];
 
-const shortDate = (t) => new Date(t).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
-const longDate = (t) => new Date(t).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+const shortDate = (t) => new Date(t).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+const longDate = (t) => new Date(t).toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' });
 const dateTime = (t) =>
-  new Date(t).toLocaleString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  new Date(t).toLocaleString(locale(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 /** Відповідь /api/watch/:id/history → масив серій з точками { t (мс), v (копійки), discount }. */
 function prepare(raw) {
@@ -73,7 +74,7 @@ function changes(series, from, to) {
 export function priceChart(container, rawSeries) {
   const series = prepare(rawSeries);
   if (!series.length) {
-    setHtml(container, html`<p class="muted">Історії цін ще немає. Вона з'явиться після першої перевірки цін.</p>`);
+    setHtml(container, html`<p class="muted">${t("Історії цін ще немає. Вона з'явиться після першої перевірки цін.")}</p>`);
     return;
   }
 
@@ -90,8 +91,8 @@ export function priceChart(container, rawSeries) {
       <div class="chart-top">
         <div class="chart-stats"></div>
         ${ranges.length > 1
-          ? html`<div class="segmented" role="group" aria-label="Період">
-              ${ranges.map((r) => html`<button type="button" data-days="${r.days}" aria-pressed="${String(r.days === range)}">${r.label}</button>`)}
+          ? html`<div class="segmented" role="group" aria-label="${t('Період')}">
+              ${ranges.map((r) => html`<button type="button" data-days="${r.days}" aria-pressed="${String(r.days === range)}">${t(r.label)}</button>`)}
             </div>`
           : ''}
       </div>
@@ -101,12 +102,12 @@ export function priceChart(container, rawSeries) {
       <div class="chart-plot" tabindex="0" role="img"></div>
       <p class="hint">
         ${spanDays < 7
-          ? `Історія збирається з ${longDate(first)}. Ціни перевіряються автоматично, і кожна зміна з'явиться тут.`
-          : 'Ціни в гривнях. Ціни GOG перераховано за курсом НБУ на день перевірки.'}
-        Наведи на графік (або вибери його і натискай ← →), щоб побачити ціну на будь-який день.
+          ? t("Історія збирається з {date}. Ціни перевіряються автоматично, і кожна зміна з'явиться тут.", { date: longDate(first) })
+          : t('Ціни в гривнях. Ціни GOG перераховано за курсом НБУ на день перевірки.')}
+        ${t('Наведи на графік (або вибери його і натискай ← →), щоб побачити ціну на будь-який день.')}
       </p>
       <details class="chart-table">
-        <summary>Показати зміни ціни таблицею</summary>
+        <summary>${t('Показати зміни ціни таблицею')}</summary>
         <div class="table-wrap"></div>
       </details>
     `
@@ -174,7 +175,7 @@ export function priceChart(container, rawSeries) {
           ${visible.map((s) => html`<path class="chart-line series-${s.store}" d="${path(s.seg)}"></path>`)}
           ${ends.map((e) => html`<text class="chart-end-label" x="${pad.left + w + 8}" y="${e.y + 4}">${STORE_NAMES[e.store]}</text>`)}
           <circle class="chart-min-dot" cx="${minX}" cy="${y(min.v)}" r="5"></circle>
-          <text class="chart-min-label" x="${minX}" y="${y(min.v) - 10}" text-anchor="${minAnchor}">мін. ${formatUah(min.v)}</text>
+          <text class="chart-min-label" x="${minX}" y="${y(min.v) - 10}" text-anchor="${minAnchor}">${t('мін.')} ${formatUah(min.v)}</text>
           <g class="chart-hover" style="display: none">
             <line class="chart-cross" y1="${pad.top}" y2="${pad.top + h}"></line>
             ${visible.map((s) => html`<circle class="chart-dot series-${s.store}" r="5" data-store="${s.store}"></circle>`)}
@@ -192,21 +193,21 @@ export function priceChart(container, rawSeries) {
     setHtml(
       $('.chart-stats', container),
       html`
-        <div class="chart-stat"><span>Зараз найдешевше</span><strong>${formatUah(current.v)}</strong><small>${STORE_NAMES[current.store]}</small></div>
-        <div class="chart-stat"><span>Мінімум за період</span><strong>${formatUah(min.v)}</strong><small>${STORE_NAMES[min.store]}, ${shortDate(min.t)}</small></div>
-        <div class="chart-stat"><span>Найбільша знижка</span><strong>${maxDiscount ? `−${maxDiscount}%` : 'не було'}</strong></div>
+        <div class="chart-stat"><span>${t('Зараз найдешевше')}</span><strong>${formatUah(current.v)}</strong><small>${STORE_NAMES[current.store]}</small></div>
+        <div class="chart-stat"><span>${t('Мінімум за період')}</span><strong>${formatUah(min.v)}</strong><small>${STORE_NAMES[min.store]}, ${shortDate(min.t)}</small></div>
+        <div class="chart-stat"><span>${t('Найбільша знижка')}</span><strong>${maxDiscount ? `−${maxDiscount}%` : t('не було')}</strong></div>
       `
     );
     plot.setAttribute(
       'aria-label',
-      `Графік ціни. Зараз найдешевше ${formatUah(current.v)} у ${STORE_NAMES[current.store]}, мінімум за період ${formatUah(min.v)}.`
+      t('Графік ціни. Зараз найдешевше {price} у {store}, мінімум за період {min}.', { price: formatUah(current.v), store: STORE_NAMES[current.store], min: formatUah(min.v) })
     );
 
     const rows = changes(series, from, now);
     setHtml(
       $('.chart-table .table-wrap', container),
       html`<table class="table">
-        <thead><tr><th>Дата</th><th>Магазин</th><th>Ціна</th><th>Знижка</th></tr></thead>
+        <thead><tr><th>${t('Дата')}</th><th>${t('Магазин')}</th><th>${t('Ціна')}</th><th>${t('Знижка')}</th></tr></thead>
         <tbody>
           ${rows.map(
             (r) => html`<tr><td class="nowrap">${dateTime(r.t)}</td><td>${STORE_NAMES[r.store]}</td>
@@ -243,7 +244,7 @@ export function priceChart(container, rawSeries) {
         <strong>${formatUah(p.v)}${p.discount ? html` <span class="discount">−${p.discount}%</span>` : ''}</strong>
       </div>`);
     }
-    setHtml(tip, html`<div class="chart-tip-date">${longDate(cursor)}</div>${rows.length ? rows : html`<div class="muted">Ще не відстежувалось</div>`}`);
+    setHtml(tip, html`<div class="chart-tip-date">${longDate(cursor)}</div>${rows.length ? rows : html`<div class="muted">${t('Ще не відстежувалось')}</div>`}`);
     tip.hidden = false;
     // Підказка з того боку від перехрестя, де більше місця
     const scale = plot.clientWidth / width;

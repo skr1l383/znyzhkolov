@@ -172,12 +172,14 @@ CREATE TABLE IF NOT EXISTS outbox (
 );
 
 -- Сторінки ігор: опис, скриншоти, трейлери з магазинів. Кеш на кілька годин, щоб не питати магазини щоразу.
+-- Опис і жанри Steam віддає мовою запиту, тому кожна мова інтерфейсу має свій запис.
 CREATE TABLE IF NOT EXISTS game_details (
   store      TEXT NOT NULL,
   store_id   TEXT NOT NULL,
+  lang       TEXT NOT NULL DEFAULT 'uk',
   data       TEXT NOT NULL,
   fetched_at TEXT NOT NULL,
-  PRIMARY KEY (store, store_id)
+  PRIMARY KEY (store, store_id, lang)
 );
 
 CREATE TABLE IF NOT EXISTS settings (
@@ -205,6 +207,11 @@ function migrate() {
   }
   // ALTER TABLE не вміє додавати UNIQUE, тому унікальність ключа — окремим індексом
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_share_token ON users(share_token)');
+  // Ключ кешу сторінок ігор змінився (додалась мова). Це лише кеш — стару таблицю простіше створити заново
+  if (!db.prepare('PRAGMA table_info(game_details)').all().some((c) => c.name === 'lang')) {
+    db.exec('DROP TABLE game_details');
+    db.exec(SCHEMA);
+  }
 }
 
 /** @type {DatabaseSync} */

@@ -1,19 +1,20 @@
 // Перевірка даних, що приходять від браузера. Помилки повертаються з полем,
 // щоб інтерфейс міг підсвітити саме те поле, яке заповнено неправильно.
-import { HttpError } from './http.js';
+import { HttpError, templateError } from './http.js';
 
-export function fieldError(field, message) {
-  return new HttpError(400, message, { field });
+/** Помилка поля; vars — значення для шаблону на кшталт «Поле «{label}»…» (див. templateError). */
+export function fieldError(field, message, vars) {
+  return vars ? templateError(400, message, vars, { field }) : new HttpError(400, message, { field });
 }
 
 export function text(value, { field, label, min = 0, max = 200, required = true }) {
   const s = typeof value === 'string' ? value.trim() : '';
   if (!s) {
-    if (required) throw fieldError(field, `Заповніть поле «${label}»`);
+    if (required) throw fieldError(field, 'Заповніть поле «{label}»', { label });
     return '';
   }
-  if (s.length < min) throw fieldError(field, `Поле «${label}» має містити щонайменше ${min} символів`);
-  if (s.length > max) throw fieldError(field, `Поле «${label}» має містити не більше ${max} символів`);
+  if (s.length < min) throw fieldError(field, 'Поле «{label}» має містити щонайменше {min} символів', { label, min });
+  if (s.length > max) throw fieldError(field, 'Поле «{label}» має містити не більше {max} символів', { label, max });
   return s;
 }
 
@@ -37,16 +38,16 @@ export function password(value) {
 export function optionalInt(value, { field, label, min, max }) {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
-  if (!Number.isFinite(n) || Math.round(n) !== n) throw fieldError(field, `«${label}» має бути цілим числом`);
-  if (n < min || n > max) throw fieldError(field, `«${label}» має бути від ${min} до ${max}`);
+  if (!Number.isFinite(n) || Math.round(n) !== n) throw fieldError(field, '«{label}» має бути цілим числом', { label });
+  if (n < min || n > max) throw fieldError(field, '«{label}» має бути від {min} до {max}', { label, min, max });
   return n;
 }
 
 export function optionalMoney(value, { field, label, max = 100000 }) {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(String(value).replace(',', '.'));
-  if (!Number.isFinite(n) || n < 0) throw fieldError(field, `«${label}» має бути додатним числом`);
-  if (n > max) throw fieldError(field, `«${label}» не може бути більше ${max}`);
+  if (!Number.isFinite(n) || n < 0) throw fieldError(field, '«{label}» має бути додатним числом', { label });
+  if (n > max) throw fieldError(field, '«{label}» не може бути більше {max}', { label, max });
   return Math.round(n * 100); // у копійках
 }
 

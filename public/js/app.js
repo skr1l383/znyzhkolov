@@ -1,5 +1,6 @@
 // Головний модуль інтерфейсу: стан користувача, навігація між сторінками, тема.
-import { get, post } from './api.js';
+import { get, patch, post } from './api.js';
+import { LANGS, getLang, setLang, t, translateStatic } from './i18n.js';
 import { $, $$, avatar, closeDialog, html, initials, setHtml, toast } from './ui.js';
 import * as admin from './views/admin.js';
 import * as auth from './views/auth.js';
@@ -58,7 +59,7 @@ async function navigate() {
   cleanup = null;
   closeDialog();
   renderChrome(route.nav);
-  document.title = `${route.title} · Знижколов`;
+  document.title = `${t(route.title)} · ${t('Знижколов')}`;
 
   const root = $('#view');
   if (lastRoute !== name) window.scrollTo(0, 0);
@@ -68,8 +69,8 @@ async function navigate() {
   } catch (err) {
     setHtml(
       root,
-      html`<div class="empty"><h2>Не вдалося відкрити сторінку</h2><p>${err.message}</p>
-        <button class="btn" type="button" id="retry">Спробувати ще раз</button></div>`
+      html`<div class="empty"><h2>${t('Не вдалося відкрити сторінку')}</h2><p>${t(err.message)}</p>
+        <button class="btn" type="button" id="retry">${t('Спробувати ще раз')}</button></div>`
     );
     $('#retry', root)?.addEventListener('click', navigate);
   }
@@ -195,6 +196,34 @@ document.addEventListener(
   true
 );
 
+// ---------- Мова інтерфейсу ----------
+function updateLangButton() {
+  const btn = $('#lang-toggle');
+  const other = getLang() === 'uk' ? 'en' : 'uk';
+  btn.textContent = LANGS[other].short;
+  btn.setAttribute('aria-label', other === 'en' ? 'Switch to English' : 'Перемкнути на українську');
+  btn.title = btn.getAttribute('aria-label');
+}
+
+/** Перемикає мову: зберігає вибір (і в профілі, якщо увійшли) та перемальовує сторінку. */
+export async function switchLang(next) {
+  setLang(next);
+  translateStatic();
+  updateLangButton();
+  if (state.user) {
+    state.user.lang = next;
+    patch('/api/me', { lang: next }).catch(() => {}); // на інших пристроях — та сама мова
+  }
+  renderChrome();
+  await navigate();
+}
+
+function setupLang() {
+  translateStatic();
+  updateLangButton();
+  $('#lang-toggle').addEventListener('click', () => switchLang(getLang() === 'uk' ? 'en' : 'uk'));
+}
+
 // ---------- Застосунок (PWA) ----------
 /** Дані акаунта, збережені для офлайну, прибираємо при виході — щоб їх не побачив наступний користувач пристрою. */
 export async function clearPrivateCache() {
@@ -211,7 +240,7 @@ function setupVerifyBanner() {
     btn.disabled = true;
     try {
       await post('/api/auth/verify/resend');
-      toast(state.app.mail === 'outbox' ? 'Лист у тестовій скриньці (адмін-панель)' : 'Лист надіслано — перевір пошту і папку «Спам»');
+      toast(state.app.mail === 'outbox' ? t('Лист у тестовій скриньці (адмін-панель)') : t('Лист надіслано — перевір пошту і папку «Спам»'));
     } catch (err) {
       toast(err.message, 'error');
     } finally {
@@ -279,6 +308,7 @@ function setupPwa() {
 
 async function start() {
   applyThemeColor();
+  setupLang();
   setupPwa();
   setupVerifyBanner();
   try {
@@ -286,11 +316,23 @@ async function start() {
   } catch (err) {
     setHtml(
       $('#view'),
-      html`<div class="empty"><h2>Сервер не відповідає</h2><p>${err.message}</p>
-        <button class="btn btn-primary" type="button" id="reload-page">Оновити сторінку</button></div>`
+      html`<div class="empty"><h2>${t('Сервер не відповідає')}</h2><p>${t(err.message)}</p>
+        <button class="btn btn-primary" type="button" id="reload-page">${t('Оновити сторінку')}</button></div>`
     );
     $('#reload-page').addEventListener('click', () => location.reload());
     return;
+  }
+  // Мова з профілю — якщо на цьому пристрої її ще не вибирали
+  let savedHere = false;
+  try {
+    savedHere = Boolean(localStorage.getItem('zk-lang'));
+  } catch {
+    // без localStorage — беремо з профілю
+  }
+  if (!savedHere && state.user?.lang && state.user.lang !== getLang()) {
+    setLang(state.user.lang);
+    translateStatic();
+    updateLangButton();
   }
   await navigate();
   pollUnread();

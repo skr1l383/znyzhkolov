@@ -29,6 +29,10 @@ export function profileRoutes(router) {
     if ('name' in ctx.body) changes.name = v.text(ctx.body.name, { field: 'name', label: "Ім'я", min: 2, max: 40 });
     if ('notifyEpicFree' in ctx.body) changes.notify_epic_free = ctx.body.notifyEpicFree ? 1 : 0;
     if ('notifyEmail' in ctx.body) changes.notify_email = ctx.body.notifyEmail ? 1 : 0;
+    if ('lang' in ctx.body) {
+      if (!['uk', 'en'].includes(ctx.body.lang)) throw new HttpError(400, 'Непідтримувана мова');
+      changes.lang = ctx.body.lang;
+    }
     const fields = Object.keys(changes);
     if (fields.length) {
       db.prepare(`UPDATE users SET ${fields.map((f) => `${f} = ?`).join(', ')} WHERE id = ?`).run(

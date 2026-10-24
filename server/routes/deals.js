@@ -48,6 +48,6 @@ export function gamePageRoutes(router) {
   router.get('/api/games/:store/:id', async (ctx) => {
     const { store, id } = ctx.params;
     if (!['steam', 'gog'].includes(store) || !/^\d{1,12}$/.test(id)) throw new HttpError(404, 'Гру не знайдено');
-    return getGameDetails(store, id, ctx.user?.id ?? null);
+    return getGameDetails(store, id, ctx.user?.id ?? null, ctx.query.lang === 'en' ? 'en' : 'uk');
   });
 }

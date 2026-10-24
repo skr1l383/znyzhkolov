@@ -12,21 +12,21 @@ import { searchSteam } from '../stores/steam.js';
 
 const CACHE_HOURS = 6;
 
-function cached(store, storeId) {
-  const row = db.prepare('SELECT data, fetched_at FROM game_details WHERE store = ? AND store_id = ?').get(store, storeId);
+function cached(store, storeId, lang) {
+  const row = db.prepare('SELECT data, fetched_at FROM game_details WHERE store = ? AND store_id = ? AND lang = ?').get(store, storeId, lang);
   if (!row || Date.now() - new Date(row.fetched_at).getTime() > CACHE_HOURS * 3600 * 1000) return null;
   return JSON.parse(row.data);
 }
 
-function save(info) {
+function save(info, lang) {
   const data = JSON.stringify(info);
   const stamp = now();
   // Під обома ідентифікаторами: сторінку можна відкрити і зі Steam, і з GOG
   for (const o of info.offers) {
     db.prepare(
-      `INSERT INTO game_details (store, store_id, data, fetched_at) VALUES (?, ?, ?, ?)
-       ON CONFLICT(store, store_id) DO UPDATE SET data = excluded.data, fetched_at = excluded.fetched_at`
-    ).run(o.store, o.storeId, data, stamp);
+      `INSERT INTO game_details (store, store_id, lang, data, fetched_at) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(store, store_id, lang) DO UPDATE SET data = excluded.data, fetched_at = excluded.fetched_at`
+    ).run(o.store, o.storeId, lang, data, stamp);
   }
 }
 
@@ -51,24 +51,24 @@ const offerOf = (store, storeId, title, url, image, p) => ({
   discount: p?.discount ?? 0,
 });
 
-async function build(store, storeId) {
+async function build(store, storeId, lang) {
   let steam = null;
   let gog = null;
   let gogPrice = null;
 
   if (store === 'steam') {
-    steam = await fetchSteamDetails(storeId);
+    steam = await fetchSteamDetails(storeId, lang);
     if (!steam) throw new HttpError(404, 'Такої гри в Steam немає');
     // Для пошуку в GOG потрібна англійська назва, а Steam може віддати українську
     const englishTitle = /[^ -~]/.test(steam.title) ? await fetchSteamEnglishTitle(storeId).catch(() => null) : steam.title;
     gogPrice = await findMatch(searchGog, englishTitle || steam.title);
-    if (gogPrice) gog = await fetchGogDetails(gogPrice.storeId).catch(() => null);
+    if (gogPrice) gog = await fetchGogDetails(gogPrice.storeId, lang).catch(() => null);
   } else {
-    gog = await fetchGogDetails(storeId);
+    gog = await fetchGogDetails(storeId, lang);
     if (!gog) throw new HttpError(404, 'Такої гри в GOG немає');
     gogPrice = (await searchGog(gog.title).catch(() => [])).find((r) => r.storeId === String(storeId)) || null;
     const steamMatch = await findMatch((t) => searchSteam(t, { language: 'english' }), gog.title);
-    if (steamMatch) steam = await fetchSteamDetails(steamMatch.storeId).catch(() => null);
+    if (steamMatch) steam = await fetchSteamDetails(steamMatch.storeId, lang).catch(() => null);
   }
 
   const main = steam || gog;
@@ -148,12 +148,13 @@ function fromDatabase(store, storeId) {
   };
 }
 
-export async function getGameDetails(store, storeId, userId = null) {
-  let info = cached(store, storeId);
+/** lang — мова інтерфейсу ('uk' або 'en'): нею Steam віддає опис, жанри й дату виходу. */
+export async function getGameDetails(store, storeId, userId = null, lang = 'uk') {
+  let info = cached(store, storeId, lang);
   if (!info) {
     try {
-      info = await build(store, storeId);
-      save(info);
+      info = await build(store, storeId, lang);
+      save(info, lang);
     } catch (err) {
       if (err instanceof HttpError) throw err;
       log.warn('game.details', `Не вдалося завантажити сторінку гри ${store}:${storeId}: ${err.message}`);

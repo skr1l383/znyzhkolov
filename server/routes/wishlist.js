@@ -2,7 +2,7 @@
 // Ігри додаються одразу зі Steam, а та сама гра в GOG шукається у фоні (по одній, щоб не засипати GOG запитами).
 import { config } from '../config.js';
 import { db } from '../db.js';
-import { HttpError } from '../http.js';
+import { HttpError, templateError } from '../http.js';
 import { log } from '../logger.js';
 import { requireAuth } from '../auth.js';
 import { evaluateWatches, refreshGame, upsertGameWithOffers } from '../services/prices.js';
@@ -50,11 +50,12 @@ export function wishlistRoutes(router) {
     const appids = await fetchWishlist(profile.steamId);
     if (!appids.length) {
       // Steam не відрізняє «порожній» від «прихований»: в обох випадках віддає порожній список
-      throw new HttpError(
+      throw templateError(
         404,
         profile.privacy && profile.privacy !== 'public'
-          ? `Профіль Steam «${profile.name}» прихований, тому список бажаного не видно`
-          : `Steam не показує список бажаного профілю «${profile.name}»: він порожній або прихований`,
+          ? 'Профіль Steam «{name}» прихований, тому список бажаного не видно'
+          : 'Steam не показує список бажаного профілю «{name}»: він порожній або прихований',
+        { name: profile.name },
         { code: 'wishlist_hidden', profileName: profile.name, profilePublic: profile.privacy === 'public' }
       );
     }
@@ -73,7 +74,7 @@ export function wishlistRoutes(router) {
   router.post('/api/steam/wishlist/import', requireAuth, async (ctx) => {
     const appids = Array.isArray(ctx.body.appids) ? [...new Set(ctx.body.appids.map(String))].filter((id) => /^\d{1,10}$/.test(id)) : [];
     if (!appids.length) throw new HttpError(400, 'Вибери хоча б одну гру');
-    if (appids.length > MAX_IMPORT) throw new HttpError(400, `За один раз можна додати до ${MAX_IMPORT} ігор`);
+    if (appids.length > MAX_IMPORT) throw templateError(400, 'За один раз можна додати до {max} ігор', { max: MAX_IMPORT });
     const minDiscount = ctx.body.minDiscount == null || ctx.body.minDiscount === '' ? null : Number(ctx.body.minDiscount);
     if (minDiscount != null && !(Number.isInteger(minDiscount) && minDiscount >= 1 && minDiscount <= 100)) {
       throw new HttpError(400, 'Знижка має бути від 1 до 100%');

@@ -1,4 +1,5 @@
 // Запити до сервера. Помилки перетворюються на ApiError з людським повідомленням.
+import { t } from './i18n.js';
 
 export class ApiError extends Error {
   constructor(message, status, field, details = null) {
@@ -7,6 +8,19 @@ export class ApiError extends Error {
     this.field = field;
     this.details = details; // додаткові відомості від сервера (наприклад, код помилки)
   }
+}
+
+/**
+ * Повідомлення сервера приходять українською. Якщо фраза є у словнику — показуємо переклад;
+ * для повідомлень із підставленими значеннями сервер додає шаблон (details.i18n), і перекладаємо його.
+ */
+function errorText(data, status) {
+  const tpl = data?.details?.i18n;
+  if (tpl) {
+    const vars = Object.fromEntries(Object.entries(tpl.vars || {}).map(([k, v]) => [k, typeof v === 'string' ? t(v) : v]));
+    return t(tpl.text, vars);
+  }
+  return t(data?.error || 'Помилка сервера ({status})', { status });
 }
 
 export function api(method, url, body) {
@@ -32,7 +46,7 @@ async function send(url, init) {
     res = await fetch(url, { ...init, credentials: 'same-origin' });
   } catch {
     window.dispatchEvent(new CustomEvent('zk:offline'));
-    throw new ApiError(navigator.onLine ? 'Немає зв’язку із сервером. Перевірте, чи він запущений' : 'Немає інтернету. Спробуй, щойно з’явиться зв’язок', 0);
+    throw new ApiError(navigator.onLine ? t('Немає зв’язку із сервером. Перевірте, чи він запущений') : t('Немає інтернету. Спробуй, щойно з’явиться зв’язок'), 0);
   }
 
   // Service worker віддав збережену копію — значить, сервер або інтернет недоступні
@@ -47,7 +61,7 @@ async function send(url, init) {
 
   if (!res.ok) {
     if (res.status === 401 && url !== '/api/auth/login') window.dispatchEvent(new CustomEvent('zk:unauthorized'));
-    throw new ApiError(data?.error || `Помилка сервера (${res.status})`, res.status, data?.details?.field, data?.details || null);
+    throw new ApiError(errorText(data, res.status), res.status, data?.details?.field, data?.details || null);
   }
   return data;
 }
