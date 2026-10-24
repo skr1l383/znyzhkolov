@@ -239,8 +239,8 @@ export const EN = {
     'Your account, game list, alerts and photo will be deleted forever. They cannot be restored.',
   'Видалити акаунт': 'Delete account',
   'Видалити акаунт назавжди?': 'Delete the account forever?',
-  'Буде видалено акаунт {email}, усі ігри зі списку, сповіщення, фото профілю і посилання «Поділитися».':
-    'This deletes the account {email}, all games on the list, alerts, the profile photo and the “Share” link.',
+  'Буде видалено акаунт {email}, усі ігри зі списку, сповіщення, коментарі, фото профілю і посилання «Поділитися».':
+    'This deletes the account {email}, all games on the list, alerts, comments, the profile photo and the “Share” link.',
   'Перед цим можна': 'Before that you can',
   'завантажити свої дані': 'download your data',
   'Розумію, що це назавжди': 'I understand this is permanent',
@@ -313,6 +313,25 @@ export const EN = {
   'Видавець:': 'Publisher:',
   'Створи акаунт або увійди, щоб стежити за цінами': 'Create an account or sign in to follow prices',
   'Браузер не вміє програвати це відео': 'Your browser cannot play this video',
+
+  // ---- Коментарі до гри ----
+  Коментарі: 'Comments',
+  коментар: ['comment', 'comments'],
+  адмін: 'admin',
+  ти: 'you',
+  'Твій коментар': 'Your comment',
+  'Поділися думкою: чи варта гра своїх грошей, на якій знижці її брати…': 'Share your thoughts: is the game worth its price, at what discount to buy it…',
+  Надіслати: 'Post',
+  'Щоб написати коментар, увійди в акаунт.': 'Sign in to write a comment.',
+  'Коментарів ще немає — будь першим.': 'No comments yet — be the first.',
+  'Видалити коментар?': 'Delete the comment?',
+  'Коментар зникне назавжди.': 'The comment will be gone for good.',
+  'Коментар користувача {name} зникне назавжди.': "{name}'s comment will be gone for good.",
+  'Коментар видалено': 'Comment deleted',
+  Коментар: 'Comment',
+  'Зачекай кілька секунд перед наступним коментарем': 'Wait a few seconds before your next comment',
+  'Коментар не знайдено': 'Comment not found',
+  'Видалити можна лише свій коментар': 'You can only delete your own comment',
 
   // ---- Роздачі Epic ----
   закінчилась: 'ended',

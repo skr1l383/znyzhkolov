@@ -300,6 +300,40 @@ test('Чужу гру не можна змінити або видалити', a
   assert.equal(r.data.item.minDiscount, 50);
 });
 
+test('Коментарі: гість читає, користувач пише й видаляє свій, адмін модерує, захист від флуду', async () => {
+  const url = '/api/games/steam/367520/comments';
+  const guest = client();
+  assert.equal((await guest('POST', url, { text: 'Привіт' })).status, 401);
+  let r = await user('POST', url, { text: '   ' });
+  assert.equal(r.status, 400);
+  assert.equal(r.data.details.field, 'text');
+  assert.equal((await user('POST', url, { text: 'x'.repeat(1001) })).status, 400);
+
+  r = await user('POST', url, { text: '<script>alert(1)</script> Чекаю знижку 50%' });
+  assert.equal(r.status, 200);
+  const mine = r.data.comment;
+  assert.equal(mine.text, '<script>alert(1)</script> Чекаю знижку 50%', 'текст зберігається як є — сторінка показує його як текст');
+  assert.equal(mine.mine, true);
+  r = await user('POST', url, { text: 'Ще один одразу' });
+  assert.equal(r.status, 429, 'не частіше разу на 15 секунд');
+
+  const theirs = (await admin('POST', url, { text: 'Брав на розпродажі, раджу' })).data.comment;
+  r = await guest('GET', url);
+  assert.equal(r.data.total, 2);
+  assert.deepEqual(r.data.items.map((c) => c.author.name), ['Саша', 'Оля'], 'нові згори');
+  assert.ok(r.data.items[0].author.isAdmin);
+  assert.ok(r.data.items.every((c) => !c.canDelete && !c.mine && c.author.avatarUrl === null), 'гість не видаляє і не бачить фото');
+
+  assert.equal((await user('DELETE', `/api/comments/${theirs.id}`)).status, 403, 'чужий коментар видалити не можна');
+  assert.equal((await admin('DELETE', `/api/comments/${mine.id}`)).status, 200, 'адміністратор модерує');
+  assert.equal((await user('DELETE', `/api/comments/${mine.id}`)).status, 404);
+  assert.equal((await guest('GET', url)).data.total, 1);
+  assert.equal((await guest('GET', '/api/games/epic/1/comments')).status, 404);
+
+  const { events } = (await admin('GET', '/api/admin/events?type=comment')).data;
+  assert.ok(events.some((e) => e.type === 'comment.delete' && e.meta.byAdmin), 'модерація записана в журнал');
+});
+
 test('Telegram: прив’язка через /start, тестове повідомлення і команда /list', async () => {
   const link = await user('POST', '/api/me/telegram/link');
   assert.equal(link.status, 200);

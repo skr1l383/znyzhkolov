@@ -91,6 +91,9 @@ export function accountRoutes(router) {
       notifications: db
         .prepare('SELECT kind, title, body, url, created_at AS createdAt FROM notifications WHERE user_id = ? ORDER BY id DESC')
         .all(u.id),
+      comments: db
+        .prepare('SELECT store, store_id AS gameId, text, created_at AS createdAt FROM comments WHERE user_id = ? ORDER BY id DESC')
+        .all(u.id),
       sessions: db.prepare('SELECT created_at AS createdAt, expires_at AS expiresAt, user_agent AS device FROM sessions WHERE user_id = ?').all(u.id),
     };
     log.info('account.export', `${u.email} завантажив свої дані`, { userId: u.id });

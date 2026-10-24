@@ -2336,6 +2336,88 @@ a.profile-stat:hover {
   mask-image: linear-gradient(#000 60%, transparent);
 }
 
+/* ---------- Коментарі до гри ---------- */
+.game-comments .section-title {
+  margin-top: 8px;
+}
+
+textarea.input {
+  min-height: 84px;
+  padding: 10px 13px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.comment-form,
+.comment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.comment-form {
+  margin-bottom: 18px;
+}
+
+.comment-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+}
+
+.comment-form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.comment-guest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+
+.comments {
+  display: grid;
+}
+
+.comment {
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.comment-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.comment-delete {
+  min-height: 28px;
+  margin-left: auto;
+  padding: 0 8px;
+}
+
+.comment-text {
+  margin-top: 4px;
+  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.comments-empty {
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
 .game-side {
   position: sticky;
   top: calc(var(--topbar-h) + 16px);

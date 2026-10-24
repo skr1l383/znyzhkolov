@@ -74,7 +74,7 @@ function deleteDialog() {
     <form class="dialog-body" novalidate>
       <h2>${t('Видалити акаунт назавжди?')}</h2>
       <p class="muted">
-        ${t('Буде видалено акаунт {email}, усі ігри зі списку, сповіщення, фото профілю і посилання «Поділитися».', { email: state.user.email })}
+        ${t('Буде видалено акаунт {email}, усі ігри зі списку, сповіщення, коментарі, фото профілю і посилання «Поділитися».', { email: state.user.email })}
         ${t('Перед цим можна')} <a href="/api/me/export.json" download>${t('завантажити свої дані')}</a>.
       </p>
       <div class="form-error" role="alert" hidden></div>

@@ -182,6 +182,17 @@ CREATE TABLE IF NOT EXISTS game_details (
   PRIMARY KEY (store, store_id, lang)
 );
 
+-- Коментарі до ігор. Гра визначається сторінкою гри: Steam, якщо гра там є, інакше GOG.
+CREATE TABLE IF NOT EXISTS comments (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  store      TEXT NOT NULL,
+  store_id   TEXT NOT NULL,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  text       TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_comments_game ON comments(store, store_id, created_at);
+
 CREATE TABLE IF NOT EXISTS settings (
   key        TEXT PRIMARY KEY,
   value      TEXT,

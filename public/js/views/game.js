@@ -5,6 +5,7 @@ import { getLang, locale, t } from '../i18n.js';
 import { go, state } from '../app.js';
 import { $, STORE_NAMES, formatMoney, formatUah, html, setHtml, toast } from '../ui.js';
 import { openAddDialog } from './search.js';
+import { commentsSection, mountComments } from './comments.js';
 
 // Підсумок відгуків Steam приходить англійською; українською — переклад, англійською — як є
 const REVIEWS_UK = {
@@ -110,6 +111,8 @@ export async function render(root, params) {
                     ${g.description.length > DESCRIPTION_PREVIEW ? html`<button class="btn btn-ghost btn-sm" type="button" id="more-desc">${t('Читати далі')}</button>` : ''}`
                 : html`<p class="muted">${g.limited ? t('Магазин зараз не відповідає, тому показуємо лише основне. Спробуй оновити сторінку пізніше.') : t('Опису поки немає.')}</p>`}
             </section>
+
+            ${commentsSection()}
           </div>
 
           <aside class="game-side">
@@ -149,6 +152,9 @@ export async function render(root, params) {
       history.back();
     }
   });
+
+  // Коментарі прив'язані до головної пропозиції сторінки (Steam, якщо гра там є)
+  mountComments(root, g.offers[0]);
 
   $('#more-desc', root)?.addEventListener('click', (e) => {
     $('.description', root).classList.remove('collapsed');
