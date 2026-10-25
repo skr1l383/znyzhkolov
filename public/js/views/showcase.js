@@ -1,6 +1,7 @@
 // Головна сторінка: вітрина популярних ігор зі знижками в Steam і GOG з фільтрами.
 // Фільтри зберігаються в адресі сторінки (#/?store=gog&minDiscount=50), тож вибірку можна надіслати другові.
 import { get } from '../api.js';
+import { setBackdrop } from '../backdrop.js';
 import { go, state } from '../app.js';
 import { $, $$, STORE_NAMES, cover, gameHref, formatDate, formatMoney, formatUah, html, setHtml, timeAgo, toast } from '../ui.js';
 import { t, tp } from '../i18n.js';
@@ -127,6 +128,7 @@ function mountHero(box, items, onWatch) {
   let current = 0;
   let timer = null;
 
+
   const loadImage = (n) => {
     const img = $('img[data-src]', slides[n]);
     if (img) {
@@ -145,6 +147,7 @@ function mountHero(box, items, onWatch) {
       s.querySelectorAll('a, button').forEach((el) => (el.tabIndex = on ? 0 : -1));
     });
     dots.forEach((d, k) => d.classList.toggle('active', k === current));
+    setBackdrop(items[current].heroImage);
   };
   // Хто просить менше руху на екрані — без автоперемикання
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -186,6 +189,7 @@ function mountHero(box, items, onWatch) {
   const onVisibility = () => (document.hidden ? pause() : play());
   document.addEventListener('visibilitychange', onVisibility);
   loadImage(1);
+  setBackdrop(items[0].heroImage);
   play();
   return () => {
     pause();
@@ -269,28 +273,51 @@ export async function render(root, params) {
       <div id="freebies"></div>
 
       <form class="filters" role="search" aria-label="${t('Фільтри вітрини')}">
-        <input class="input filter-q" type="search" name="q" placeholder="${t('Пошук за назвою')}" value="${filters.q}"
-          aria-label="${t('Пошук за назвою')}" maxlength="80" />
-        <div class="segmented" role="group" aria-label="${t('Магазин')}">
-          ${[
-            ['', 'Усі'],
-            ['steam', 'Steam'],
-            ['gog', 'GOG'],
-          ].map(([v, label]) => html`<button type="button" data-store="${v}" aria-pressed="${String(filters.store === v)}">${t(label)}</button>`)}
+        <div class="filters-top">
+          <div class="filter-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <input class="input" type="search" name="q" placeholder="${t('Пошук за назвою')}" value="${filters.q}"
+              aria-label="${t('Пошук за назвою')}" maxlength="80" />
+          </div>
+          <select class="select filter-sort" name="sort" aria-label="${t('Сортування')}">
+            ${SORTS.map(([v, label]) => html`<option value="${v}" ${filters.sort === v ? 'selected' : ''}>${t(label)}</option>`)}
+          </select>
         </div>
-        <select class="select" name="minDiscount" aria-label="${t('Мінімальна знижка')}">
-          <option value="">${t('Будь-яка знижка')}</option>
-          ${DISCOUNTS.map((d) => html`<option value="${d}" ${filters.minDiscount === String(d) ? 'selected' : ''}>${t('від {n}%', { n: d })}</option>`)}
-        </select>
-        <div class="input-suffix filter-price">
-          <input class="input num" type="number" name="maxPrice" min="0" step="1" inputmode="numeric" placeholder="${t('Ціна до')}"
-            value="${filters.maxPrice}" aria-label="${t('Максимальна ціна, гривень')}" />
-          <span>₴</span>
+        <div class="filters-row">
+          <div class="filter-group">
+            <span class="filter-label" aria-hidden="true">${t('Магазин')}</span>
+            <div class="segmented" role="group" aria-label="${t('Магазин')}">
+              ${[
+                ['', 'Усі'],
+                ['steam', 'Steam'],
+                ['gog', 'GOG'],
+              ].map(
+                ([v, label]) =>
+                  html`<button type="button" data-filter="store" data-value="${v}" aria-pressed="${String(filters.store === v)}">${v ? html`<i class="store-dot ${v}"></i>` : ''}${t(label)}</button>`
+              )}
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label" aria-hidden="true">${t('Знижка')}</span>
+            <div class="segmented chips" role="group" aria-label="${t('Мінімальна знижка')}">
+              ${['', ...DISCOUNTS.map(String)].map(
+                (v) =>
+                  html`<button type="button" data-filter="minDiscount" data-value="${v}" aria-pressed="${String(filters.minDiscount === v)}">${v ? `${v}%+` : t('Будь-яка')}</button>`
+              )}
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label" aria-hidden="true">${t('Ціна до')}</span>
+            <div class="input-suffix filter-price">
+              <input class="input num" type="number" name="maxPrice" min="0" step="1" inputmode="numeric" placeholder="${t('Будь-яка')}"
+                value="${filters.maxPrice}" aria-label="${t('Максимальна ціна, гривень')}" />
+              <span>₴</span>
+            </div>
+          </div>
+          <button class="btn btn-ghost filters-reset" type="reset" id="filters-reset">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>${t('Скинути')}
+          </button>
         </div>
-        <select class="select" name="sort" aria-label="${t('Сортування')}">
-          ${SORTS.map(([v, label]) => html`<option value="${v}" ${filters.sort === v ? 'selected' : ''}>${t(label)}</option>`)}
-        </select>
-        <button class="btn btn-ghost" type="reset" id="filters-reset">${t('Скинути')}</button>
       </form>
 
       <div id="deals" aria-live="polite"></div>
@@ -384,10 +411,12 @@ export async function render(root, params) {
   });
   form.addEventListener('submit', (e) => e.preventDefault());
   form.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-store]');
+    // Кнопки-перемикачі: магазин і мінімальна знижка
+    const btn = e.target.closest('[data-filter]');
     if (!btn) return;
-    filters.store = btn.dataset.store;
-    $$('[data-store]', form).forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    const key = btn.dataset.filter;
+    filters[key] = btn.dataset.value;
+    $$(`[data-filter="${key}"]`, form).forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
     apply();
   });
   const reset = () => {
@@ -395,9 +424,8 @@ export async function render(root, params) {
     form.reset();
     form.elements.q.value = '';
     form.elements.maxPrice.value = '';
-    form.elements.minDiscount.value = '';
     form.elements.sort.value = 'popular';
-    $$('[data-store]', form).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.store === '')));
+    $$('[data-filter]', form).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === '')));
     apply();
   };
   form.addEventListener('reset', (e) => {

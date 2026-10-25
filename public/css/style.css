@@ -29,6 +29,9 @@
 
   --font-display: 'Unbounded', 'Manrope', system-ui, sans-serif;
   --font-body: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* «Матове скло» для великих блоків: крізь них трохи видно фон із грою */
+  --glass: color-mix(in srgb, var(--surface) 76%, transparent);
+  --glass-blur: blur(18px) saturate(1.4);
   --radius: 14px;
   --radius-sm: 9px;
   --topbar-h: 60px;
@@ -413,7 +416,9 @@ p {
   height: 38px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   color: var(--fg);
   cursor: pointer;
 }
@@ -647,7 +652,9 @@ p {
 }
 
 .panel {
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
@@ -663,7 +670,9 @@ p {
   padding: 0 16px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   color: var(--fg);
   font: inherit;
   font-weight: 700;
@@ -763,6 +772,17 @@ p {
   background: var(--surface);
   color: var(--fg);
   font: inherit;
+}
+
+/* Власна стрілка списку замість системної — однакова в усіх браузерах і темах */
+.select {
+  appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a94a8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  cursor: pointer;
 }
 
 .input:focus,
@@ -1098,7 +1118,9 @@ p {
   grid-template-rows: auto 1fr auto;
   gap: 10px;
   padding: 10px;
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -1129,7 +1151,9 @@ p {
   gap: 12px;
   padding: 48px 20px;
   text-align: center;
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px dashed var(--border);
   border-radius: var(--radius);
 }
@@ -1155,7 +1179,9 @@ p {
   display: grid;
   gap: 10px;
   padding: 12px;
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -1183,7 +1209,9 @@ p {
   grid-template-columns: 40px minmax(0, 1fr);
   gap: 12px;
   padding: 14px;
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -1238,7 +1266,9 @@ p {
   position: relative;
   overflow: hidden;
   margin-bottom: 20px;
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) + 4px);
   box-shadow: var(--shadow);
@@ -1821,7 +1851,9 @@ a.profile-stat:hover {
 
 .stat {
   padding: 14px 16px;
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -1842,7 +1874,9 @@ a.profile-stat:hover {
 
 .table-wrap {
   overflow-x: auto;
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -1938,7 +1972,9 @@ a.profile-stat:hover {
   display: grid;
   gap: 16px;
   padding: 26px;
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border);
   border-radius: 18px;
   box-shadow: var(--shadow);
@@ -2776,7 +2812,9 @@ textarea.input {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow);
 }
 
@@ -3126,6 +3164,50 @@ textarea.input {
 }
 
 /* ---------- Банер-карусель на головній ---------- */
+/* Фон вітрини: розмитий кадр гри з банера на всю ширину, донизу тане у звичайний фон */
+.page-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: min(1000px, 130vh);
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent);
+  mask-image: linear-gradient(to bottom, #000 30%, transparent);
+}
+
+.page-backdrop i {
+  position: absolute;
+  inset: -16px;
+  background: center 20% / cover no-repeat;
+  filter: blur(5px) saturate(1.1);
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.page-backdrop i.on {
+  opacity: 0.42;
+}
+
+/* У світлій темі фон ледь помітний, щоб текст лишався чітким */
+:root:not([data-theme='dark']) .page-backdrop i.on {
+  opacity: 0.28;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .page-backdrop i.on {
+    opacity: 0.42;
+  }
+}
+
+@media print {
+  .page-backdrop {
+    display: none;
+  }
+}
+
 .hero {
   position: relative;
   height: clamp(260px, 34vw, 400px);
@@ -3407,25 +3489,132 @@ textarea.input {
   color: var(--muted);
 }
 
+/* Панель фільтрів: зверху пошук і сортування, нижче групи з підписами */
 .filters {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+}
+
+.filters-top {
+  display: flex;
+  gap: 10px;
+}
+
+.filter-search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-search svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.filter-search .input {
+  padding-left: 42px;
+  background: var(--surface-2);
+  border-color: transparent;
+}
+
+.filter-search .input:focus {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+
+.filters .filter-sort {
+  width: auto;
+  min-width: 190px;
+  font-weight: 700;
+}
+
+.filters-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 18px;
+  align-items: flex-end;
+  gap: 12px 22px;
 }
 
-.filters .select {
-  width: auto;
-}
-
-.filter-q {
-  flex: 1 1 220px;
+.filter-group {
+  display: grid;
+  gap: 6px;
   min-width: 0;
+}
+
+.filter-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filters .segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.filters .segmented button:hover:not([aria-pressed='true']) {
+  color: var(--fg);
+  background: rgb(127 127 127 / 0.1);
+}
+
+.store-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--steam);
+}
+
+.store-dot.gog {
+  background: var(--gog);
+}
+
+/* Вибрана знижка — кольором цінника */
+.segmented.chips button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .filter-price {
   width: 140px;
+}
+
+.filter-price .input {
+  min-height: 42px;
+}
+
+.filters-reset {
+  margin-left: auto;
+  gap: 6px;
+}
+
+.filters-reset svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
 }
 
 .deal-grid {
@@ -3537,13 +3726,32 @@ textarea.input {
 
 
 @media (max-width: 760px) {
-  .filter-q {
-    flex-basis: 100%;
+  .filters {
+    padding: 12px;
   }
-  .filters .select,
+  .filters-top {
+    flex-wrap: wrap;
+  }
+  .filters .filter-sort {
+    flex: 1 1 100%;
+  }
+  .filter-group {
+    flex: 1 1 100%;
+  }
+  /* Чіпи гортаються пальцем, якщо не влазять */
+  .filters .segmented {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filters .segmented button {
+    flex: 1 0 auto;
+    justify-content: center;
+  }
   .filter-price {
-    flex: 1 1 140px;
-    width: auto;
+    width: 100%;
+  }
+  .filters-reset {
+    margin-left: 0;
   }
   .deal-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

@@ -1,6 +1,7 @@
 // Сторінка гри: трейлер і скриншоти, опис, рейтинг, ціни в обох магазинах,
 // кнопки «Купити» (ведуть у магазин) і «Стежити за ціною».
 import { get } from '../api.js';
+import { setBackdrop } from '../backdrop.js';
 import { getLang, locale, t } from '../i18n.js';
 import { go, state } from '../app.js';
 import { $, STORE_NAMES, formatMoney, formatUah, html, setHtml, toast } from '../ui.js';
@@ -68,6 +69,7 @@ export async function render(root, params) {
   const id = params.id;
   setHtml(root, html`<div class="stack"><div class="skeleton" style="height: 320px"></div><div class="skeleton"></div></div>`);
   const g = await get(`/api/games/${encodeURIComponent(store)}/${encodeURIComponent(id)}?lang=${getLang()}`);
+  setBackdrop(g.screenshots[0]?.full || g.headerImage); // скриншот великий і чіткий; фон Steam (background) надто темний
   document.title = `${g.title} · ${t('Знижколов')}`;
 
   // Спочатку трейлери, потім скриншоти — одна стрічка мініатюр

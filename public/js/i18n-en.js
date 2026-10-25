@@ -276,6 +276,7 @@ export const EN = {
   'Фільтри вітрини': 'Deal filters',
   'Пошук за назвою': 'Search by title',
   'Мінімальна знижка': 'Minimum discount',
+  'Будь-яка': 'Any',
   'Максимальна ціна, гривень': 'Maximum price, UAH',
   Сортування: 'Sort by',
   'Нічого не знайшли': 'Nothing found',

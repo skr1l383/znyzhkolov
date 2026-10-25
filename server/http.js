@@ -226,6 +226,16 @@ function serveStatic(publicDir, pathname, req, res) {
   const ext = path.extname(file).toLowerCase();
   const isHtml = ext === '.html';
   const isSw = path.basename(file) === 'sw.js';
+  // Код і стилі браузер щоразу звіряє з сервером (304, якщо файл не змінився) — нова версія сайту видна одразу.
+  // Картинки й шрифти змінюються рідко, їх можна тримати 5 хвилин без перевірки.
+  const isCode = isHtml || isSw || ext === '.js' || ext === '.css' || ext === '.webmanifest';
+  const etag = `"${stat.size.toString(36)}-${Math.floor(stat.mtimeMs).toString(36)}"`;
+  const cacheHeaders = { ETag: etag, 'Cache-Control': isCode ? 'no-cache' : 'public, max-age=300' };
+  if (req.headers['if-none-match'] === etag) {
+    res.writeHead(304, cacheHeaders);
+    res.end();
+    return true;
+  }
   res.writeHead(200, {
     ...SECURITY_HEADERS,
     // Service worker сам завантажує обкладинки зі Steam і GOG, щоб зберегти їх для офлайну,
@@ -233,7 +243,7 @@ function serveStatic(publicDir, pathname, req, res) {
     ...(isSw ? { 'Content-Security-Policy': "default-src 'self'; connect-src 'self' https:" } : {}),
     'Content-Type': MIME[ext] || 'application/octet-stream',
     'Content-Length': stat.size,
-    'Cache-Control': isHtml || isSw ? 'no-cache' : 'public, max-age=300',
+    ...cacheHeaders,
   });
   if (req.method === 'HEAD') {
     res.end();

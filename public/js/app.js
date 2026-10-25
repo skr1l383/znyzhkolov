@@ -1,5 +1,6 @@
 // Головний модуль інтерфейсу: стан користувача, навігація між сторінками, тема.
 import { get, patch, post } from './api.js';
+import { setPageBackdrop } from './backdrop.js';
 import { LANGS, getLang, setLang, t, translateStatic } from './i18n.js';
 import { $, $$, avatar, closeDialog, html, initials, setHtml, toast } from './ui.js';
 import * as admin from './views/admin.js';
@@ -61,6 +62,8 @@ async function navigate() {
   renderChrome(route.nav);
   document.title = `${t(route.title)} · ${t('Знижколов')}`;
 
+  // Вітрина і сторінка гри потім ставлять власний фон
+  setPageBackdrop(name || 'home');
   const root = $('#view');
   if (lastRoute !== name) window.scrollTo(0, 0);
   lastRoute = name;
