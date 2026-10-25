@@ -56,6 +56,55 @@ function offerCard(o, best) {
   `;
 }
 
+// Ключі Steam в офіційних магазинах (Fanatical, Humble…) — вантажаться окремо, щоб не гальмувати сторінку
+function keysBox(data, steamPriceUah) {
+  const deals = data.deals.filter((d) => d.priceUah != null).slice(0, 5);
+  if (!deals.length) return '';
+  const cheapest = deals[0];
+  const saving = steamPriceUah != null ? steamPriceUah - cheapest.priceUah : 0;
+  const low = data.lowestEver;
+  return html`
+    <h3 class="keys-title">${t('Ключі Steam в офіційних магазинах')}</h3>
+    ${saving >= 1000 // від 10 ₴: дрібниця через курс не варта позначки
+      ? html`<p class="keys-cheaper">${t('У {seller} дешевше, ніж у Steam, на {sum}', { seller: cheapest.seller, sum: formatUah(saving) })}</p>`
+      : ''}
+    <div class="keys-list">
+      ${deals.map(
+        (d) => html`<a class="key-row" href="${d.url}" target="_blank" rel="noopener noreferrer"
+          title="${t('{price} за курсом НБУ', { price: formatMoney(d.price, 'USD') })}">
+          <span class="store store-keys">${d.seller}</span>
+          <span class="buy-prices">
+            ${d.discount > 0 ? html`<span class="discount">−${d.discount}%</span>` : ''}
+            <span class="price">≈ ${formatUah(d.priceUah)}</span>
+          </span>
+        </a>`
+      )}
+    </div>
+    <p class="hint">
+      ${low?.priceUah != null
+        ? html`${t('Історичний мінімум: ≈ {price} ({usd}), {date}.', {
+            price: formatUah(low.priceUah),
+            usd: formatMoney(low.price, 'USD'),
+            date: new Date(low.at).toLocaleDateString(locale(), { month: 'long', year: 'numeric' }),
+          })} `
+        : ''}
+      ${t('Ціни для США за даними CheapShark. Перед покупкою перевір, чи ключ активується в Україні.')}
+    </p>
+  `;
+}
+
+async function mountKeys(root, steam) {
+  const box = $('#keys-box', root);
+  try {
+    const data = await get(`/api/games/steam/${encodeURIComponent(steam.storeId)}/keys`);
+    if (!root.isConnected) return;
+    setHtml(box, keysBox(data, steam.priceUah));
+    box.hidden = !box.innerHTML.trim();
+  } catch {
+    // без ключів сторінка гри однаково повна
+  }
+}
+
 function mediaThumb(m, i) {
   return html`
     <button class="media-thumb ${m.kind !== 'image' ? 'is-video' : ''}" type="button" data-media="${i}"
@@ -137,6 +186,8 @@ export async function render(root, params) {
               ${g.offers.map((o) => offerCard(o, best && o.store === best.store))}
             </div>
 
+            <div class="keys-box" id="keys-box" hidden></div>
+
             <div class="watch-box">
               ${g.watchId
                 ? html`<span class="pill pill-good">${t('Ти стежиш за цією грою')}</span>
@@ -162,6 +213,7 @@ export async function render(root, params) {
   // Коментарі прив'язані до головної пропозиції сторінки (Steam, якщо гра там є)
   mountComments(root, g.offers[0]);
   if (steam) mountRegional(root, steam.storeId);
+  if (steam) mountKeys(root, steam);
 
   $('#more-desc', root)?.addEventListener('click', (e) => {
     $('.description', root).classList.remove('collapsed');

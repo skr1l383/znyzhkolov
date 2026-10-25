@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 import { parseSteamPrices, parseSteamSearch } from '../server/stores/steam.js';
 import { parseGogCatalog } from '../server/stores/gog.js';
 import { parseEpicFreebies } from '../server/stores/epic.js';
+import { bestKeyPrice, parseKeyGame } from '../server/stores/keys.js';
+import { genresFromGog, parseSteamExtras, uniqueCompanies } from '../server/stores/genres.js';
 import { parseNbuRate, parseNbuRates, toUahAny } from '../server/stores/currency.js';
 import { parsePriceOverview, REGIONS } from '../server/stores/regional.js';
 import { parseGogDeals, parseSteamSpecials } from '../server/stores/deals.js';
@@ -321,4 +323,47 @@ test('Сторінка гри: дані Steam і GOG', async () => {
   assert.equal(gog.background, 'https://images-1.gog-statics.com/bg.jpg');
   assert.equal(gog.screenshots[0].full, 'https://images-1.gog-statics.com/abc_ggvgm_2x.jpg');
   assert.deepEqual(gog.videos.map((v) => v.src), ['https://www.youtube-nocookie.com/embed/jFwdbtqsM8c'], 'YouTube без стеження, інші сервіси пропущено');
+});
+
+test('CheapShark: лише офіційні продавці ключів, від найдешевшого', () => {
+  const json = {
+    info: { title: 'Hollow Knight', steamAppID: '367520', thumb: 'https://shared.fastly.steamstatic.com/a.jpg' },
+    cheapestPriceEver: { price: '2.99', date: 1712840581 },
+    deals: [
+      { storeID: '1', dealID: 'steam%3D', price: '7.49', retailPrice: '14.99', savings: '50' }, // Steam — беремо напряму
+      { storeID: '25', dealID: 'epic', price: '5.00', retailPrice: '14.99', savings: '66' }, // Epic — ціни США оманливі
+      { storeID: '3', dealID: 'gmg%2B1', price: '8.99', retailPrice: '14.99', savings: '40' },
+      { storeID: '15', dealID: 'fan', price: '6.74', retailPrice: '14.99', savings: '55' },
+      { storeID: '11', dealID: 'bad', price: '', retailPrice: '14.99' },
+    ],
+  };
+  const parsed = parseKeyGame(json);
+  assert.deepEqual(parsed.deals.map((d) => d.seller), ['Fanatical', 'Green Man Gaming']);
+  assert.equal(parsed.deals[0].price, 674);
+  assert.equal(parsed.deals[0].discount, 55);
+  assert.equal(parsed.deals[1].url, 'https://www.cheapshark.com/redirect?dealID=gmg%2B1', 'dealID не кодується вдруге');
+  assert.deepEqual(parsed.lowestEver, { price: 299, currency: 'USD', at: '2024-04-11T13:03:01.000Z' });
+  assert.equal(bestKeyPrice(parsed).seller, 'Fanatical');
+  assert.deepEqual(bestKeyPrice(parseKeyGame({ deals: [] })), { available: false });
+  assert.deepEqual(parseKeyGame(null).deals, []);
+});
+
+test('Жанри: теги Steam і жанри GOG зводяться до одного списку, студії без повторів', () => {
+  const steam = parseSteamExtras({
+    response: {
+      store_items: [
+        {
+          appid: 367520,
+          tagids: [1628, 1625, 19, 492, 4026],
+          basic_info: { developers: [{ name: 'Team Cherry' }], publishers: [{ name: 'Team Cherry' }] },
+        },
+        { appid: 10, tags: [{ tagid: 1663 }, { tagid: 1667 }] },
+      ],
+    },
+  });
+  assert.deepEqual(steam.get('367520'), { genres: ['action', 'platformer', 'indie'], companies: ['Team Cherry'] });
+  assert.deepEqual(steam.get('10').genres, ['shooter', 'horror'], 'FPS — це шутер');
+  assert.deepEqual(genresFromGog({ genres: [{ slug: 'role-playing' }], tags: [{ slug: 'open-world' }, { slug: 'fantasy' }] }), ['rpg', 'openworld']);
+  assert.deepEqual(genresFromGog({}), []);
+  assert.deepEqual(uniqueCompanies(['CAPCOM Co., Ltd.', 'Valve'], ['Capcom', 'Bethesda Softworks LLC', 'Valve Corporation']), ['CAPCOM', 'Valve', 'Bethesda Softworks']);
 });

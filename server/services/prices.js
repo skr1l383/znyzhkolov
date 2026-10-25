@@ -6,6 +6,7 @@ import { getUsdRate, toUah } from '../stores/currency.js';
 import { steamHeader } from '../stores/deals.js';
 import { demoHistory } from '../stores/demo.js';
 import { gogImage } from '../stores/gog.js';
+import { fetchKeyPrices, findKeyGameId } from '../stores/keys.js';
 import { STORE_NAMES, store } from '../stores/index.js';
 import { dealMessage, notifyUser } from './notifier.js';
 import { evaluateWatch, offersForGame } from './watch.js';
@@ -117,6 +118,8 @@ function applyPrice(offer, data, rate) {
     `UPDATE offers SET currency = ?, price = ?, base_price = ?, discount = ?, is_free = ?, price_uah = ?,
        available = 1, last_error = NULL, checked_at = ? WHERE id = ?`
   ).run(updated.currency, updated.price, updated.base_price, updated.discount, updated.is_free, updated.price_uah, checkedAt, offer.id);
+  // У ключів найдешевший продавець може змінитися — разом з ним і посилання
+  if (data.seller) db.prepare('UPDATE offers SET seller = ?, url = ? WHERE id = ?').run(data.seller, data.url, offer.id);
   recordHistory(updated, false);
   return updated.price !== offer.price || updated.discount !== offer.discount || offer.available !== 1;
 }
@@ -194,8 +197,59 @@ export async function evaluateWatches({ watchId = null } = {}) {
 }
 
 /** Повна перевірка: усі ігри, які хтось відстежує. Запускається за розкладом або вручну. */
+// Ігри, яких немає в CheapShark, не перепитуємо частіше ніж раз на добу
+const noKeys = new Map();
+const NO_KEYS_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * До ігор зі Steam додає пропозицію «ключ Steam в офіційному магазині», якщо такий ключ продається.
+ * Без gameIds — для всіх ігор, за якими хтось стежить.
+ */
+export async function linkKeyOffers(gameIds = null) {
+  if (config.demoStores) return 0;
+  const rows = db
+    .prepare(
+      `SELECT o.game_id, o.store_id, g.title FROM offers o JOIN games g ON g.id = o.game_id
+       WHERE o.store = 'steam'
+         AND NOT EXISTS (SELECT 1 FROM offers k WHERE k.game_id = o.game_id AND k.store = 'keys')
+         AND EXISTS (SELECT 1 FROM watch_items w WHERE w.game_id = o.game_id AND w.active = 1)`
+    )
+    .all()
+    .filter((r) => (!gameIds || gameIds.includes(r.game_id)) && !(Date.now() - (noKeys.get(r.store_id) || 0) < NO_KEYS_MS));
+  const rate = getUsdRate().rate;
+  let linked = 0;
+  for (const r of rows) {
+    try {
+      const keyId = await findKeyGameId(r.store_id);
+      const deal = keyId && (await fetchKeyPrices([{ storeId: keyId }])).get(keyId);
+      if (!deal?.available) {
+        noKeys.set(r.store_id, Date.now());
+        continue;
+      }
+      // Та сама гра CheapShark могла вже бути прив'язана до іншої нашої гри — тоді пропускаємо
+      if (db.prepare("SELECT 1 FROM offers WHERE store = 'keys' AND store_id = ?").get(keyId)) continue;
+      const priceUah = toUah(deal.price, deal.currency, rate);
+      const info = db
+        .prepare(
+          `INSERT INTO offers (game_id, store, store_id, title, url, currency, price, base_price, discount, is_free,
+             price_uah, available, checked_at, seller)
+           VALUES (?, 'keys', ?, ?, ?, ?, ?, ?, ?, 0, ?, 1, ?, ?)`
+        )
+        .run(r.game_id, keyId, r.title, deal.url, deal.currency, deal.price, deal.basePrice, deal.discount, priceUah, now(), deal.seller);
+      recordHistory({ id: Number(info.lastInsertRowid), price: deal.price, base_price: deal.basePrice, discount: deal.discount, price_uah: priceUah }, true);
+      linked += 1;
+    } catch (err) {
+      // CheapShark недоступний — сайт працює зі Steam і GOG, спробуємо під час наступної перевірки
+      log.warn('keys.link', `Не вдалося перевірити ключі для «${r.title}»: ${err.message}`);
+      break;
+    }
+  }
+  return linked;
+}
+
 export async function runPriceCheck({ trigger = 'schedule' } = {}) {
   const started = Date.now();
+  await linkKeyOffers();
   const offers = db
     .prepare(
       `SELECT DISTINCT o.* FROM offers o
@@ -215,6 +269,7 @@ export async function runPriceCheck({ trigger = 'schedule' } = {}) {
 }
 
 export async function refreshGame(gameId) {
+  await linkKeyOffers([gameId]);
   return refreshOffers(offersForGame(gameId));
 }
 

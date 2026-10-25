@@ -41,13 +41,14 @@ function offerNote(o, isBest) {
 }
 
 function priceRow(o, bestStore) {
+  if (o.store === 'keys' && !o.available) return ''; // ключ зараз ніхто не продає — рядок не потрібен
   const isBest = o.store === bestStore && o.available && o.priceUah != null;
   const note = offerNote(o, isBest);
   const value = !o.available || o.price == null ? '—' : o.isFree ? t('Безкоштовно') : formatUah(o.priceUah);
   return html`
     <a class="price-row ${isBest ? 'best' : ''}" href="${o.url}" target="_blank" rel="noopener noreferrer"
-      title="${t('Відкрити в {store}', { store: STORE_NAMES[o.store] })}">
-      <span class="store store-${o.store}">${STORE_NAMES[o.store]}</span>
+      title="${t('Відкрити в {store}', { store: o.seller || STORE_NAMES[o.store] })}">
+      <span class="store store-${o.store}">${o.seller ? `${o.seller} · ${STORE_NAMES.keys}` : STORE_NAMES[o.store]}</span>
       <span class="price-values">
         ${o.discount > 0 && o.basePriceUah ? html`<span class="price-old">${formatUah(o.basePriceUah)}</span>` : ''}
         ${o.discount > 0 ? html`<span class="discount">−${o.discount}%</span>` : ''}

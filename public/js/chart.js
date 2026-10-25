@@ -5,7 +5,7 @@ import { locale, t } from './i18n.js';
 
 const DAY = 864e5;
 const HEIGHT = 260;
-const STORE_ORDER = ['steam', 'gog'];
+const STORE_ORDER = ['steam', 'gog', 'keys'];
 const RANGES = [
   { days: 30, label: '30 днів' },
   { days: 90, label: '90 днів' },

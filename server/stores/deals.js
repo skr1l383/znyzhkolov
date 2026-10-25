@@ -6,6 +6,7 @@ import { config } from '../config.js';
 import { discountPercent, fetchJson, safeImageUrl, sleep, toMinor } from './util.js';
 import { gogImage } from './gog.js';
 import { steamUrl } from './steam.js';
+import { genresFromGog, uniqueCompanies } from './genres.js';
 
 const STEAM_SEARCH = 'https://store.steampowered.com/search/results/';
 const GOG_CATALOG = 'https://catalog.gog.com/v1/catalog';
@@ -115,6 +116,8 @@ export function parseGogDeals(json) {
         discount: discountPercent(basePrice, price),
         rating: Number.isFinite(p.reviewsRating) && p.reviewsRating > 0 ? p.reviewsRating * 2 : null,
         reviews: Number.isFinite(p.reviewsCount) ? p.reviewsCount : null,
+        genres: genresFromGog(p),
+        companies: uniqueCompanies(p.developers || [], p.publishers || []),
       };
     })
     .filter((d) => d.storeId && d.title && d.price != null && d.discount > 0);

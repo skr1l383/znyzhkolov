@@ -42,7 +42,15 @@ export function setHtml(el, content) {
   el.innerHTML = String(content);
 }
 
-export const STORE_NAMES = { steam: 'Steam', gog: 'GOG', epic: 'Epic Games' };
+export const STORE_NAMES = {
+  steam: 'Steam',
+  gog: 'GOG',
+  epic: 'Epic Games',
+  // Ключ Steam в офіційному магазині (Fanatical, Humble…); сам продавець — у полі seller пропозиції
+  get keys() {
+    return t('Ключ Steam');
+  },
+};
 
 /** 51500 копійок → "515 ₴" */
 export function formatUah(kopecks) {

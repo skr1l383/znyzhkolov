@@ -8,7 +8,24 @@ import { t, tp } from '../i18n.js';
 import { openAddDialog } from './search.js';
 
 const PAGE = 24;
-const DEFAULTS = { store: '', minDiscount: '', maxPrice: '', sort: 'popular', q: '', page: '1' };
+const DEFAULTS = { store: '', minDiscount: '', maxPrice: '', genre: '', company: '', sort: 'popular', q: '', page: '1' };
+// Ключі збігаються з серверними (server/stores/genres.js)
+const GENRES = [
+  ['action', 'Бойовик'],
+  ['adventure', 'Пригоди'],
+  ['rpg', 'Рольова гра'],
+  ['strategy', 'Стратегія'],
+  ['simulation', 'Симулятор'],
+  ['shooter', 'Шутер'],
+  ['horror', 'Жахи'],
+  ['platformer', 'Платформер'],
+  ['puzzle', 'Головоломка'],
+  ['survival', 'Виживання'],
+  ['openworld', 'Відкритий світ'],
+  ['racing', 'Перегони'],
+  ['sports', 'Спорт'],
+  ['indie', 'Інді'],
+];
 const SLIDE_MS = 6000;
 const SORTS = [
   ['popular', 'Популярні'],
@@ -307,6 +324,19 @@ export async function render(root, params) {
             </div>
           </div>
           <div class="filter-group">
+            <span class="filter-label" aria-hidden="true">${t('Жанр')}</span>
+            <select class="select filter-genre" name="genre" aria-label="${t('Жанр')}">
+              <option value="">${t('Будь-який жанр')}</option>
+              ${GENRES.map(([v, label]) => html`<option value="${v}" ${filters.genre === v ? 'selected' : ''}>${t(label)}</option>`)}
+            </select>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label" aria-hidden="true">${t('Студія')}</span>
+            <input class="input filter-company" type="search" name="company" list="companies" maxlength="80" autocomplete="off"
+              placeholder="${t('Розробник або видавець')}" value="${filters.company}" aria-label="${t('Розробник або видавець')}" />
+            <datalist id="companies"></datalist>
+          </div>
+          <div class="filter-group">
             <span class="filter-label" aria-hidden="true">${t('Ціна до')}</span>
             <div class="input-suffix filter-price">
               <input class="input num" type="number" name="maxPrice" min="0" step="1" inputmode="numeric" placeholder="${t('Будь-яка')}"
@@ -424,6 +454,8 @@ export async function render(root, params) {
     form.reset();
     form.elements.q.value = '';
     form.elements.maxPrice.value = '';
+    form.elements.genre.value = '';
+    form.elements.company.value = '';
     form.elements.sort.value = 'popular';
     $$('[data-filter]', form).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === '')));
     apply();
@@ -461,6 +493,21 @@ export async function render(root, params) {
     const btn = e.target.closest('[data-watch]');
     if (btn) watch(items[Number(btn.dataset.watch)], draw);
   });
+
+  // Які жанри й студії зараз є на вітрині: кількість ігор біля жанру і підказки для студії
+  get('/api/deals/facets')
+    .then(({ genres, companies }) => {
+      if (!root.isConnected) return;
+      const counts = new Map(genres.map((g) => [g.key, g.count]));
+      for (const option of form.elements.genre.options) {
+        if (!option.value) continue;
+        const n = counts.get(option.value) || 0;
+        option.textContent = `${t(GENRES.find(([k]) => k === option.value)[1])} (${n})`;
+        option.disabled = !n && option.value !== filters.genre;
+      }
+      setHtml($('#companies', root), html`${companies.map((c) => html`<option value="${c.name}"></option>`)}`);
+    })
+    .catch(() => {}); // без підказок фільтри однаково працюють
 
   // Банер вантажимо окремо: він не залежить від фільтрів і не перемальовується при їх зміні
   let heroShown = false;

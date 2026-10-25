@@ -4,6 +4,7 @@ import { db, getSetting, now, setSetting, tx } from '../db.js';
 import { log } from '../logger.js';
 import { getUsdRate, toUah } from '../stores/currency.js';
 import { fetchGogDeals, fetchSteamSpecials } from '../stores/deals.js';
+import { GENRE_KEYS, fetchSteamExtras } from '../stores/genres.js';
 import { demoDeals } from '../stores/demo.js';
 import { normalizeTitle } from '../stores/match.js';
 import { STORE_NAMES } from '../stores/index.js';
@@ -15,15 +16,27 @@ function saveStore(store, deals, rate) {
     db.prepare('DELETE FROM deals WHERE store = ?').run(store);
     const insert = db.prepare(
       `INSERT OR IGNORE INTO deals (store, store_id, title, search_title, url, image_url, image_fallback, currency, price, base_price,
-         discount, price_uah, base_price_uah, rating, rank, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         discount, price_uah, base_price_uah, rating, rank, updated_at, genres, companies)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     deals.forEach((d, i) => {
       insert.run(d.store, d.storeId, d.title, normalizeTitle(d.title), d.url, d.imageUrl, d.imageFallback || null, d.currency, d.price, d.basePrice,
-        d.discount, toUah(d.price, d.currency, rate), toUah(d.basePrice, d.currency, rate), d.rating, i + 1, at);
+        d.discount, toUah(d.price, d.currency, rate), toUah(d.basePrice, d.currency, rate), d.rating, i + 1, at,
+        d.genres?.length ? `,${d.genres.join(',')},` : null, d.companies?.length ? d.companies.join('\n') : null);
     });
   });
   setSetting(`deals:${store}:updated_at`, at);
+}
+
+/** Сторінка знижок Steam не містить жанрів і студій — догружаємо їх окремо. Не вийшло — вітрина буде без них. */
+async function withSteamExtras(deals) {
+  try {
+    const extras = await fetchSteamExtras(deals.map((d) => d.storeId));
+    return deals.map((d) => ({ ...d, ...extras.get(String(d.storeId)) }));
+  } catch (err) {
+    log.warn('deals.extras', `Жанри Steam недоступні: ${err.message}`);
+    return deals;
+  }
 }
 
 export async function refreshDeals() {
@@ -34,7 +47,7 @@ export async function refreshDeals() {
     config.dealsSource === 'demo'
       ? Object.entries(await demoDeals()).map(([store, deals]) => [store, async () => deals])
       : [
-          ['steam', () => fetchSteamSpecials(250)],
+          ['steam', () => fetchSteamSpecials(250).then(withSteamExtras)],
           ['gog', () => fetchGogDeals(150)],
         ];
   const result = {};
@@ -66,7 +79,7 @@ const SORTS = {
  * Ігри вітрини з фільтрами. Усі фільтри виконуються в самій базі даних (WHERE),
  * тому сторінка не завантажує зайвого.
  */
-export function listDeals({ store, minDiscount, maxPriceUah, q, sort = 'popular', limit = 24, offset = 0, userId = null }) {
+export function listDeals({ store, minDiscount, maxPriceUah, q, genre, company, sort = 'popular', limit = 24, offset = 0, userId = null }) {
   const where = [];
   const args = [];
   if (store) {
@@ -80,6 +93,14 @@ export function listDeals({ store, minDiscount, maxPriceUah, q, sort = 'popular'
   if (maxPriceUah != null) {
     where.push('price_uah <= ?');
     args.push(maxPriceUah);
+  }
+  if (GENRE_KEYS.includes(genre)) {
+    where.push('genres LIKE ?');
+    args.push(`%,${genre},%`);
+  }
+  if (company) {
+    where.push("companies LIKE ? ESCAPE '!'");
+    args.push(`%${company.replace(/[!%_]/g, (c) => `!${c}`)}%`);
   }
   const search = normalizeTitle(q);
   if (search) {
@@ -106,6 +127,27 @@ function watchingSet(userId) {
       .all(userId)
       .map((r) => `${r.store}:${r.store_id}`)
   );
+}
+
+/** Що є на вітрині зараз: скільки ігор кожного жанру і найчастіші студії — для фільтрів. */
+export function dealFacets() {
+  const rows = db.prepare('SELECT genres, companies FROM deals').all();
+  const genres = Object.fromEntries(GENRE_KEYS.map((k) => [k, 0]));
+  const companies = new Map();
+  for (const r of rows) {
+    for (const k of (r.genres || '').split(',')) if (k in genres) genres[k] += 1;
+    // Без різниці в регістрі: «CAPCOM» і «Capcom» рахуємо разом, показуємо перше написання
+    for (const c of (r.companies || '').split('\n')) {
+      if (!c) continue;
+      const hit = companies.get(c.toLowerCase()) || { name: c, count: 0 };
+      hit.count += 1;
+      companies.set(c.toLowerCase(), hit);
+    }
+  }
+  return {
+    genres: GENRE_KEYS.filter((k) => genres[k] > 0).map((k) => ({ key: k, count: genres[k] })),
+    companies: [...companies.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)).slice(0, 80),
+  };
 }
 
 function dealItem(r, watching) {

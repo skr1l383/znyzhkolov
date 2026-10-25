@@ -5,6 +5,28 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+// Таблиця пропозицій окремо: при міграції її створюємо заново під іншим ім'ям
+const offersTable = (name) => `CREATE TABLE IF NOT EXISTS ${name} (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  game_id     INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  store       TEXT NOT NULL CHECK (store IN ('steam', 'gog', 'epic', 'keys')),
+  store_id    TEXT NOT NULL,
+  title       TEXT NOT NULL,
+  url         TEXT,
+  image_url   TEXT,
+  currency    TEXT,
+  price       INTEGER,
+  base_price  INTEGER,
+  discount    INTEGER NOT NULL DEFAULT 0,
+  is_free     INTEGER NOT NULL DEFAULT 0,
+  price_uah   INTEGER,
+  available   INTEGER NOT NULL DEFAULT 1,
+  checked_at  TEXT,
+  last_error  TEXT,
+  seller      TEXT,
+  UNIQUE (store, store_id)
+);`;
+
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id                 INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,26 +61,9 @@ CREATE TABLE IF NOT EXISTS games (
 );
 
 -- Пропозиція гри в конкретному магазині (одна гра може бути в Steam, GOG та Epic).
+-- keys — найдешевший ключ Steam в офіційних магазинах (seller — який саме магазин).
 -- Ціни зберігаються цілими числами в копійках/центах, щоб не було похибок округлення.
-CREATE TABLE IF NOT EXISTS offers (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  game_id     INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
-  store       TEXT NOT NULL CHECK (store IN ('steam', 'gog', 'epic')),
-  store_id    TEXT NOT NULL,
-  title       TEXT NOT NULL,
-  url         TEXT,
-  image_url   TEXT,
-  currency    TEXT,
-  price       INTEGER,
-  base_price  INTEGER,
-  discount    INTEGER NOT NULL DEFAULT 0,
-  is_free     INTEGER NOT NULL DEFAULT 0,
-  price_uah   INTEGER,
-  available   INTEGER NOT NULL DEFAULT 1,
-  checked_at  TEXT,
-  last_error  TEXT,
-  UNIQUE (store, store_id)
-);
+${offersTable('offers')}
 CREATE INDEX IF NOT EXISTS idx_offers_game ON offers(game_id);
 
 CREATE TABLE IF NOT EXISTS price_history (
@@ -209,6 +214,8 @@ const ADDED_COLUMNS = [
   ['users', 'notify_email', 'INTEGER NOT NULL DEFAULT 1'], // сповіщення про знижки на пошту
   ['users', 'steam_id', 'TEXT'], // профіль Steam, з якого імпортували список бажаного
   ['notifications', 'sent_email', 'INTEGER NOT NULL DEFAULT 0'],
+  ['deals', 'genres', 'TEXT'], // жанри вітрини у вигляді ",action,rpg," — так їх зручно шукати через LIKE
+  ['deals', 'companies', 'TEXT'], // розробники й видавці, по одному в рядку
 ];
 
 function migrate() {
@@ -218,6 +225,30 @@ function migrate() {
   }
   // ALTER TABLE не вміє додавати UNIQUE, тому унікальність ключа — окремим індексом
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_share_token ON users(share_token)');
+  // Магазин keys з'явився пізніше. CHECK у SQLite не змінити, тому таблицю пропозицій переносимо в нову
+  // з тими самими id — історія цін і зв'язки з іграми зберігаються.
+  if (!/'keys'/.test(db.prepare("SELECT sql FROM sqlite_master WHERE name = 'offers'").get().sql)) {
+    const cols = db.prepare('PRAGMA table_info(offers)').all().map((c) => c.name).join(', ');
+    db.exec('PRAGMA foreign_keys = OFF');
+    try {
+      db.exec(`BEGIN;
+        ${offersTable('offers_new')}
+        INSERT INTO offers_new (${cols}) SELECT ${cols} FROM offers;
+        DROP TABLE offers;
+        ALTER TABLE offers_new RENAME TO offers;
+        CREATE INDEX IF NOT EXISTS idx_offers_game ON offers(game_id);
+        COMMIT;`);
+    } catch (err) {
+      try {
+        db.exec('ROLLBACK');
+      } catch {
+        // транзакція вже завершилась
+      }
+      throw err;
+    } finally {
+      db.exec('PRAGMA foreign_keys = ON');
+    }
+  }
   // Ключ кешу сторінок ігор змінився (додалась мова). Це лише кеш — стару таблицю простіше створити заново
   if (!db.prepare('PRAGMA table_info(game_details)').all().some((c) => c.name === 'lang')) {
     db.exec('DROP TABLE game_details');

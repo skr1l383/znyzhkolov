@@ -10,7 +10,7 @@ import { accountRoutes } from './routes/account.js';
 import { adminRoutes } from './routes/admin.js';
 import { authRoutes } from './routes/auth.js';
 import { commentRoutes } from './routes/comments.js';
-import { dealRoutes, featuredRoutes, gamePageRoutes } from './routes/deals.js';
+import { dealRoutes, facetRoutes, featuredRoutes, gamePageRoutes } from './routes/deals.js';
 import { gameRoutes } from './routes/games.js';
 import { profileRoutes } from './routes/profile.js';
 import { shareRoutes } from './routes/share.js';
@@ -72,6 +72,7 @@ export function buildServer({ dbFile, silent = false } = {}) {
   authRoutes(router);
   gameRoutes(router);
   featuredRoutes(router);
+  facetRoutes(router);
   dealRoutes(router);
   gamePageRoutes(router);
   commentRoutes(router);

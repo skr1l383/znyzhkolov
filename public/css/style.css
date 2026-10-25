@@ -24,6 +24,8 @@
      (фірмові синій Steam і фіолетовий GOG — ні) */
   --chart-steam: #1f6fb2;
   --chart-gog: #c2410c;
+  --chart-keys: #0f8a6c;
+  --keys: #0f8a6c;
   --shadow: 0 1px 2px rgb(18 24 38 / 0.05), 0 6px 20px rgb(18 24 38 / 0.06);
   --ring: 0 0 0 3px rgb(242 154 46 / 0.45);
 
@@ -59,6 +61,8 @@
     --epic: #c9d1e0;
   --chart-steam: #3d8ce6;
   --chart-gog: #e0662f;
+  --chart-keys: #2fbf95;
+  --keys: #2fbf95;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.22);
     color-scheme: dark;
   }
@@ -84,6 +88,8 @@
   --epic: #c9d1e0;
   --chart-steam: #3d8ce6;
   --chart-gog: #e0662f;
+  --chart-keys: #2fbf95;
+  --keys: #2fbf95;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.22);
   color-scheme: dark;
 }
@@ -906,6 +912,10 @@ p {
 
 .store-epic {
   --store-color: var(--epic);
+}
+
+.store-keys {
+  --store-color: var(--keys);
 }
 
 .price {
@@ -2847,6 +2857,59 @@ textarea.input {
   font-size: 12px;
 }
 
+/* Ключі Steam в офіційних магазинах на сторінці гри */
+.keys-box {
+  display: grid;
+  gap: 8px;
+}
+
+.keys-title {
+  margin: 0;
+  font-size: 14px;
+}
+
+.keys-cheaper {
+  margin: 0;
+  padding: 8px 11px;
+  border-radius: 10px;
+  background: var(--good-bg);
+  color: var(--good);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.keys-list {
+  display: grid;
+  gap: 6px;
+}
+
+.key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.key-row .store {
+  white-space: nowrap;
+}
+
+.key-row:hover {
+  border-color: var(--keys);
+  background: var(--surface-2);
+}
+
+.keys-box .hint {
+  margin: 0;
+  font-size: 12px;
+}
+
 .buy-box {
   display: grid;
   gap: 10px;
@@ -3599,6 +3662,17 @@ textarea.input {
   width: 140px;
 }
 
+.filters .filter-genre {
+  width: auto;
+  min-width: 170px;
+  min-height: 42px;
+}
+
+.filter-company {
+  width: 210px;
+  min-height: 42px;
+}
+
 .filter-price .input {
   min-height: 42px;
 }
@@ -3747,7 +3821,9 @@ textarea.input {
     flex: 1 0 auto;
     justify-content: center;
   }
-  .filter-price {
+  .filter-price,
+  .filter-company,
+  .filters .filter-genre {
     width: 100%;
   }
   .filters-reset {
@@ -3822,6 +3898,15 @@ textarea.input {
 
 .series-gog {
   --series: var(--chart-gog);
+}
+
+/* Ключі — третій колір і пунктир: лінії розрізняються і без кольору */
+.series-keys {
+  --series: var(--chart-keys);
+}
+
+.chart-line.series-keys {
+  stroke-dasharray: 6 4;
 }
 
 .chart-box {

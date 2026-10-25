@@ -33,6 +33,24 @@ const GOG = [
 
 const DISCOUNTS = [10, 20, 25, 33, 40, 50, 60, 75, 80, 90];
 
+// Жанри й студії тестової вітрини (за початком назви)
+const EXTRAS = [
+  ['Hades', ['action', 'rpg', 'indie'], ['Supergiant Games']],
+  ['Stardew Valley', ['simulation', 'rpg', 'indie'], ['ConcernedApe']],
+  ['Hollow Knight', ['action', 'adventure', 'platformer', 'indie'], ['Team Cherry']],
+  ['The Witcher 3', ['rpg', 'openworld'], ['CD PROJEKT RED']],
+  ['Cyberpunk 2077', ['rpg', 'shooter', 'openworld'], ['CD PROJEKT RED']],
+  ['Disco Elysium', ['rpg', 'adventure'], ['ZA/UM']],
+  ['Terraria', ['action', 'adventure', 'survival', 'indie'], ['Re-Logic']],
+  ['Celeste', ['platformer', 'indie'], ['Maddy Makes Games']],
+  ['Vampire Survivors', ['action', 'indie'], ['poncle']],
+  ['Slay the Spire', ['strategy', 'indie'], ['Mega Crit', 'Humble Games']],
+];
+const extras = (title) => {
+  const hit = EXTRAS.find(([name]) => title.startsWith(name));
+  return hit ? { genres: hit[1], companies: hit[2] } : {};
+};
+
 function randomPrice(base) {
   if (base == null) return { price: null, basePrice: null, discount: 0, isFree: false };
   const roll = Math.random();
@@ -135,7 +153,7 @@ export async function demoDeals() {
   const deal = (offer, base) => {
     const discount = pick();
     const price = Math.round((base * (100 - discount)) / 100);
-    return { ...offer, price, basePrice: base, discount, rating: 70 + Math.floor(Math.random() * 28), reviews: null };
+    return { ...offer, ...extras(offer.title), price, basePrice: base, discount, rating: 70 + Math.floor(Math.random() * 28), reviews: null };
   };
   return {
     steam: STEAM.filter((g) => g.price).map((g) => deal({ ...steamOffer(g), imageUrl: steamHeader(g.id) }, g.price)),

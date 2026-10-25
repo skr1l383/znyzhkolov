@@ -559,6 +559,18 @@ test('Вітрина: відкрита для гостей, фільтри за 
   assert.ok(r.data.items.every((d) => d.discount >= 50 && d.priceUah <= 30000), 'два фільтри одночасно');
   assert.ok(r.data.total <= all);
 
+  r = await guest('GET', '/api/deals?genre=rpg&limit=60');
+  const rpg = ['Hades', 'Stardew Valley', 'The Witcher 3', 'Cyberpunk 2077', 'Disco Elysium'];
+  assert.ok(r.data.items.length > 0 && r.data.items.every((d) => rpg.some((n) => d.title.startsWith(n))), 'фільтр за жанром');
+  r = await guest('GET', '/api/deals?genre=rpg&company=projekt&store=gog&limit=60');
+  assert.ok(r.data.items.length > 0, 'жанр, студія і магазин разом');
+  assert.ok(r.data.items.every((d) => d.store === 'gog' && /Witcher|Cyberpunk/.test(d.title)));
+  r = await guest('GET', '/api/deals?genre=unknown&limit=60');
+  assert.equal(r.data.total, all, 'невідомий жанр не фільтрує');
+  r = await guest('GET', '/api/deals/facets');
+  assert.ok(r.data.genres.some((g) => g.key === 'rpg' && g.count > 0));
+  assert.ok(r.data.companies.some((c) => c.name === 'CD PROJEKT RED'), 'студії для підказок');
+
   r = await guest('GET', '/api/deals?q=hollow&limit=60');
   assert.ok(r.data.items.length >= 1 && r.data.items.every((d) => /hollow/i.test(d.title)));
   r = await guest('GET', `/api/deals?q=${encodeURIComponent('100%_')}`);

@@ -50,16 +50,19 @@ function conditionText(watch) {
   return parts.join(' або ');
 }
 
+/** Назва магазину для сповіщення: у ключів — сам продавець. */
+const storeLabel = (o) => (o.store === 'keys' && o.seller ? `${o.seller} (ключ Steam)` : STORE_NAMES[o.store]);
+
 const priceLine = (o) => {
-  if (o.is_free) return `${STORE_NAMES[o.store]}: безкоштовно (було ${formatUah(toUah(o.base_price, o.currency))})`;
+  if (o.is_free) return `${storeLabel(o)}: безкоштовно (було ${formatUah(toUah(o.base_price, o.currency))})`;
   const sale = o.discount > 0 ? ` (−${o.discount}%)` : '';
-  return `${STORE_NAMES[o.store]}: ${formatUah(o.price_uah)}${sale}`;
+  return `${storeLabel(o)}: ${formatUah(o.price_uah)}${sale}`;
 };
 
 /** Текст сповіщення про знижку для сайту і для Telegram. */
 export function dealMessage(game, watch, evaluation, offers) {
   const t = evaluation.trigger.offer;
-  const storeName = STORE_NAMES[t.store];
+  const storeName = storeLabel(t);
   const title = t.is_free
     ? `${game.title}: безкоштовно в ${storeName}!`
     : `${game.title}: ${formatUah(t.price_uah)} у ${storeName}${t.discount > 0 ? ` (−${t.discount}%)` : ''}`;

@@ -39,7 +39,7 @@ export function offersForGame(gameId) {
   return db
     .prepare(
       `SELECT * FROM offers WHERE game_id = ?
-       ORDER BY CASE store WHEN 'steam' THEN 0 WHEN 'gog' THEN 1 ELSE 2 END`
+       ORDER BY CASE store WHEN 'steam' THEN 0 WHEN 'gog' THEN 1 WHEN 'keys' THEN 3 ELSE 2 END`
     )
     .all(gameId);
 }
@@ -51,6 +51,7 @@ export function publicOffer(o) {
     storeId: o.store_id,
     title: o.title,
     url: o.url,
+    seller: o.seller || null,
     currency: o.currency,
     price: o.price,
     basePrice: o.base_price,

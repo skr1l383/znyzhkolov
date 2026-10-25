@@ -1,8 +1,12 @@
+import { config } from '../config.js';
 import { HttpError } from '../http.js';
+import { log } from '../logger.js';
+import { getUsdRate, toUah } from '../stores/currency.js';
+import { fetchKeyDeals } from '../stores/keys.js';
 import { getGameDetails } from '../services/gameDetails.js';
 import { listFreebies } from '../services/epicFree.js';
 import { getRegionalPrices } from '../services/regional.js';
-import { dealsStatus, featuredDeals, listDeals } from '../services/deals.js';
+import { dealFacets, dealsStatus, featuredDeals, listDeals } from '../services/deals.js';
 import { runJob } from '../services/scheduler.js';
 
 const int = (value, min, max) => {
@@ -12,7 +16,7 @@ const int = (value, min, max) => {
 
 export function dealRoutes(router) {
   // Вітрина відкрита й для гостей: це головна сторінка сайту.
-  // Фільтри: store, minDiscount (%), maxPrice (грн), q (назва), sort, limit, offset.
+  // Фільтри: store, minDiscount (%), maxPrice (грн), q (назва), genre, company (студія), sort, limit, offset.
   router.get('/api/deals', (ctx) => {
     const q = ctx.query;
     const maxPrice = q.maxPrice ? int(String(q.maxPrice).replace(',', '.'), 0, 100000) : null;
@@ -21,6 +25,8 @@ export function dealRoutes(router) {
       minDiscount: int(q.minDiscount, 1, 100),
       maxPriceUah: maxPrice == null ? null : maxPrice * 100,
       q: String(q.q || '').slice(0, 80),
+      genre: String(q.genre || ''),
+      company: String(q.company || '').trim().slice(0, 80),
       sort: q.sort,
       limit: int(q.limit, 1, 60) ?? 24,
       offset: int(q.offset, 0, 10000) ?? 0,
@@ -39,6 +45,11 @@ export function dealRoutes(router) {
   });
 }
 
+export function facetRoutes(router) {
+  // Жанри й студії, які зараз є на вітрині, — варіанти для фільтрів
+  router.get('/api/deals/facets', () => dealFacets());
+}
+
 export function featuredRoutes(router) {
   // Банер на головній
   router.get('/api/deals/featured', (ctx) => ({ items: featuredDeals({ userId: ctx.user?.id ?? null }) }));
@@ -50,6 +61,26 @@ export function gamePageRoutes(router) {
     const { store, id } = ctx.params;
     if (!['steam', 'gog'].includes(store) || !/^\d{1,12}$/.test(id)) throw new HttpError(404, 'Гру не знайдено');
     return getGameDetails(store, id, ctx.user?.id ?? null, ctx.query.lang === 'en' ? 'en' : 'uk');
+  });
+
+  // Ключі Steam в офіційних магазинах. Окремий запит: сторінка гри не чекає на CheapShark,
+  // а якщо він недоступний — блок просто не показується.
+  router.get('/api/games/steam/:id/keys', async (ctx) => {
+    if (!/^\d{1,12}$/.test(ctx.params.id)) throw new HttpError(404, 'Гру не знайдено');
+    if (config.demoStores) return { deals: [], lowestEver: null };
+    let data;
+    try {
+      data = await fetchKeyDeals(ctx.params.id);
+    } catch (err) {
+      log.warn('keys.page', `Ключі для Steam ${ctx.params.id} недоступні: ${err.message}`);
+      return { deals: [], lowestEver: null, unavailable: true };
+    }
+    const rate = getUsdRate().rate;
+    const uah = (p) => toUah(p.price, p.currency, rate);
+    return {
+      deals: (data?.deals || []).map((d) => ({ ...d, priceUah: uah(d), basePriceUah: toUah(d.basePrice, d.currency, rate) })),
+      lowestEver: data?.lowestEver ? { ...data.lowestEver, priceUah: uah(data.lowestEver) } : null,
+    };
   });
 
   // Карта цін: скільки гра коштує в Steam у різних країнах
