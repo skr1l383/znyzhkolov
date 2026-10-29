@@ -59,8 +59,8 @@ export function renderLogin(root) {
         <h2>${t('Вхід')}</h2>
         <div class="form-error" role="alert" hidden></div>
         <div class="field">
-          <label for="login-email">${t('Електронна пошта')}</label>
-          <input class="input" id="login-email" name="email" type="email" autocomplete="email" required />
+          <label for="login-email">${t('Пошта або нік')}</label>
+          <input class="input" id="login-email" name="email" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required />
         </div>
         <div class="field">
           <label for="login-password">${t('Пароль')}</label>
@@ -84,8 +84,9 @@ export function renderRegister(root) {
         <h2>${t('Реєстрація')}</h2>
         <div class="form-error" role="alert" hidden></div>
         <div class="field">
-          <label for="reg-name">${t("Ім'я")}</label>
+          <label for="reg-name">${t('Нік')}</label>
           <input class="input" id="reg-name" name="name" autocomplete="nickname" maxlength="40" required />
+          <p class="hint">${t('Твоє ім’я на сайті. Ним, як і поштою, можна входити')}</p>
         </div>
         <div class="field">
           <label for="reg-email">${t('Електронна пошта')}</label>

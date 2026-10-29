@@ -196,8 +196,8 @@ test('Реєстрація: порожні поля, короткий парол
   assert.equal(r.status, 400);
   assert.equal(r.data.details.field, 'name');
   // Разом із готовим текстом приходить шаблон — за ним інтерфейс показує переклад
-  assert.equal(r.data.error, 'Заповніть поле «Ім\'я»');
-  assert.deepEqual(r.data.details.i18n, { text: 'Заповніть поле «{label}»', vars: { label: "Ім'я" } });
+  assert.equal(r.data.error, 'Заповніть поле «Нік»');
+  assert.deepEqual(r.data.details.i18n, { text: 'Заповніть поле «{label}»', vars: { label: 'Нік' } });
 
   r = await admin('POST', '/api/auth/register', { name: 'Саша', email: 'sasha@test.ua', password: '123' });
   assert.equal(r.status, 400);
@@ -235,7 +235,7 @@ test('Вхід: неправильний пароль і неіснуючий к
   const guest = client();
   let r = await guest('POST', '/api/auth/login', { email: 'sasha@test.ua', password: 'wrong-password' });
   assert.equal(r.status, 401);
-  assert.equal(r.data.error, 'Невірна пошта або пароль');
+  assert.equal(r.data.error, 'Невірна пошта, нік або пароль');
   r = await guest('POST', '/api/auth/login', { email: 'nobody@test.ua', password: 'password123' });
   assert.equal(r.status, 401);
   r = await guest('POST', '/api/auth/login', { email: 'sasha@test.ua', password: 'password123' });
@@ -883,4 +883,31 @@ test('Дані зберігаються після перезапуску сер
   const list = await guest('GET', '/api/watch');
   assert.ok(list.data.items.some((i) => i.title === 'Hollow Knight'));
   assert.equal(r.data.user.telegramLinked, true);
+});
+
+test('Вхід за ніком: нік унікальний без різниці в регістрі, без «@»; реєстрації обмежені', async () => {
+  const nick = client();
+  let r = await nick('POST', '/api/auth/register', { name: 'Саша', email: 'other-sasha@test.ua', password: 'password123' });
+  assert.equal(r.status, 409, 'нік уже зайнятий');
+  assert.equal(r.data.details.field, 'name');
+  r = await nick('POST', '/api/auth/register', { name: 'САША', email: 'other-sasha@test.ua', password: 'password123' });
+  assert.equal(r.status, 409, 'регістр не важить');
+  r = await nick('POST', '/api/auth/register', { name: 'a@b', email: 'other-sasha@test.ua', password: 'password123' });
+  assert.equal(r.status, 400, '«@» у ніку заборонено');
+  assert.equal(r.data.details.field, 'name');
+
+  const guest = client();
+  r = await guest('POST', '/api/auth/login', { email: 'саша', password: 'password123' });
+  assert.equal(r.status, 200, 'вхід за ніком у будь-якому регістрі');
+  assert.equal(r.data.user.email, 'sasha@test.ua');
+  r = await guest('PATCH', '/api/me', { name: 'Оля' });
+  assert.equal(r.status, 409, 'не можна змінити нік на чужий');
+
+  // П'ята успішна реєстрація з однієї адреси за годину ще проходить, шоста — ні
+  let last;
+  for (let i = 0; i < 6; i++) {
+    last = await client()('POST', '/api/auth/register', { name: `Бот ${i}`, email: `bot${i}@test.ua`, password: 'password123' });
+    if (last.status === 429) break;
+  }
+  assert.equal(last.status, 429, 'масові реєстрації блокуються');
 });

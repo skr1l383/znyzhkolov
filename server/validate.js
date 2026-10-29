@@ -56,3 +56,13 @@ export function id(value) {
   if (!Number.isInteger(n) || n <= 0) throw new HttpError(404, 'Не знайдено');
   return n;
 }
+
+/**
+ * Нік — ім'я на сайті й логін для входу. Без «@», щоб його не сплутати з поштою,
+ * і без пробілів на краях.
+ */
+export function nickname(value) {
+  const name = text(value, { field: 'name', label: 'Нік', min: 2, max: 40 });
+  if (name.includes('@')) throw fieldError('name', 'Нік не може містити «@»');
+  return name;
+}

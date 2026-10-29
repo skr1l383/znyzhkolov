@@ -213,10 +213,14 @@ const ADDED_COLUMNS = [
   ['users', 'email_verified_at', 'TEXT'], // коли користувач підтвердив пошту
   ['users', 'notify_email', 'INTEGER NOT NULL DEFAULT 1'], // сповіщення про знижки на пошту
   ['users', 'steam_id', 'TEXT'], // профіль Steam, з якого імпортували список бажаного
+  ['users', 'name_key', 'TEXT'], // нік у нижньому регістрі — для входу за ніком і перевірки, що він вільний
   ['notifications', 'sent_email', 'INTEGER NOT NULL DEFAULT 0'],
   ['deals', 'genres', 'TEXT'], // жанри вітрини у вигляді ",action,rpg," — так їх зручно шукати через LIKE
   ['deals', 'companies', 'TEXT'], // розробники й видавці, по одному в рядку
 ];
+
+/** Нік для порівняння: без пробілів на краях і без різниці в регістрі (і для кирилиці). */
+export const nameKey = (name) => String(name).trim().toLocaleLowerCase('uk');
 
 function migrate() {
   for (const [table, column, type] of ADDED_COLUMNS) {
@@ -225,6 +229,15 @@ function migrate() {
   }
   // ALTER TABLE не вміє додавати UNIQUE, тому унікальність ключа — окремим індексом
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_share_token ON users(share_token)');
+  // Нік — логін нарівні з поштою, тому унікальний без різниці в регістрі. COLLATE NOCASE у SQLite
+  // знає лише латиницю («САША» ≠ «Саша»), тож порівнюємо окремий стовпець, обчислений у JavaScript.
+  const update = db.prepare('UPDATE users SET name_key = ? WHERE id = ?');
+  for (const u of db.prepare('SELECT id, name FROM users WHERE name_key IS NULL').all()) update.run(nameKey(u.name), u.id);
+  try {
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_name_key ON users(name_key)');
+  } catch {
+    // однакові ніки з часів до цього правила — нові однакові не пропустить код реєстрації й профілю
+  }
   // Магазин keys з'явився пізніше. CHECK у SQLite не змінити, тому таблицю пропозицій переносимо в нову
   // з тими самими id — історія цін і зв'язки з іграми зберігаються.
   if (!/'keys'/.test(db.prepare("SELECT sql FROM sqlite_master WHERE name = 'offers'").get().sql)) {

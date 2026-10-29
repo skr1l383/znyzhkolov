@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.js';
-import { db, getSetting, now } from '../db.js';
+import { db, getSetting, nameKey, now } from '../db.js';
 import { detectImage } from '../formats/detect.js';
 import { HttpError, readUpload, sendFile } from '../http.js';
 import { log } from '../logger.js';
@@ -43,7 +43,12 @@ export function profileRoutes(router) {
 
   router.patch('/api/me', requireAuth, (ctx) => {
     const changes = {};
-    if ('name' in ctx.body) changes.name = v.text(ctx.body.name, { field: 'name', label: "Ім'я", min: 2, max: 40 });
+    if ('name' in ctx.body) {
+      changes.name = v.nickname(ctx.body.name);
+      changes.name_key = nameKey(changes.name);
+      const taken = db.prepare('SELECT 1 FROM users WHERE name_key = ? AND id != ?').get(changes.name_key, ctx.user.id);
+      if (taken) throw new HttpError(409, 'Цей нік уже зайнятий. Вигадай інший', { field: 'name' });
+    }
     if ('notifyEpicFree' in ctx.body) changes.notify_epic_free = ctx.body.notifyEpicFree ? 1 : 0;
     if ('notifyEmail' in ctx.body) changes.notify_email = ctx.body.notifyEmail ? 1 : 0;
     if ('lang' in ctx.body) {

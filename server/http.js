@@ -2,7 +2,7 @@
 // маршрути, розбір JSON, cookies, віддача статичних файлів і заголовки безпеки.
 import fs from 'node:fs';
 import path from 'node:path';
-import { config } from './config.js';
+import { config, isHttps } from './config.js';
 
 export class HttpError extends Error {
   constructor(status, message, details) {
@@ -58,6 +58,8 @@ const SECURITY_HEADERS = {
     "form-action 'self'",
     "frame-ancestors 'none'",
   ].join('; '),
+  // Лише на HTTPS-сервері: браузер рік не відкриватиме сайт через незахищений http://
+  ...(isHttps ? { 'Strict-Transport-Security': 'max-age=31536000' } : {}),
 };
 
 export function parseCookies(header = '') {

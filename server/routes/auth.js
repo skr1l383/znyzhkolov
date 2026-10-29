@@ -1,5 +1,5 @@
 import { config } from '../config.js';
-import { db, now } from '../db.js';
+import { db, nameKey, now } from '../db.js';
 import { HttpError } from '../http.js';
 import { log } from '../logger.js';
 import {
@@ -54,12 +54,20 @@ export async function sendVerificationEmail(user) {
 
 export function authRoutes(router) {
   router.post('/api/auth/register', async (ctx) => {
-    const name = v.text(ctx.body.name, { field: 'name', label: "Ім'я", min: 2, max: 40 });
+    const name = v.nickname(ctx.body.name);
     const email = v.email(ctx.body.email);
     const password = v.password(ctx.body.password);
+    if (db.prepare('SELECT 1 FROM users WHERE name_key = ?').get(nameKey(name))) {
+      throw new HttpError(409, 'Цей нік уже зайнятий. Вигадай інший', { field: 'name' });
+    }
 
     if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) {
       throw new HttpError(409, 'Користувач з такою поштою вже зареєстрований. Спробуйте увійти', { field: 'email' });
+    }
+    // Від масових реєстрацій: кожен новий акаунт отримує справжній лист, а безкоштовний ліміт пошти — 300 на день.
+    // Рахуємо лише ті спроби, що дійшли до створення акаунта
+    if (tooOften(`register-ip:${ctx.ip}`, { limit: 5, windowMs: 60 * 60000 })) {
+      throw new HttpError(429, 'Забагато реєстрацій з цієї адреси. Спробуй пізніше');
     }
 
     // Адміністратор — пошта з ADMIN_EMAIL. Якщо її не задано (локальна розробка) — перший зареєстрований користувач.
@@ -69,8 +77,8 @@ export function authRoutes(router) {
 
     const hash = await hashPassword(password);
     const info = db
-      .prepare('INSERT INTO users (email, name, password_hash, role, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(email, name, hash, role, now(), now());
+      .prepare('INSERT INTO users (email, name, name_key, password_hash, role, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(email, name, nameKey(name), hash, role, now(), now());
     const userId = Number(info.lastInsertRowid);
 
     const token = createSession(userId, ctx.req.headers['user-agent']);
@@ -145,24 +153,27 @@ export function authRoutes(router) {
 
   router.post('/api/auth/login', async (ctx) => {
     checkLoginRate(ctx.ip);
-    const email = typeof ctx.body.email === 'string' ? ctx.body.email.trim().toLowerCase() : '';
+    // Увійти можна поштою або ніком: є «@» — шукаємо пошту, немає — нік (без різниці в регістрі)
+    const login = typeof ctx.body.email === 'string' ? ctx.body.email.trim() : '';
     const password = typeof ctx.body.password === 'string' ? ctx.body.password : '';
-    if (!email) throw v.fieldError('email', 'Заповніть поле «Електронна пошта»');
+    if (!login) throw v.fieldError('email', 'Заповніть поле «Пошта або нік»');
     if (!password) throw v.fieldError('password', 'Заповніть поле «Пароль»');
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const user = login.includes('@')
+      ? db.prepare('SELECT * FROM users WHERE email = ?').get(login.toLowerCase())
+      : db.prepare('SELECT * FROM users WHERE name_key = ?').get(nameKey(login));
     const ok = user ? await verifyPassword(password, user.password_hash) : false;
     if (!ok) {
       registerLoginFailure(ctx.ip);
-      log.warn('auth.login_failed', `Невдала спроба входу для ${email}`, { userId: user?.id ?? null, meta: { ip: ctx.ip } });
-      throw new HttpError(401, 'Невірна пошта або пароль');
+      log.warn('auth.login_failed', `Невдала спроба входу для ${login}`, { userId: user?.id ?? null, meta: { ip: ctx.ip } });
+      throw new HttpError(401, 'Невірна пошта, нік або пароль');
     }
 
     resetLoginFailures(ctx.ip);
     db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').run(now(), user.id);
     const token = createSession(user.id, ctx.req.headers['user-agent']);
     ctx.setHeaders['Set-Cookie'] = sessionCookie(token);
-    log.info('auth.login', `Вхід: ${email}`, { userId: user.id });
+    log.info('auth.login', `Вхід: ${user.email}`, { userId: user.id });
     return { user: publicUser(user) };
   });
 
