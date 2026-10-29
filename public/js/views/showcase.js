@@ -262,6 +262,77 @@ function queryString(filters, extra = {}) {
   return p.toString();
 }
 
+/**
+ * Підказки студій під полем «Студія». Системний datalist не оформити стилями, тому список власний:
+ * збіг підсвічується, стрілки ↑↓ гортають, Enter вибирає, Esc закриває.
+ */
+function mountSuggest(input, list, companies) {
+  let shown = [];
+  let active = -1;
+  const close = () => {
+    list.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    active = -1;
+  };
+  const mark = (name, q) => {
+    const i = q ? name.toLowerCase().indexOf(q) : -1;
+    return i < 0 ? name : html`${name.slice(0, i)}<mark>${name.slice(i, i + q.length)}</mark>${name.slice(i + q.length)}`;
+  };
+  const open = () => {
+    const q = input.value.trim().toLowerCase();
+    shown = companies.filter((c) => !q || c.name.toLowerCase().includes(q)).slice(0, 8);
+    // Уже вибрана студія — підказувати нічого
+    if (!shown.length || (shown.length === 1 && shown[0].name.toLowerCase() === q)) return close();
+    active = -1;
+    setHtml(
+      list,
+      html`${shown.map(
+        (c, i) => html`<li role="option" id="company-opt-${i}" data-i="${i}" aria-selected="false">
+          <span>${mark(c.name, q)}</span><span class="combo-count">${c.count} ${tp(c.count, 'гра', 'гри', 'ігор')}</span>
+        </li>`
+      )}`
+    );
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+  };
+  const highlight = (i) => {
+    active = (i + shown.length) % shown.length;
+    [...list.children].forEach((li, k) => li.setAttribute('aria-selected', String(k === active)));
+    input.setAttribute('aria-activedescendant', `company-opt-${active}`);
+    list.children[active].scrollIntoView({ block: 'nearest' });
+  };
+  const choose = (i) => {
+    input.value = shown[i].name;
+    close();
+    input.dispatchEvent(new Event('input', { bubbles: true })); // форма застосує фільтр
+  };
+
+  input.addEventListener('focus', open);
+  input.addEventListener('input', open);
+  input.addEventListener('blur', close);
+  input.addEventListener('keydown', (e) => {
+    if (list.hidden && e.key === 'ArrowDown') return open();
+    if (list.hidden) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlight(active + (e.key === 'ArrowDown' ? 1 : -1));
+    } else if (e.key === 'Enter' && active >= 0) {
+      e.preventDefault();
+      choose(active);
+    } else if (e.key === 'Escape') {
+      close();
+    }
+  });
+  // mousedown, а не click: інакше поле встигне втратити фокус і список закриється раніше
+  list.addEventListener('mousedown', (e) => {
+    const li = e.target.closest('[data-i]');
+    if (!li) return;
+    e.preventDefault();
+    choose(Number(li.dataset.i));
+  });
+}
+
 export async function render(root, params) {
   const filters = readFilters(params);
   let items = [];
@@ -332,9 +403,12 @@ export async function render(root, params) {
           </div>
           <div class="filter-group">
             <span class="filter-label" aria-hidden="true">${t('Студія')}</span>
-            <input class="input filter-company" type="search" name="company" list="companies" maxlength="80" autocomplete="off"
-              placeholder="${t('Розробник або видавець')}" value="${filters.company}" aria-label="${t('Розробник або видавець')}" />
-            <datalist id="companies"></datalist>
+            <div class="combo">
+              <input class="input filter-company" type="search" name="company" maxlength="80" autocomplete="off"
+                role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="company-list"
+                placeholder="${t('Розробник або видавець')}" value="${filters.company}" aria-label="${t('Розробник або видавець')}" />
+              <ul class="combo-list" id="company-list" role="listbox" aria-label="${t('Студії')}" hidden></ul>
+            </div>
           </div>
           <div class="filter-group">
             <span class="filter-label" aria-hidden="true">${t('Ціна до')}</span>
@@ -505,7 +579,7 @@ export async function render(root, params) {
         option.textContent = `${t(GENRES.find(([k]) => k === option.value)[1])} (${n})`;
         option.disabled = !n && option.value !== filters.genre;
       }
-      setHtml($('#companies', root), html`${companies.map((c) => html`<option value="${c.name}"></option>`)}`);
+      mountSuggest(form.elements.company, $('#company-list', root), companies);
     })
     .catch(() => {}); // без підказок фільтри однаково працюють
 

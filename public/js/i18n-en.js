@@ -280,6 +280,7 @@ export const EN = {
   Жанр: 'Genre',
   'Будь-який жанр': 'Any genre',
   Студія: 'Studio',
+  Студії: 'Studios',
   'Розробник або видавець': 'Developer or publisher',
   Бойовик: 'Action',
   Пригоди: 'Adventure',
