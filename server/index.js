@@ -26,7 +26,7 @@ server.on('error', (err) => {
   process.exit(1);
 });
 
-server.listen(config.port, () => {
+server.listen(config.port, config.host, () => {
   log.info('server.start', `Знижколов працює: ${config.baseUrl}${config.demoStores ? ' (ДЕМО-режим, тестові ціни)' : ''}`);
   startScheduler();
   startBot();

@@ -22,6 +22,10 @@ const port = num(env.PORT, 3000);
 
 export const config = {
   port,
+  // На сервері сайт слухає лише 127.0.0.1, а назовні його відкриває HTTPS-проксі (Caddy)
+  host: env.HOST || undefined,
+  // За проксі справжній IP відвідувача приходить у заголовку X-Forwarded-For
+  trustProxy: env.TRUST_PROXY === '1',
   baseUrl: (env.BASE_URL || `http://localhost:${port}`).replace(/\/$/, ''),
   dataDir: path.resolve(ROOT, env.DATA_DIR || 'data'),
   logDir: path.resolve(ROOT, env.LOG_DIR || 'logs'),

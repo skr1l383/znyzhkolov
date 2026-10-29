@@ -62,9 +62,10 @@ export function authRoutes(router) {
       throw new HttpError(409, 'Користувач з такою поштою вже зареєстрований. Спробуйте увійти', { field: 'email' });
     }
 
-    // Перший зареєстрований користувач (або пошта з ADMIN_EMAIL) стає адміністратором
+    // Адміністратор — пошта з ADMIN_EMAIL. Якщо її не задано (локальна розробка) — перший зареєстрований користувач.
+    // На публічному сервері ADMIN_EMAIL обов'язковий: інакше адміном став би той, хто встиг першим
     const isFirst = !db.prepare('SELECT 1 FROM users LIMIT 1').get();
-    const role = isFirst || (config.adminEmail && email === config.adminEmail) ? 'admin' : 'user';
+    const role = (config.adminEmail ? email === config.adminEmail : isFirst) ? 'admin' : 'user';
 
     const hash = await hashPassword(password);
     const info = db

@@ -2,6 +2,7 @@
 // маршрути, розбір JSON, cookies, віддача статичних файлів і заголовки безпеки.
 import fs from 'node:fs';
 import path from 'node:path';
+import { config } from './config.js';
 
 export class HttpError extends Error {
   constructor(status, message, details) {
@@ -254,6 +255,20 @@ function serveStatic(publicDir, pathname, req, res) {
 }
 
 /**
+ * IP відвідувача — для обмеження спроб входу й захисту від флуду.
+ * Заголовку X-Forwarded-For віримо лише тоді, коли запит прийшов від власного проксі на цьому ж сервері:
+ * інакше будь-хто підставив би чужий IP і обійшов би блокування.
+ */
+export function clientIp(req) {
+  const direct = req.socket.remoteAddress || '';
+  const local = direct === '127.0.0.1' || direct === '::1' || direct === '::ffff:127.0.0.1';
+  if (config.trustProxy && local && req.headers['x-forwarded-for']) {
+    return String(req.headers['x-forwarded-for']).split(',')[0].trim();
+  }
+  return direct;
+}
+
+/**
  * Створює обробник запитів.
  * Обробник маршруту отримує ctx і повертає об'єкт (буде надісланий як JSON)
  * або кидає HttpError. Проміжні обробники (наприклад, перевірка входу)
@@ -287,7 +302,7 @@ export function createApp({ router, publicDir, onError, beforeRoute, mapError })
       params: {},
       body: {},
       cookies: parseCookies(req.headers.cookie),
-      ip: req.socket.remoteAddress || '',
+      ip: clientIp(req),
       user: null,
       setHeaders: {},
     };

@@ -40,8 +40,8 @@ function bindForm(root, url, fields, onDone) {
       try {
         const result = await post(url, data);
         await refreshMe();
-        onDone?.(result);
-        go('#/');
+        // onDone може повернути адресу, куди перейти далі (після реєстрації — «Перевір пошту»)
+        go(onDone?.(result) || '#/');
       } catch (err) {
         showFormError(form, err);
       }
@@ -102,9 +102,7 @@ export function renderRegister(root) {
       </form>
     </div>`
   );
-  bindForm(root, '/api/auth/register', ['name', 'email', 'password'], ({ user }) =>
-    toast(t('Ми надіслали лист на {email} — натисни в ньому «Підтвердити пошту»', { email: user.email }))
-  );
+  bindForm(root, '/api/auth/register', ['name', 'email', 'password'], () => '#/check-email');
 }
 
 // ---------- Відновлення пароля і підтвердження пошти ----------
@@ -193,11 +191,93 @@ export function renderReset(root, params) {
   });
 }
 
+// Пошти, для яких можна одразу відкрити скриньку в браузері
+const WEBMAIL = {
+  'gmail.com': ['Gmail', 'https://mail.google.com/'],
+  'googlemail.com': ['Gmail', 'https://mail.google.com/'],
+  'ukr.net': ['ukr.net', 'https://mail.ukr.net/'],
+  'outlook.com': ['Outlook', 'https://outlook.live.com/mail/'],
+  'hotmail.com': ['Outlook', 'https://outlook.live.com/mail/'],
+  'live.com': ['Outlook', 'https://outlook.live.com/mail/'],
+  'yahoo.com': ['Yahoo', 'https://mail.yahoo.com/'],
+  'icloud.com': ['iCloud', 'https://www.icloud.com/mail'],
+  'proton.me': ['Proton', 'https://mail.proton.me/'],
+};
+
+/** Повідомляє інші вкладки сайту, що пошту підтверджено, — вони одразу ховають нагадування. */
+function announceVerified() {
+  try {
+    new BroadcastChannel('zk-account').postMessage('verified');
+  } catch {
+    // старий браузер — інші вкладки дізнаються, коли на них повернешся
+  }
+}
+
+/** Екран після реєстрації: куди пішов лист, що робити далі, і живе очікування підтвердження. */
+export function renderCheckEmail(root) {
+  if (!state.user) return go('#/login');
+  if (state.user.emailVerified) return go('#/');
+  const email = state.user.email;
+  const webmail = WEBMAIL[email.split('@')[1]?.toLowerCase()];
+  const outbox = state.app.mail === 'outbox';
+  setHtml(
+    root,
+    html`<section class="check-email">
+      <div class="check-email-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" /></svg>
+      </div>
+      <h1>${t('Перевір пошту')}</h1>
+      <p class="check-email-lead">${t('Ми надіслали лист на')} <b>${email}</b>.<br />${t('Натисни в ньому «Підтвердити пошту» — і зможеш отримувати сповіщення про знижки на пошту.')}</p>
+      ${outbox
+        ? html`<p class="hint">${t('Сайт працює без поштового сервісу: лист лежить у тестовій скриньці адмін-панелі.')}</p>`
+        : html`<p class="hint">${t('Не бачиш листа за хвилину? Глянь у папки «Спам» і «Промоакції».')}</p>`}
+      <div class="check-email-actions">
+        ${webmail && !outbox
+          ? html`<a class="btn btn-primary" href="${webmail[1]}" target="_blank" rel="noopener noreferrer">${t('Відкрити {mail}', { mail: webmail[0] })}</a>`
+          : ''}
+        <button class="btn" type="button" id="check-resend">${t('Надіслати ще раз')}</button>
+        <a class="btn btn-ghost" href="#/">${t('Пізніше — на сайт')}</a>
+      </div>
+      <p class="check-email-wait" role="status"><span class="spinner" aria-hidden="true"></span>${t('Чекаємо на підтвердження — ця сторінка оновиться сама')}</p>
+    </section>`
+  );
+
+  $('#check-resend', root).addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      await post('/api/auth/verify/resend');
+      toast(outbox ? t('Лист у тестовій скриньці (адмін-панель)') : t('Лист надіслано — перевір пошту і папку «Спам»'));
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setTimeout(() => (btn.disabled = false), 3000);
+    }
+  });
+
+  // Щойно пошту підтверджено (у цій чи іншій вкладці) — показуємо це і пропонуємо, що робити далі
+  const onVerified = () => {
+    if (!root.isConnected || !state.user?.emailVerified) return;
+    setHtml(
+      root,
+      html`<section class="check-email">
+        <div class="check-email-icon ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg></div>
+        <h1>${t('Пошту підтверджено ✓')}</h1>
+        <p class="check-email-lead">${t('Тепер сповіщення про знижки приходитимуть і на пошту.')}</p>
+        <div class="check-email-actions"><a class="btn btn-primary" href="#/search">${t('Знайти першу гру')}</a><a class="btn" href="#/">${t('На вітрину')}</a></div>
+      </section>`
+    );
+  };
+  window.addEventListener('zk:verified', onVerified);
+  return () => window.removeEventListener('zk:verified', onVerified);
+}
+
 export async function renderVerify(root, params) {
   setHtml(root, html`<div class="empty"><h2>${t('Підтверджуємо пошту…')}</h2></div>`);
   try {
     const { user } = await post('/api/auth/verify', { token: params.token });
     await refreshMe().catch(() => {});
+    announceVerified();
     setHtml(
       root,
       html`<div class="empty">

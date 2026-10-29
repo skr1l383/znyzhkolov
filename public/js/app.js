@@ -26,6 +26,7 @@ const routes = {
   forgot: { view: auth.renderForgot, public: true, title: 'Відновлення пароля' },
   reset: { view: auth.renderReset, open: true, title: 'Новий пароль' },
   verify: { view: auth.renderVerify, open: true, title: 'Підтвердження пошти' },
+  'check-email': { view: auth.renderCheckEmail, open: true, title: 'Перевір пошту' },
   privacy: { view: privacy.render, open: true, title: 'Конфіденційність' },
   // open — сторінка доступна і гостям, і тим, хто увійшов
   '': { view: showcase.render, nav: 'showcase', title: 'Знижки зараз', open: true },
@@ -237,6 +238,40 @@ export async function clearPrivateCache() {
   }
 }
 
+/**
+ * Пошту підтверджують в іншій вкладці (з листа), тож ця вкладка про це не знає.
+ * Дізнаємось двома шляхами: повідомлення від іншої вкладки (BroadcastChannel)
+ * і тиха перевірка /api/me, коли користувач повертається на вкладку або раз на 15 с, поки вона відкрита.
+ */
+function watchVerification() {
+  let busy = false;
+  const check = async () => {
+    if (busy || !state.user || state.user.emailVerified || document.hidden) return;
+    busy = true;
+    try {
+      const { user } = await get('/api/me');
+      if (user?.emailVerified) {
+        state.user = user;
+        renderChrome();
+        toast(t('Пошту підтверджено ✓'));
+        window.dispatchEvent(new CustomEvent('zk:verified'));
+      }
+    } catch {
+      // немає зв'язку — перевіримо наступного разу
+    } finally {
+      busy = false;
+    }
+  };
+  try {
+    new BroadcastChannel('zk-account').addEventListener('message', (e) => e.data === 'verified' && check());
+  } catch {
+    // без BroadcastChannel лишаються перевірки нижче
+  }
+  document.addEventListener('visibilitychange', check);
+  window.addEventListener('focus', check);
+  setInterval(check, 15000);
+}
+
 function setupVerifyBanner() {
   $('#verify-resend').addEventListener('click', async (e) => {
     const btn = e.currentTarget;
@@ -314,6 +349,7 @@ async function start() {
   setupLang();
   setupPwa();
   setupVerifyBanner();
+  watchVerification();
   try {
     await refreshMe();
   } catch (err) {

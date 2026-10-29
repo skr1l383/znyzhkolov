@@ -1,0 +1,25 @@
+# Сервіс systemd: сайт запускається разом із сервером і перезапускається після збою.
+# Встановлення: sudo cp deploy/znyzhkolov.service /etc/systemd/system/ && sudo systemctl enable --now znyzhkolov
+[Unit]
+Description=Znyzhkolov — знижки на ігри
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=znyzhkolov
+Group=znyzhkolov
+WorkingDirectory=/opt/znyzhkolov/app
+EnvironmentFile=/etc/znyzhkolov.env
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning server/index.js
+Restart=always
+RestartSec=3
+
+# Обмеження: сайт може писати лише в папку даних, решта системи для нього лише для читання
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/znyzhkolov
+
+[Install]
+WantedBy=multi-user.target
