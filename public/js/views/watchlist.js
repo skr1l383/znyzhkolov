@@ -15,6 +15,7 @@ import {
   formatUah,
   gameHref,
   html,
+  raw,
   openDialog,
   setHtml,
   showFormError,
@@ -71,26 +72,82 @@ function statusPill(item) {
   return html`<span class="pill">${t('Чекаємо на знижку')}</span>`;
 }
 
+/** Найдешевша доступна пропозиція гри зараз. */
+function bestOf(item) {
+  return item.offers.filter((o) => o.available && o.priceUah != null).sort((a, b) => a.priceUah - b.priceUah)[0] || null;
+}
+
+/**
+ * Наскільки гра близька до умови користувача: смужка від 0 до 100%.
+ * Для знижки — поточна знижка від потрібної, для ціни — потрібна ціна від поточної. Береться ближча з умов.
+ */
+function progressHtml(item) {
+  const best = bestOf(item);
+  if (!best || !item.active) return '';
+  if (item.conditionMet) {
+    return html`<div class="goal is-met"><div class="goal-bar"><span style="width: 100%"></span></div>
+      <p>${t('Умову виконано — саме час купувати')}</p></div>`;
+  }
+  const goals = [];
+  const discount = Math.max(0, ...item.offers.filter((o) => o.available).map((o) => o.discount || 0));
+  if (item.minDiscount) {
+    goals.push({
+      share: Math.min(discount / item.minDiscount, 1),
+      text: t('Знижка зараз {now} · твоя умова від {goal}%', { now: discount ? `−${discount}%` : t('немає'), goal: item.minDiscount }),
+    });
+  }
+  if (item.maxPriceUah) {
+    goals.push({
+      share: Math.min(item.maxPriceUah / best.priceUah, 1),
+      text: t('Зараз {now} · твоя ціна до {goal} (ще {left})', {
+        now: formatUah(best.priceUah),
+        goal: formatUah(item.maxPriceUah),
+        left: formatUah(best.priceUah - item.maxPriceUah),
+      }),
+    });
+  }
+  if (!goals.length) return '';
+  const g = goals.sort((a, b) => b.share - a.share)[0];
+  return html`<div class="goal"><div class="goal-bar"><span style="width: ${Math.max(4, Math.round(g.share * 100))}%"></span></div><p>${g.text}</p></div>`;
+}
+
+const ICON = {
+  refresh: '<path d="M21 12a9 9 0 1 1-3-6.7" /><path d="M21 4v5h-5" />',
+  pause: '<path d="M9 5v14M15 5v14" />',
+  play: '<path d="M7 5l12 7-12 7Z" />',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />',
+};
+const iconBtn = (action, icon, label, extra = '') =>
+  html`<button class="icon-btn game-icon-btn ${extra}" type="button" data-action="${action}" title="${label}" aria-label="${label}">
+    <svg viewBox="0 0 24 24">${raw(ICON[icon])}</svg></button>`;
+
 function gameCard(item) {
   const checked = lastChecked(item);
   const missingGog = !item.offers.some((o) => o.store === 'gog');
+  const best = bestOf(item);
   return html`
     <article class="game-card ${item.conditionMet && item.active ? 'met' : ''} ${item.active ? '' : 'paused'}" data-id="${item.id}">
-      ${cover(item.imageUrl, item.title)}
+      <a class="game-cover" href="${gameHref(item.offers[0]?.store, item.offers[0]?.storeId)}" tabindex="-1" aria-hidden="true">
+        ${cover(item.imageUrl, item.title)}
+        ${best?.discount > 0 ? html`<span class="deal-badge">−${best.discount}%</span>` : ''}
+      </a>
       <div class="game-main">
         <div class="row">${statusPill(item)}</div>
         <h2 class="game-title"><a class="plain-link" href="${gameHref(item.offers[0]?.store, item.offers[0]?.storeId)}">${item.title}</a></h2>
         <p class="conditions">${t('Сповістити, коли:')} ${conditionsText(item)}</p>
+        ${progressHtml(item)}
         ${item.lastAlertAt ? html`<p class="hint">${t('Останнє сповіщення {when}', { when: timeAgo(item.lastAlertAt) })}</p>` : ''}
         <div class="game-actions">
           <button class="btn btn-sm" type="button" data-action="chart">${t('Графік ціни')}</button>
-          <button class="btn btn-sm" type="button" data-action="refresh">${t('Оновити ціни')}</button>
           <button class="btn btn-sm" type="button" data-action="edit">${t('Умови')}</button>
-          <button class="btn btn-sm" type="button" data-action="toggle">${item.active ? t('Пауза') : t('Увімкнути')}</button>
           ${missingGog
             ? html`<a class="btn btn-sm btn-ghost" href="#/search?store=gog&q=${encodeURIComponent(item.title)}&link=${item.id}">+ GOG</a>`
             : ''}
-          <button class="btn btn-sm btn-ghost btn-danger" type="button" data-action="delete">${t('Видалити')}</button>
+          <span class="game-icons">
+            ${iconBtn('refresh', 'refresh', t('Оновити ціни'))}
+            ${iconBtn('toggle', item.active ? 'pause' : 'play', item.active ? t('Пауза') : t('Увімкнути'))}
+            ${iconBtn('delete', 'trash', t('Видалити'), 'is-danger')}
+          </span>
         </div>
       </div>
       <div class="prices">
@@ -431,12 +488,75 @@ async function chartDialog(item) {
   }
 }
 
+const FILTERS = [
+  ['all', 'Усі'],
+  ['met', 'Умову виконано'],
+  ['waiting', 'Чекаємо'],
+  ['paused', 'На паузі'],
+];
+const SORTS = [
+  ['added', 'Нещодавно додані'],
+  ['discount', 'Найбільша знижка'],
+  ['cheap', 'Найдешевші'],
+  ['title', 'За назвою'],
+];
+
+function matchesFilter(item, filter) {
+  if (filter === 'met') return item.active && item.conditionMet;
+  if (filter === 'waiting') return item.active && !item.conditionMet;
+  if (filter === 'paused') return !item.active;
+  return true;
+}
+
+/** Підсумок над списком: скільки ігор, скільки умов виконано, скільки коштують зараз і найбільша знижка. */
+function statsHtml(items) {
+  const priced = items.map((i) => ({ item: i, best: bestOf(i) })).filter((r) => r.best);
+  const now = priced.reduce((s, r) => s + r.best.priceUah, 0);
+  const regular = priced.reduce((s, r) => s + (r.best.basePriceUah ?? r.best.priceUah), 0);
+  const top = priced.sort((a, b) => (b.best.discount || 0) - (a.best.discount || 0))[0];
+  const met = items.filter((i) => i.active && i.conditionMet).length;
+  return html`
+    <div class="list-stats">
+      <div><b>${items.length}</b><span>${tp(items.length, 'гра', 'гри', 'ігор')} ${t('у списку')}</span></div>
+      <div class="${met ? 'is-good' : ''}"><b>${met}</b><span>${t('з виконаною умовою')}</span></div>
+      <div>
+        <b>${formatUah(now)}</b>
+        <span>${regular > now ? t('коштують зараз · заощадиш {sum}', { sum: formatUah(regular - now) }) : t('коштують зараз')}</span>
+      </div>
+      ${top?.best.discount > 0
+        ? html`<div><b>−${top.best.discount}%</b><span>${t('найбільша знижка: {title}', { title: top.item.title })}</span></div>`
+        : ''}
+    </div>
+  `;
+}
+
 export async function render(root) {
   setHtml(root, html`<div class="stack"><div class="skeleton"></div><div class="skeleton"></div></div>`);
   let items = (await get('/api/watch')).items;
 
+  // Що показати: фільтр, пошук за назвою і сортування (живуть, поки відкрита сторінка)
+  const view = { filter: 'all', q: '', sort: 'added' };
+  const visible = () => {
+    const q = view.q.trim().toLocaleLowerCase();
+    const list = items.filter((i) => matchesFilter(i, view.filter) && (!q || i.title.toLocaleLowerCase().includes(q)));
+    const SORTERS = {
+      discount: (a, b) => (bestOf(b)?.discount || 0) - (bestOf(a)?.discount || 0),
+      cheap: (a, b) => (bestOf(a)?.priceUah ?? Infinity) - (bestOf(b)?.priceUah ?? Infinity),
+      title: (a, b) => a.title.localeCompare(b.title),
+    };
+    return SORTERS[view.sort] ? [...list].sort(SORTERS[view.sort]) : list; // added — як прийшло з сервера (нові першими)
+  };
+  const drawList = () => {
+    const list = visible();
+    setHtml(
+      $('#game-list', root),
+      list.length
+        ? html`${list.map(gameCard)}`
+        : html`<div class="empty"><p>${t('Нічого не знайшли. Зміни фільтр або пошук.')}</p></div>`
+    );
+  };
+
   const draw = () => {
-    const met = items.filter((i) => i.active && i.conditionMet).length;
     setHtml(
       root,
       html`
@@ -447,12 +567,11 @@ export async function render(root) {
         <div class="page-head">
           <div>
             <h1>${t('Мій список')}</h1>
-            ${items.length
-              ? html`<div class="summary">
-                  <span class="pill">${items.length} ${tp(items.length, 'гра', 'гри', 'ігор')}</span>
-                  ${met ? html`<span class="pill pill-good">${t('{n} з виконаною умовою', { n: met })}</span>` : ''}
-                </div>`
-              : html`<p>${t('Тут будуть ігри, за цінами яких ти стежиш.')}</p>`}
+            <p>
+              ${items.length
+                ? t('Ціни перевіряємо кілька разів на день і повідомимо, щойно настане час купувати.')
+                : t('Тут будуть ігри, за цінами яких ти стежиш.')}
+            </p>
           </div>
           <div class="row">
             <button class="btn" type="button" id="steam-btn">${t('Імпорт зі Steam')}</button>
@@ -462,10 +581,37 @@ export async function render(root) {
             ${items.length ? html`<a class="btn btn-primary" href="#/search">${t('Додати гру')}</a>` : ''}
           </div>
         </div>
-        ${items.length ? html`<div class="game-list">${items.map(gameCard)}</div>` : emptyState()}
+        ${items.length
+          ? html`${statsHtml(items)}
+              <div class="list-toolbar">
+                <div class="segmented" role="group" aria-label="${t('Показати')}">
+                  ${FILTERS.filter(([key]) => key === 'all' || items.some((i) => matchesFilter(i, key))).map(
+                    ([key, label]) => html`<button type="button" data-filter="${key}" aria-pressed="${view.filter === key}">
+                      ${t(label)} <span class="count">${items.filter((i) => matchesFilter(i, key)).length}</span>
+                    </button>`
+                  )}
+                </div>
+                <input class="input" id="list-q" type="search" placeholder="${t('Пошук у списку')}" aria-label="${t('Пошук у списку')}" value="${view.q}" />
+                <select class="select" id="list-sort" aria-label="${t('Сортування')}">
+                  ${SORTS.map(([key, label]) => html`<option value="${key}" ${view.sort === key ? 'selected' : ''}>${t(label)}</option>`)}
+                </select>
+              </div>
+              <div class="game-list" id="game-list"></div>`
+          : emptyState()}
       `
     );
-    if (!items.length) loadStarter(root).then((list) => (starter = list));
+    if (items.length) drawList();
+    else loadStarter(root).then((list) => (starter = list));
+  };
+  root.oninput = (e) => {
+    if (e.target.id !== 'list-q') return;
+    view.q = e.target.value;
+    drawList();
+  };
+  root.onchange = (e) => {
+    if (e.target.id !== 'list-sort') return;
+    view.sort = e.target.value;
+    drawList();
   };
   let starter = [];
 
@@ -505,6 +651,13 @@ export async function render(root) {
         items = (await get('/api/watch')).items;
         draw();
       });
+      return;
+    }
+    const filterBtn = e.target.closest('[data-filter]');
+    if (filterBtn) {
+      view.filter = filterBtn.dataset.filter;
+      root.querySelectorAll('[data-filter]').forEach((b) => b.setAttribute('aria-pressed', String(b === filterBtn)));
+      drawList();
       return;
     }
     const btn = e.target.closest('[data-action]');
@@ -561,6 +714,8 @@ export async function render(root) {
   return () => {
     clearInterval(timer);
     root.onclick = null;
+    root.oninput = null;
+    root.onchange = null;
   };
 }
 

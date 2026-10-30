@@ -534,7 +534,6 @@ export const EN = {
   'Результат для «{file}»': 'Result for “{file}”',
   'у файлі': 'in the file',
   'Спробуй інший файл: Excel (.xlsx) або CSV': 'Try another file: Excel (.xlsx) or CSV',
-  '{n} з виконаною умовою': '{n} with the condition met',
   'Тут будуть ігри, за цінами яких ти стежиш.': 'Games whose prices you follow will be here.',
   Таблиці: 'Tables',
   'Частину цін не вдалося оновити: {errors}': 'Some prices could not be updated: {errors}',
@@ -805,6 +804,23 @@ export const EN = {
   'ключі Steam': 'Steam keys',
   'вітрина знижок': 'deals showcase',
   'мій список': 'my list',
+
+  // Мій список (views/watchlist.js)
+  'Умову виконано — саме час купувати': 'Condition met — time to buy',
+  'Знижка зараз {now} · твоя умова від {goal}%': 'Discount now {now} · your condition: {goal}% or more',
+  немає: 'none',
+  'Зараз {now} · твоя ціна до {goal} (ще {left})': 'Now {now} · your price: up to {goal} ({left} to go)',
+  Чекаємо: 'Waiting',
+  'Нещодавно додані': 'Recently added',
+  'За назвою': 'By title',
+  'у списку': 'on the list',
+  'з виконаною умовою': 'with the condition met',
+  'коштують зараз · заощадиш {sum}': 'cost now · you save {sum}',
+  'коштують зараз': 'cost now',
+  'найбільша знижка: {title}': 'biggest discount: {title}',
+  'Нічого не знайшли. Зміни фільтр або пошук.': 'Nothing found. Change the filter or search.',
+  'Ціни перевіряємо кілька разів на день і повідомимо, щойно настане час купувати.': 'We check prices several times a day and will let you know as soon as it is time to buy.',
+  'Пошук у списку': 'Search the list',
 
   // Пошук і сповіщення (views/search.js, views/notifications.js)
   Інше: 'Other',
