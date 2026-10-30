@@ -39,3 +39,12 @@ test('Сповіщення про знижку згадує історичний
   assert.match(msg.html, /📉 Історичний мінімум/);
   assert.doesNotMatch(dealMessage({ title: 'Portal 2' }, { min_discount: 50 }, { trigger: { offer } }, [offer]).body, /мінімум/);
 });
+
+test('Сповіщення про знижку англійською для того, хто вибрав англійську мову', () => {
+  const offer = { id: 1, store: 'steam', price_uah: 3300, discount: 60, available: 1 };
+  const msg = dealMessage({ title: 'Portal 2' }, { min_discount: 50 }, { trigger: { offer } }, [offer], '2026-10-01', 'en');
+  assert.match(msg.title, /^Portal 2: .+ on Steam \(−60%\)$/);
+  assert.match(msg.body, /Historical low: not this cheap since 01\.10\.2026\. Your condition: discount of 50% or more\./);
+  assert.equal(msg.buttonLabel, 'Open on Steam');
+  assert.doesNotMatch(`${msg.title} ${msg.body} ${msg.html}`, /[а-яіїєґ]/i);
+});

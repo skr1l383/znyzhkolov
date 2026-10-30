@@ -1,6 +1,7 @@
 import { config } from '../config.js';
 import { db, nameKey, now } from '../db.js';
 import { HttpError } from '../http.js';
+import { tr, userLang } from '../i18n.js';
 import { log } from '../logger.js';
 import {
   SESSION_COOKIE,
@@ -40,16 +41,18 @@ function tooOften(key, { limit, windowMs }) {
 
 export async function sendVerificationEmail(user) {
   const token = createEmailToken(user.id, 'verify', VERIFY_MINUTES);
+  const lang = userLang(user);
   const { html, text } = emailLayout({
-    heading: `Підтверди пошту, ${user.name}`,
+    lang,
+    heading: tr(lang, 'Підтверди пошту, {name}', { name: user.name }),
     paragraphs: [
-      'Дякуємо за реєстрацію в Знижколові! Натисни кнопку, щоб підтвердити, що це твоя пошта.',
-      'Після цього ми зможемо надсилати тобі сповіщення про знижки і, якщо знадобиться, допомогти відновити пароль.',
+      tr(lang, 'Дякуємо за реєстрацію в Знижколові! Натисни кнопку, щоб підтвердити, що це твоя пошта.'),
+      tr(lang, 'Після цього ми зможемо надсилати тобі сповіщення про знижки і, якщо знадобиться, допомогти відновити пароль.'),
     ],
-    button: { label: 'Підтвердити пошту', url: siteLink(`#/verify?token=${token}`) },
-    footnote: 'Посилання діє 3 дні. Якщо ти не реєструвався в Знижколові, просто проігноруй цей лист.',
+    button: { label: tr(lang, 'Підтвердити пошту'), url: siteLink(`#/verify?token=${token}`) },
+    footnote: tr(lang, 'Посилання діє 3 дні. Якщо ти не реєструвався в Знижколові, просто проігноруй цей лист.'),
   });
-  return sendMail({ to: user.email, subject: 'Підтвердь пошту в Знижколові', html, text, kind: 'verify', userId: user.id });
+  return sendMail({ to: user.email, subject: tr(lang, 'Підтвердь пошту в Знижколові'), html, text, kind: 'verify', userId: user.id });
 }
 
 export function authRoutes(router) {
@@ -57,6 +60,8 @@ export function authRoutes(router) {
     const name = v.nickname(ctx.body.name);
     const email = v.email(ctx.body.email);
     const password = v.password(ctx.body.password);
+    // Мова сайту в момент реєстрації — нею прийде лист підтвердження й подальші сповіщення
+    const lang = ctx.body.lang === 'en' ? 'en' : 'uk';
     if (db.prepare('SELECT 1 FROM users WHERE name_key = ?').get(nameKey(name))) {
       throw new HttpError(409, 'Цей нік уже зайнятий. Вигадай інший', { field: 'name' });
     }
@@ -77,8 +82,8 @@ export function authRoutes(router) {
 
     const hash = await hashPassword(password);
     const info = db
-      .prepare('INSERT INTO users (email, name, name_key, password_hash, role, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(email, name, nameKey(name), hash, role, now(), now());
+      .prepare('INSERT INTO users (email, name, name_key, password_hash, role, lang, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(email, name, nameKey(name), hash, role, lang, now(), now());
     const userId = Number(info.lastInsertRowid);
 
     const token = createSession(userId, ctx.req.headers['user-agent']);
@@ -122,13 +127,18 @@ export function authRoutes(router) {
       return answer;
     }
     const token = createEmailToken(user.id, 'reset', RESET_MINUTES);
+    const lang = userLang(user);
     const { html, text } = emailLayout({
-      heading: 'Відновлення пароля',
-      paragraphs: [`Привіт, ${user.name}! Хтось (сподіваємось, ти) попросив змінити пароль до Знижколова.`, 'Натисни кнопку й вигадай новий пароль.'],
-      button: { label: 'Змінити пароль', url: siteLink(`#/reset?token=${token}`) },
-      footnote: 'Посилання діє годину і спрацює лише один раз. Якщо ти не просив змінити пароль, нічого не роби — старий пароль працює.',
+      lang,
+      heading: tr(lang, 'Відновлення пароля'),
+      paragraphs: [
+        tr(lang, 'Привіт, {name}! Хтось (сподіваємось, ти) попросив змінити пароль до Знижколова.', { name: user.name }),
+        tr(lang, 'Натисни кнопку й вигадай новий пароль.'),
+      ],
+      button: { label: tr(lang, 'Змінити пароль'), url: siteLink(`#/reset?token=${token}`) },
+      footnote: tr(lang, 'Посилання діє годину і спрацює лише один раз. Якщо ти не просив змінити пароль, нічого не роби — старий пароль працює.'),
     });
-    await sendMail({ to: user.email, subject: 'Відновлення пароля в Знижколові', html, text, kind: 'reset', userId: user.id });
+    await sendMail({ to: user.email, subject: tr(lang, 'Відновлення пароля в Знижколові'), html, text, kind: 'reset', userId: user.id });
     log.info('auth.forgot', `${user.email} запросив відновлення пароля`, { userId: user.id, meta: { ip: ctx.ip } });
     return answer;
   });

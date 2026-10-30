@@ -5,6 +5,7 @@ import path from 'node:path';
 import { config } from '../config.js';
 import { db, now, tx } from '../db.js';
 import { HttpError, sendFile } from '../http.js';
+import { tr, userLang } from '../i18n.js';
 import { log } from '../logger.js';
 import { SESSION_COOKIE, clearSessionCookie, destroyOtherSessions, hashPassword, publicUser, requireAuth, verifyPassword } from '../auth.js';
 import { emailLayout, sendMail, siteLink } from '../services/mailer.js';
@@ -24,13 +25,19 @@ async function requirePassword(user, password) {
 }
 
 /** Лист-попередження про важливу зміну в акаунті (щоб власник помітив, якщо це зробив не він). */
-function securityNotice(to, user, heading, text) {
+function securityNotice(to, user, heading, text, vars = {}) {
+  const lang = userLang(user);
+  const title = tr(lang, heading);
   const { html, text: plain } = emailLayout({
-    heading,
-    paragraphs: [`Привіт, ${user.name}! ${text}`, 'Якщо це зробив не ти — одразу зміни пароль через «Забули пароль?» на сторінці входу.'],
-    button: { label: 'Відкрити Знижколов', url: siteLink('#/profile') },
+    lang,
+    heading: title,
+    paragraphs: [
+      tr(lang, 'Привіт, {name}! {text}', { name: user.name, text: tr(lang, text, vars) }),
+      tr(lang, 'Якщо це зробив не ти — одразу зміни пароль через «Забули пароль?» на сторінці входу.'),
+    ],
+    button: { label: tr(lang, 'Відкрити Знижколов'), url: siteLink('#/profile') },
   });
-  return sendMail({ to, subject: `Знижколов: ${heading.toLowerCase()}`, html, text: plain, kind: 'security', userId: user.id });
+  return sendMail({ to, subject: `${tr(lang, 'Знижколов')}: ${title.toLowerCase()}`, html, text: plain, kind: 'security', userId: user.id });
 }
 
 export function accountRoutes(router) {
@@ -59,7 +66,7 @@ export function accountRoutes(router) {
     log.info('account.email', `Пошту змінено: ${oldEmail} → ${email}`, { userId: user.id });
     await sendVerificationEmail(user);
     if (ctx.user.email_verified_at) {
-      await securityNotice(oldEmail, user, 'Пошту акаунта змінено', `Пошту твого акаунта змінили з ${oldEmail} на ${email}.`);
+      await securityNotice(oldEmail, user, 'Пошту акаунта змінено', 'Пошту твого акаунта змінили з {from} на {to}.', { from: oldEmail, to: email });
     }
     return { user: publicUser(user) };
   });

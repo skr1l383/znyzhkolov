@@ -1,5 +1,6 @@
 // Безкоштовні роздачі Epic Games: зберігаємо в базі й повідомляємо про нові.
 import { db, now, tx } from '../db.js';
+import { dateLocale, tr, userLang } from '../i18n.js';
 import { log } from '../logger.js';
 import { getEpicFreebies } from '../stores/index.js';
 import { formatUah } from '../stores/util.js';
@@ -23,7 +24,18 @@ export function listFreebies() {
     }));
 }
 
-const dateUk = (iso) => (iso ? new Date(iso).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' }) : '?');
+const dateText = (iso, lang) => (iso ? new Date(iso).toLocaleDateString(dateLocale(lang), { day: 'numeric', month: 'long' }) : '?');
+
+/** Текст сповіщення про роздачу мовою користувача. */
+function freebieMessage(f, lang) {
+  const price = f.original_price && f.currency === 'UAH' ? tr(lang, ' (зазвичай {price})', { price: formatUah(f.original_price) }) : '';
+  const until = dateText(f.ends_at, lang);
+  return {
+    title: tr(lang, 'Epic Games роздає {title} безкоштовно', { title: f.title }),
+    body: tr(lang, 'Забрати можна до {date}{price}.', { date: until, price }),
+    html: `🎁 <b>${escapeHtml(f.title)}</b> — ${tr(lang, 'безкоштовно в Epic Games')}${escapeHtml(price)}\n${escapeHtml(tr(lang, 'До {date}', { date: until }))}`,
+  };
+}
 
 export async function runEpicCheck() {
   const items = await getEpicFreebies();
@@ -52,12 +64,9 @@ export async function runEpicCheck() {
   if (fresh.length) {
     const users = db.prepare('SELECT * FROM users WHERE notify_epic_free = 1').all();
     for (const f of fresh) {
-      const price = f.original_price && f.currency === 'UAH' ? ` (зазвичай ${formatUah(f.original_price)})` : '';
-      const title = `Epic Games роздає ${f.title} безкоштовно`;
-      const body = `Забрати можна до ${dateUk(f.ends_at)}${price}.`;
-      const html = `🎁 <b>${escapeHtml(f.title)}</b> — безкоштовно в Epic Games${escapeHtml(price)}\nДо ${escapeHtml(dateUk(f.ends_at))}`;
+      const messages = { uk: freebieMessage(f, 'uk'), en: freebieMessage(f, 'en') };
       for (const u of users) {
-        await notifyUser(u, { kind: 'epic', title, body, html, url: f.url, image: f.image_url });
+        await notifyUser(u, { kind: 'epic', ...messages[userLang(u)], url: f.url, image: f.image_url });
         sent += 1;
       }
       db.prepare('UPDATE epic_freebies SET announced = 1 WHERE id = ?').run(f.id);

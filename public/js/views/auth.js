@@ -1,6 +1,6 @@
 // Сторінки входу та реєстрації.
 import { post } from '../api.js';
-import { t } from '../i18n.js';
+import { getLang, t } from '../i18n.js';
 import { go, refreshMe, state } from '../app.js';
 import { $, clearFormErrors, html, setHtml, showFormError, toast, withLoading } from '../ui.js';
 
@@ -30,7 +30,8 @@ const pitch = () => html`
   </section>
 `;
 
-function bindForm(root, url, fields, onDone) {
+/** extra — дані, яких немає серед полів форми (наприклад, мова сайту). */
+function bindForm(root, url, fields, onDone, extra = {}) {
   const form = $('form', root);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -38,7 +39,7 @@ function bindForm(root, url, fields, onDone) {
     const data = Object.fromEntries(fields.map((f) => [f, form.elements[f].value]));
     await withLoading($('button[type="submit"]', form), async () => {
       try {
-        const result = await post(url, data);
+        const result = await post(url, { ...data, ...extra });
         await refreshMe();
         // onDone може повернути адресу, куди перейти далі (після реєстрації — «Перевір пошту»)
         go(onDone?.(result) || '#/');
@@ -103,7 +104,7 @@ export function renderRegister(root) {
       </form>
     </div>`
   );
-  bindForm(root, '/api/auth/register', ['name', 'email', 'password'], () => '#/check-email');
+  bindForm(root, '/api/auth/register', ['name', 'email', 'password'], () => '#/check-email', { lang: getLang() });
 }
 
 // ---------- Відновлення пароля і підтвердження пошти ----------

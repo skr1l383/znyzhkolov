@@ -198,3 +198,14 @@ test('Переклад: у словнику немає зайвих фраз', (
   const stale = Object.keys(EN).filter((k) => !all.has(k) && !client.plurals.has(k));
   assert.deepEqual(stale, []);
 });
+
+test('Листи й повідомлення сервера: у кожного tr(lang, …) є англійський переклад', async () => {
+  const { hasEnglish } = await import('../server/i18n.js');
+  const missing = [];
+  for (const rel of walk('server').filter((f) => f !== 'server/i18n.js')) {
+    for (const m of read(rel).matchAll(/\btr\(\s*\w+,\s*'((?:[^'\\]|\\.)*)'/g)) {
+      if (!hasEnglish(m[1])) missing.push(`${rel}: ${m[1]}`);
+    }
+  }
+  assert.deepEqual(missing, [], `Без перекладу (${missing.length}):\n${missing.join('\n')}`);
+});

@@ -5,6 +5,7 @@ import { config } from '../config.js';
 import { db, getSetting, nameKey, now } from '../db.js';
 import { detectImage } from '../formats/detect.js';
 import { HttpError, readUpload, sendFile } from '../http.js';
+import { tr, userLang } from '../i18n.js';
 import { log } from '../logger.js';
 import { publicUser, requireAuth } from '../auth.js';
 import { listFreebies } from '../services/epicFree.js';
@@ -126,12 +127,10 @@ export function profileRoutes(router) {
   router.post('/api/me/telegram/test', requireAuth, async (ctx) => {
     const user = userById(ctx.user.id);
     if (!user.telegram_chat_id) throw new HttpError(400, 'Спочатку підключіть Telegram');
-    const result = await notifyUser(user, {
-      kind: 'system',
-      title: 'Тестове сповіщення',
-      body: 'Якщо ви це бачите в Telegram, усе налаштовано правильно.',
-      html: '✅ <b>Тестове сповіщення</b>\nЯкщо ти це бачиш, усе налаштовано правильно.',
-    });
+    const lang = userLang(user);
+    const title = tr(lang, 'Тестове сповіщення');
+    const body = tr(lang, 'Якщо ти це бачиш, усе налаштовано правильно.');
+    const result = await notifyUser(user, { kind: 'system', title, body, html: `✅ <b>${title}</b>\n${body}` });
     if (!result.telegram) throw new HttpError(502, 'Не вдалося надіслати повідомлення в Telegram. Перевірте, чи не заблоковано бота');
     return { ok: true };
   });

@@ -2,6 +2,7 @@
 // Працює через long polling (getUpdates), тож не потрібна публічна адреса сервера.
 import { config } from '../config.js';
 import { db, getSetting, setSetting } from '../db.js';
+import { dateLocale, tr, userLang } from '../i18n.js';
 import { log } from '../logger.js';
 import { formatUah } from '../stores/util.js';
 import { STORE_NAMES } from '../stores/index.js';
@@ -92,14 +93,18 @@ export async function sendMessage(chatId, html, { photo = null, button = null } 
   }
 }
 
-const HELP = [
-  '<b>Знижколов</b> стежить за цінами на ігри в Steam, GOG та роздачами Epic Games.',
-  '',
-  '/list — мій список ігор і поточні ціни',
-  '/free — що зараз роздають безкоштовно в Epic',
-  '/stop — відключити сповіщення в Telegram',
-  '/help — ця довідка',
-].join('\n');
+const help = (lang) =>
+  [
+    tr(lang, '<b>Знижколов</b> стежить за цінами на ігри в Steam, GOG та роздачами Epic Games.'),
+    '',
+    tr(lang, '/list — мій список ігор і поточні ціни'),
+    tr(lang, '/free — що зараз роздають безкоштовно в Epic'),
+    tr(lang, '/stop — відключити сповіщення в Telegram'),
+    tr(lang, '/help — ця довідка'),
+  ].join('\n');
+
+/** Мова чату: з профілю, якщо акаунт підключено, інакше — мова застосунку Telegram. */
+const chatLang = (user, from) => (user ? userLang(user) : /^(uk|ru)/.test(from?.language_code || 'uk') ? 'uk' : 'en');
 
 function userByChat(chatId) {
   return db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(String(chatId));
@@ -120,8 +125,9 @@ function linkAccount(code, chat, from) {
 }
 
 function watchListText(user) {
+  const lang = userLang(user);
   const items = listWatch(user.id).filter((w) => w.active);
-  if (!items.length) return 'Твій список порожній. Додай ігри на сайті, і я повідомлю про знижки.';
+  if (!items.length) return tr(lang, 'Твій список порожній. Додай ігри на сайті, і я повідомлю про знижки.');
   const lines = items.slice(0, 30).map((w) => {
     const prices = w.offers
       .filter((o) => o.available && o.priceUah != null)
@@ -131,20 +137,20 @@ function watchListText(user) {
       })
       .join(' · ');
     const mark = w.conditionMet ? '🔥 ' : '';
-    return `${mark}<b>${escapeHtml(w.title)}</b>\n${prices || 'ціна ще невідома'}`;
+    return `${mark}<b>${escapeHtml(w.title)}</b>\n${prices || tr(lang, 'ціна ще невідома')}`;
   });
-  return `<b>Твій список (${items.length})</b>\n\n${lines.join('\n\n')}`;
+  return `<b>${tr(lang, 'Твій список ({n})', { n: items.length })}</b>\n\n${lines.join('\n\n')}`;
 }
 
-function freebiesText() {
+function freebiesText(lang) {
   const rows = db.prepare("SELECT * FROM epic_freebies WHERE status IN ('current', 'upcoming') ORDER BY status, ends_at").all();
-  if (!rows.length) return 'Зараз даних про роздачі Epic немає. Спробуй пізніше.';
-  const date = (iso) => (iso ? new Date(iso).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' }) : '?');
+  if (!rows.length) return tr(lang, 'Зараз даних про роздачі Epic немає. Спробуй пізніше.');
+  const date = (iso) => (iso ? new Date(iso).toLocaleDateString(dateLocale(lang), { day: 'numeric', month: 'long' }) : '?');
   return rows
     .map((f) =>
       f.status === 'current'
-        ? `🎁 <b>${escapeHtml(f.title)}</b> — безкоштовно до ${date(f.ends_at)}\n${escapeHtml(f.url)}`
-        : `⏳ <b>${escapeHtml(f.title)}</b> — буде безкоштовно з ${date(f.starts_at)}`
+        ? `🎁 <b>${escapeHtml(f.title)}</b> ${tr(lang, '— безкоштовно до {date}', { date: date(f.ends_at) })}\n${escapeHtml(f.url)}`
+        : `⏳ <b>${escapeHtml(f.title)}</b> ${tr(lang, '— буде безкоштовно з {date}', { date: date(f.starts_at) })}`
     )
     .join('\n\n');
 }
@@ -160,35 +166,38 @@ async function handleMessage(msg) {
     const code = args[0];
     if (code) {
       const user = linkAccount(code, chat, msg.from);
+      const lang = chatLang(user, msg.from);
       return sendMessage(
         chat.id,
         user
-          ? `Готово, ${escapeHtml(user.name)}! Тепер сповіщення про знижки приходитимуть сюди.\n\n${HELP}`
-          : 'Код не підійшов або вже використаний. Онови сторінку профілю на сайті й натисни «Підключити Telegram» ще раз.'
+          ? `${tr(lang, 'Готово, {name}! Тепер сповіщення про знижки приходитимуть сюди.', { name: escapeHtml(user.name) })}\n\n${help(lang)}`
+          : tr(lang, 'Код не підійшов або вже використаний. Онови сторінку профілю на сайті й натисни «Підключити Telegram» ще раз.')
       );
     }
     const user = userByChat(chat.id);
+    const lang = chatLang(user, msg.from);
     return sendMessage(
       chat.id,
       user
-        ? `Привіт, ${escapeHtml(user.name)}! Акаунт уже підключено.\n\n${HELP}`
-        : `Привіт! Щоб отримувати сповіщення, відкрий на сайті сторінку «Профіль» і натисни «Підключити Telegram».\n\n${HELP}`
+        ? `${tr(lang, 'Привіт, {name}! Акаунт уже підключено.', { name: escapeHtml(user.name) })}\n\n${help(lang)}`
+        : `${tr(lang, 'Привіт! Щоб отримувати сповіщення, відкрий на сайті сторінку «Профіль» і натисни «Підключити Telegram».')}\n\n${help(lang)}`
     );
   }
 
-  if (command === '/help') return sendMessage(chat.id, HELP);
-  if (command === '/free') return sendMessage(chat.id, freebiesText());
-
   const user = userByChat(chat.id);
-  if (!user) return sendMessage(chat.id, 'Спочатку підключи акаунт: сайт → «Профіль» → «Підключити Telegram».');
+  const lang = chatLang(user, msg.from);
+  if (command === '/help') return sendMessage(chat.id, help(lang));
+  if (command === '/free') return sendMessage(chat.id, freebiesText(lang));
+
+  if (!user) return sendMessage(chat.id, tr(lang, 'Спочатку підключи акаунт: сайт → «Профіль» → «Підключити Telegram».'));
 
   if (command === '/list') return sendMessage(chat.id, watchListText(user));
   if (command === '/stop') {
     db.prepare('UPDATE users SET telegram_chat_id = NULL WHERE id = ?').run(user.id);
     log.info('telegram.unlinked', `Telegram відключено командою /stop (${user.email})`, { userId: user.id });
-    return sendMessage(chat.id, 'Сповіщення вимкнено. Підключити знову можна на сайті в профілі.');
+    return sendMessage(chat.id, tr(lang, 'Сповіщення вимкнено. Підключити знову можна на сайті в профілі.'));
   }
-  return sendMessage(chat.id, `Не знаю такої команди.\n\n${HELP}`);
+  return sendMessage(chat.id, `${tr(lang, 'Не знаю такої команди.')}\n\n${help(lang)}`);
 }
 
 async function pollLoop() {
@@ -244,22 +253,31 @@ export async function startBot() {
   try {
     const me = await api('getMe');
     state.username = me.username;
-    await api('setMyCommands', {
-      commands: [
-        { command: 'list', description: 'Мій список ігор і ціни' },
-        { command: 'free', description: 'Безкоштовні роздачі Epic' },
-        { command: 'stop', description: 'Вимкнути сповіщення' },
-        { command: 'help', description: 'Довідка' },
-      ],
-    }).catch(() => {});
-    // Опис бота: короткий видно в профілі, довгий — у порожньому чаті до натискання «Start»
+    // Меню команд і опис бота: українською за замовчуванням, англійською — для тих, у кого Telegram англійською.
+    // Короткий опис видно в профілі бота, довгий — у порожньому чаті до натискання «Start»
     const site = config.baseUrl.replace(/^https?:\/\//, '');
-    await api('setMyShortDescription', { short_description: `Знижки на ігри в Steam, GOG і Epic Games, ціни в гривнях. Сайт: ${site}` }).catch(() => {});
-    await api('setMyDescription', {
-      description:
-        'Знижколов стежить за цінами на ігри в Steam, GOG і роздачами Epic Games та пише, коли гра з твого списку подешевшає.\n\n' +
-        `Додай ігри на сайті ${site}, а потім у профілі натисни «Підключити Telegram».`,
-    }).catch(() => {});
+    for (const lang of ['uk', 'en']) {
+      const language_code = lang === 'en' ? 'en' : undefined;
+      await api('setMyCommands', {
+        language_code,
+        commands: [
+          { command: 'list', description: tr(lang, 'Мій список ігор і ціни') },
+          { command: 'free', description: tr(lang, 'Безкоштовні роздачі Epic') },
+          { command: 'stop', description: tr(lang, 'Вимкнути сповіщення') },
+          { command: 'help', description: tr(lang, 'Довідка') },
+        ],
+      }).catch(() => {});
+      await api('setMyShortDescription', {
+        language_code,
+        short_description: tr(lang, 'Знижки на ігри в Steam, GOG і Epic Games, ціни в гривнях. Сайт: {site}', { site }),
+      }).catch(() => {});
+      await api('setMyDescription', {
+        language_code,
+        description:
+          `${tr(lang, 'Знижколов стежить за цінами на ігри в Steam, GOG і роздачами Epic Games та пише, коли гра з твого списку подешевшає.')}\n\n` +
+          tr(lang, 'Додай ігри на сайті {site}, а потім у профілі натисни «Підключити Telegram».', { site }),
+      }).catch(() => {});
+    }
     log.info('telegram.started', `Telegram-бот @${me.username} запущено`);
   } catch (err) {
     state.lastError = err.message;
