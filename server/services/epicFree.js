@@ -55,9 +55,9 @@ export async function runEpicCheck() {
       const price = f.original_price && f.currency === 'UAH' ? ` (зазвичай ${formatUah(f.original_price)})` : '';
       const title = `Epic Games роздає ${f.title} безкоштовно`;
       const body = `Забрати можна до ${dateUk(f.ends_at)}${price}.`;
-      const html = `🎁 <b>${escapeHtml(f.title)}</b> — безкоштовно в Epic Games${escapeHtml(price)}\nДо ${escapeHtml(dateUk(f.ends_at))}\n<a href="${escapeHtml(f.url)}">Забрати гру</a>`;
+      const html = `🎁 <b>${escapeHtml(f.title)}</b> — безкоштовно в Epic Games${escapeHtml(price)}\nДо ${escapeHtml(dateUk(f.ends_at))}`;
       for (const u of users) {
-        await notifyUser(u, { kind: 'epic', title, body, html, url: f.url });
+        await notifyUser(u, { kind: 'epic', title, body, html, url: f.url, image: f.image_url });
         sent += 1;
       }
       db.prepare('UPDATE epic_freebies SET announced = 1 WHERE id = ?').run(f.id);

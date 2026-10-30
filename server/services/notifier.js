@@ -9,7 +9,9 @@ import { escapeHtml, sendMessage } from './telegram.js';
 
 const EMAIL_KINDS = new Set(['deal', 'free', 'epic']);
 
-export async function notifyUser(user, { kind, gameId = null, title, body, html, url }) {
+/** image — картинка гри (фото в Telegram, обкладинка в листі), buttonLabel — підпис кнопки з посиланням url. */
+export async function notifyUser(user, { kind, gameId = null, title, body, html, url, image = null, buttonLabel = null }) {
+  const button = url ? { label: buttonLabel || (kind === 'epic' ? 'Забрати в Epic Games' : 'Відкрити в магазині'), url } : null;
   const info = db
     .prepare(
       `INSERT INTO notifications (user_id, game_id, kind, title, body, url, created_at)
@@ -19,7 +21,7 @@ export async function notifyUser(user, { kind, gameId = null, title, body, html,
 
   let sent = false;
   if (user.telegram_chat_id) {
-    sent = await sendMessage(user.telegram_chat_id, html || escapeHtml(`${title}\n${body || ''}`));
+    sent = await sendMessage(user.telegram_chat_id, html || escapeHtml(`${title}\n${body || ''}`), { photo: image, button });
     if (sent) db.prepare('UPDATE notifications SET sent_telegram = 1 WHERE id = ?').run(info.lastInsertRowid);
   }
 
@@ -28,8 +30,9 @@ export async function notifyUser(user, { kind, gameId = null, title, body, html,
   if (EMAIL_KINDS.has(kind) && user.email_verified_at && user.notify_email !== 0) {
     const mail = emailLayout({
       heading: title,
+      image,
       paragraphs: [body].filter(Boolean),
-      button: url ? { label: kind === 'epic' ? 'Забрати в Epic Games' : 'Відкрити в магазині', url } : null,
+      button,
       footnote: `Ти отримав цей лист, бо стежиш за цінами в Знижколові. Вимкнути листи можна в профілі: ${siteLink('#/profile')}`,
     });
     emailed = (await sendMail({ to: user.email, subject: title, ...mail, kind, userId: user.id })).ok;
@@ -85,7 +88,7 @@ export function dealMessage(game, watch, evaluation, offers, lowSince = null) {
     '',
     `Твоя умова: ${escapeHtml(conditionText(watch))}`,
   ];
-  if (t.url) lines.push(`<a href="${escapeHtml(t.url)}">Відкрити в ${escapeHtml(storeName)}</a>`);
-
-  return { title, body, html: lines.join('\n'), url: t.url };
+  // Посилання на магазин — кнопкою під повідомленням (notifyUser), картинка — з будь-якого магазину, де вона є
+  const image = t.image_url || offers.find((o) => o.image_url)?.image_url || null;
+  return { title, body, html: lines.join('\n'), url: t.url, image, buttonLabel: `Відкрити в ${storeName}` };
 }

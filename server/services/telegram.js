@@ -54,14 +54,29 @@ export function botStatus() {
 
 export const linkUrl = (code) => (state.username ? `https://t.me/${state.username}?start=${code}` : null);
 
-export async function sendMessage(chatId, html) {
+/**
+ * Надсилає повідомлення. photo — картинка гри: тоді це фото з підписом (підпис у Telegram — до 1024 символів).
+ * button — { label, url }: кнопка-посилання під повідомленням.
+ */
+export async function sendMessage(chatId, html, { photo = null, button = null } = {}) {
   if (!state.enabled) return false;
+  const markup = button ? { reply_markup: { inline_keyboard: [[{ text: button.label, url: button.url }]] } } : {};
   try {
+    if (photo && html.length <= 1024) {
+      try {
+        await api('sendPhoto', { chat_id: chatId, photo, caption: html, parse_mode: 'HTML', ...markup });
+        return true;
+      } catch (err) {
+        if (err.code === 403) throw err;
+        // Telegram не зміг завантажити картинку — надсилаємо текстом
+      }
+    }
     await api('sendMessage', {
       chat_id: chatId,
       text: html,
       parse_mode: 'HTML',
       link_preview_options: { is_disabled: true },
+      ...markup,
     });
     return true;
   } catch (err) {
@@ -236,6 +251,14 @@ export async function startBot() {
         { command: 'stop', description: 'Вимкнути сповіщення' },
         { command: 'help', description: 'Довідка' },
       ],
+    }).catch(() => {});
+    // Опис бота: короткий видно в профілі, довгий — у порожньому чаті до натискання «Start»
+    const site = config.baseUrl.replace(/^https?:\/\//, '');
+    await api('setMyShortDescription', { short_description: `Знижки на ігри в Steam, GOG і Epic Games, ціни в гривнях. Сайт: ${site}` }).catch(() => {});
+    await api('setMyDescription', {
+      description:
+        'Знижколов стежить за цінами на ігри в Steam, GOG і роздачами Epic Games та пише, коли гра з твого списку подешевшає.\n\n' +
+        `Додай ігри на сайті ${site}, а потім у профілі натисни «Підключити Telegram».`,
     }).catch(() => {});
     log.info('telegram.started', `Telegram-бот @${me.username} запущено`);
   } catch (err) {

@@ -25,7 +25,7 @@ export const siteLink = (hash) => `${config.baseUrl}/${hash.replace(/^\//, '')}`
  * а розмітка — таблицями (так лист однаково виглядає в Gmail, Outlook і на телефоні).
  * Повертає HTML і текстову версію (для поштовиків без HTML).
  */
-export function emailLayout({ heading, paragraphs = [], button = null, footnote = '' }) {
+export function emailLayout({ heading, image = null, paragraphs = [], button = null, footnote = '' }) {
   const p = (t) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#121826">${escapeHtml(t)}</p>`;
   const html = `<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
 <body style="margin:0;padding:0;background:#f2f4f8;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif">
@@ -35,6 +35,7 @@ export function emailLayout({ heading, paragraphs = [], button = null, footnote 
   <span style="display:inline-block;background:#f29a2e;color:#1f1304;font-weight:800;font-size:16px;border-radius:7px;padding:3px 9px">%</span>
   <span style="color:#ffffff;font-weight:800;font-size:18px;vertical-align:middle;margin-left:8px">Знижколов</span>
 </td></tr>
+${image ? `<tr><td><img src="${escapeHtml(image)}" width="560" alt="" style="display:block;width:100%;height:auto;border:0"></td></tr>` : ''}
 <tr><td style="padding:26px 24px 8px">
   <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#121826">${escapeHtml(heading)}</h1>
   ${paragraphs.map(p).join('\n  ')}

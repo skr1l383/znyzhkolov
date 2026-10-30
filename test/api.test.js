@@ -23,7 +23,7 @@ const fakeTelegram = http.createServer(async (req, res) => {
   };
   if (method === 'getMe') return reply({ id: 1, is_bot: true, username: 'znyzhkolov_test_bot' });
   if (method === 'setMyCommands') return reply(true);
-  if (method === 'sendMessage') {
+  if (method === 'sendMessage' || method === 'sendPhoto') {
     tg.sent.push(params);
     return reply({ message_id: tg.sent.length });
   }
@@ -379,7 +379,11 @@ test('Перевірка цін за розкладом надсилає спо�
   await user('PATCH', `/api/watch/${watchId}`, { minDiscount: null, maxPriceUah: 100000 });
   const r = await admin('POST', '/api/admin/jobs/prices/run');
   assert.equal(r.status, 200);
-  await waitFor(() => tg.sent.slice(before).find((m) => m.text.includes('Hollow Knight') && m.text.includes('Твоя умова')));
+  // Сповіщення з картинкою гри приходить як фото з підписом, посилання на магазин — кнопкою
+  const msg = await waitFor(() =>
+    tg.sent.slice(before).find((m) => (m.caption ?? m.text).includes('Hollow Knight') && (m.caption ?? m.text).includes('Твоя умова'))
+  );
+  assert.match(msg.reply_markup.inline_keyboard[0][0].text, /^Відкрити в /);
   const n = await user('GET', '/api/notifications');
   assert.ok(n.data.items.some((i) => i.kind === 'deal' && i.telegram));
 });
