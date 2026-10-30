@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "org.duckdns.znyzhkolov.twa",
+        "sha256_cert_fingerprints": ["99:72:EE:C8:E7:E9:4B:62:BE:C3:0C:67:63:A2:88:C9:46:6A:53:C3:63:1C:D4:77:A8:10:1A:43:6A:6A:3E:3E"]
+      }
+    }]
