@@ -6,6 +6,7 @@ import { getLang, locale, t } from '../i18n.js';
 import { go, state } from '../app.js';
 import { $, STORE_NAMES, formatMoney, formatUah, html, setHtml, toast } from '../ui.js';
 import { openAddDialog } from './search.js';
+import { advisorSection, mountAdvisor } from './advisor.js';
 import { commentsSection, mountComments } from './comments.js';
 import { mountRegional, regionalSection } from './regional.js';
 
@@ -195,6 +196,7 @@ export async function render(root, params) {
                 : html`<button class="btn btn-primary btn-block" type="button" id="watch">${t('Стежити за ціною')}</button>
                     <p class="hint">${t('Повідомимо на сайті й у Telegram, щойно гра подешевшає до твоєї ціни.')}</p>`}
             </div>
+            ${advisorSection()}
             ${g.publishers.length ? html`<p class="hint">${t('Видавець:')} ${g.publishers.join(', ')}</p>` : ''}
           </aside>
         </div>
@@ -214,6 +216,7 @@ export async function render(root, params) {
   mountComments(root, g.offers[0]);
   if (steam) mountRegional(root, steam.storeId);
   if (steam) mountKeys(root, steam);
+  mountAdvisor(root, { store, storeId: id });
 
   $('#more-desc', root)?.addEventListener('click', (e) => {
     $('.description', root).classList.remove('collapsed');

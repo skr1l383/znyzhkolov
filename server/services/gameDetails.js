@@ -149,6 +149,18 @@ function fromDatabase(store, storeId) {
 }
 
 /** lang — мова інтерфейсу ('uk' або 'en'): нею Steam віддає опис, жанри й дату виходу. */
+/**
+ * Що вже відомо про гру без запитів до магазинів: збережена сторінка або рядок вітрини чи списку.
+ * Для ШІ-порадника — він працює лише з даними, які ми самі зібрали.
+ */
+export function knownGame(store, storeId) {
+  const row = db.prepare('SELECT data FROM game_details WHERE store = ? AND store_id = ? ORDER BY fetched_at DESC LIMIT 1').get(store, String(storeId));
+  const info = row ? JSON.parse(row.data) : fromDatabase(store, String(storeId));
+  if (!info) return null;
+  const rate = getUsdRate().rate;
+  return { ...info, offers: info.offers.map((o) => currentPrice(o, rate)) };
+}
+
 export async function getGameDetails(store, storeId, userId = null, lang = 'uk') {
   let info = cached(store, storeId, lang);
   if (!info) {

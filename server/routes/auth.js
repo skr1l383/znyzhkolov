@@ -20,6 +20,7 @@ import {
   useEmailToken,
   verifyPassword,
 } from '../auth.js';
+import { aiEnabled } from '../services/advisor.js';
 import { emailLayout, mailProvider, sendMail, siteLink } from '../services/mailer.js';
 import { botStatus } from '../services/telegram.js';
 import { googleEnabled } from './google.js';
@@ -204,6 +205,7 @@ export function authRoutes(router) {
         demo: config.demoStores,
         telegram: { enabled: bot.enabled, username: bot.username },
         google: googleEnabled(),
+        ai: aiEnabled(), // ШІ-порадник на сторінці гри
         usdRate: getUsdRate().rate,
         mail: mailProvider(), // 'outbox' — тестова скринька замість справжньої пошти
       },

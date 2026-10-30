@@ -99,6 +99,10 @@ const EN = {
   'Спочатку підключи акаунт: сайт → «Профіль» → «Підключити Telegram».': 'Connect your account first: site → “Profile” → “Connect Telegram”.',
   'Сповіщення вимкнено. Підключити знову можна на сайті в профілі.': 'Alerts are off. You can connect again in your profile on the site.',
   'Не знаю такої команди.': 'I do not know this command.',
+
+  // ШІ-порадник (advisor.js)
+  'Купувати цю гру зараз чи чекати знижки?': 'Should I buy this game now or wait for a sale?',
+  'Не можу допомогти з цим. Спитай мене про ціну чи знижки на гру.': 'I cannot help with that. Ask me about the price or discounts on the game.',
 };
 
 /** Мова користувача для листів і повідомлень: англійська, якщо він вибрав її на сайті, інакше українська. */

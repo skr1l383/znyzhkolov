@@ -86,6 +86,17 @@ export const config = {
     tokenUrl: env.GOOGLE_TOKEN_URL || 'https://oauth2.googleapis.com/token',
     userinfoUrl: env.GOOGLE_USERINFO_URL || 'https://openidconnect.googleapis.com/v1/userinfo',
   },
+
+  // ШІ-порадник на Google Gemini (безкоштовний ключ з aistudio.google.com). Без ключа порадника немає.
+  // Дві моделі: розумна для поради «купувати чи чекати», легка для коротких уточнень.
+  ai: {
+    key: (env.GEMINI_API_KEY || '').trim(),
+    apiUrl: (env.GEMINI_API_URL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, ''),
+    smartModel: env.AI_SMART_MODEL || 'gemini-3.5-flash',
+    lightModel: env.AI_LIGHT_MODEL || 'gemini-3.5-flash-lite',
+    timeoutMs: num(env.AI_TIMEOUT_MS, 30000),
+    retryMs: num(env.AI_RETRY_MS, 1500),
+  },
 };
 
 export const isHttps = config.baseUrl.startsWith('https://');

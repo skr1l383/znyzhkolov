@@ -798,4 +798,33 @@ export const EN = {
   'У файлі немає жодної гри': 'The file has no games',
   'Додай хоча б одну гру': 'Add at least one game',
   'Такого профілю Steam не знайдено. Перевір посилання': 'No such Steam profile found. Check the link',
+
+  // ШІ-порадник (views/advisor.js, routes/advisor.js)
+  'ШІ-порадник': 'AI advisor',
+  'Подивиться ціни, історію знижок і ключі та підкаже, чи варто чекати.': 'Checks prices, discount history and keys, and tells you whether to wait.',
+  'Купувати зараз чи чекати?': 'Buy now or wait?',
+  'Запитай ще щось про ціну…': 'Ask something else about the price…',
+  'Питання порадникові': 'Question for the advisor',
+  'Надіслати': 'Send',
+  'Увійди в акаунт, щоб спитати ШІ-порадника': 'Sign in to ask the AI advisor',
+  'Перевіряю ціни й історію знижок…': 'Checking prices and discount history…',
+  'Купувати цю гру зараз чи чекати знижки?': 'Should I buy this game now or wait for a sale?',
+  'Модель, що відповіла': 'The model that answered',
+  'запасна модель': 'fallback model',
+  'Вхід {prompt} · відповідь {output} · міркування {thoughts}': 'Input {prompt} · answer {output} · reasoning {thoughts}',
+  токен: ['token', 'tokens'],
+  'Перевірив: {list}': 'Checked: {list}',
+  с: 's',
+  ціни: 'prices',
+  'історія цін': 'price history',
+  'ключі Steam': 'Steam keys',
+  'вітрина знижок': 'deals showcase',
+  'мій список': 'my list',
+  'Питання': 'Question',
+  'Порадник відповідає не більше {n} разів на годину. Спробуй за {minutes} хв.': 'The advisor answers at most {n} times an hour. Try again in {minutes} min.',
+  'ШІ-порадник на цьому сервері не налаштований': 'The AI advisor is not set up on this server',
+  'ШІ-порадник вичерпав безкоштовний ліміт запитів. Спробуй за хвилину — решта сайту працює як звичайно':
+    'The AI advisor has used up its free request limit. Try again in a minute — the rest of the site works as usual',
+  'ШІ-порадник тимчасово недоступний. Решта сайту працює як звичайно — спробуй трохи пізніше':
+    'The AI advisor is temporarily unavailable. The rest of the site works as usual — try again a bit later',
 };

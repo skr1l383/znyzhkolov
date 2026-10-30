@@ -3218,6 +3218,141 @@ textarea.input {
   justify-items: start;
 }
 
+/* ---- ШІ-порадник на сторінці гри ---- */
+.advisor {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: var(--radius-sm);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%), var(--surface-2);
+}
+
+.advisor-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.advisor-head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.advisor-head .hint {
+  margin: 2px 0 0;
+}
+
+.advisor-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 12px/1 var(--font-display);
+}
+
+.advisor-log {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.advisor-log:empty {
+  display: none;
+}
+
+.advisor-msg {
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.advisor-msg p,
+.advisor-msg ul {
+  margin: 0 0 6px;
+}
+
+.advisor-msg ul {
+  padding-left: 18px;
+}
+
+.advisor-msg p:first-child {
+  font-weight: 700;
+}
+
+.advisor-msg.is-user {
+  justify-self: end;
+  max-width: 90%;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.advisor-msg.is-ai {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.advisor-msg.is-thinking {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+}
+
+.advisor-msg.is-error {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.advisor-dots {
+  width: 22px;
+  height: 6px;
+  background: radial-gradient(circle closest-side, currentColor 90%, transparent) 0 / 33.3% 100% space;
+  animation: advisor-dots 1s steps(4) infinite;
+  clip-path: inset(0 100% 0 0);
+}
+
+@keyframes advisor-dots {
+  to {
+    clip-path: inset(0 -34% 0 0);
+  }
+}
+
+.advisor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin: 6px 0 0 !important;
+  font-weight: 400 !important;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.advisor-form {
+  display: flex;
+  gap: 6px;
+}
+
+.advisor-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .advisor-dots {
+    animation: none;
+    clip-path: none;
+  }
+}
+
 @media (max-width: 900px) {
   .game-layout {
     /* minmax(0, …): інакше довга стрічка мініатюр розтягує сторінку ширше за екран */

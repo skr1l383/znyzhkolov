@@ -8,6 +8,7 @@ import { initLogger, log } from './logger.js';
 import { SESSION_COOKIE, cleanupSessions, userBySession } from './auth.js';
 import { accountRoutes } from './routes/account.js';
 import { adminRoutes } from './routes/admin.js';
+import { advisorRoutes } from './routes/advisor.js';
 import { authRoutes } from './routes/auth.js';
 import { commentRoutes } from './routes/comments.js';
 import { dealRoutes, facetRoutes, featuredRoutes, gamePageRoutes } from './routes/deals.js';
@@ -83,6 +84,7 @@ export function buildServer({ dbFile, silent = false } = {}) {
   shareRoutes(router);
   wishlistRoutes(router);
   adminRoutes(router);
+  advisorRoutes(router);
 
   const handler = createApp({
     router,
