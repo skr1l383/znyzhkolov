@@ -19,6 +19,32 @@
     <link rel="preconnect" href="https://shared.akamai.steamstatic.com" />
     <link rel="stylesheet" href="/css/style.css" />
     <script src="/js/theme-init.js"></script>
+    <!-- Усі модулі одразу, паралельно: інакше браузер дізнається про кожен import лише після попереднього файлу -->
+    <link rel="modulepreload" href="/js/app.js" />
+    <link rel="modulepreload" href="/js/api.js" />
+    <link rel="modulepreload" href="/js/backdrop.js" />
+    <link rel="modulepreload" href="/js/ui.js" />
+    <link rel="modulepreload" href="/js/i18n.js" />
+    <link rel="modulepreload" href="/js/i18n-en.js" />
+    <link rel="modulepreload" href="/js/chart.js" />
+    <link rel="modulepreload" href="/js/worldmap.js" />
+    <link rel="modulepreload" href="/js/views/account.js" />
+    <link rel="modulepreload" href="/js/views/admin.js" />
+    <link rel="modulepreload" href="/js/views/auth.js" />
+    <link rel="modulepreload" href="/js/views/comments.js" />
+    <link rel="modulepreload" href="/js/views/conditions.js" />
+    <link rel="modulepreload" href="/js/views/epic.js" />
+    <link rel="modulepreload" href="/js/views/game.js" />
+    <link rel="modulepreload" href="/js/views/notifications.js" />
+    <link rel="modulepreload" href="/js/views/privacy.js" />
+    <link rel="modulepreload" href="/js/views/profile.js" />
+    <link rel="modulepreload" href="/js/views/regional.js" />
+    <link rel="modulepreload" href="/js/views/search.js" />
+    <link rel="modulepreload" href="/js/views/share.js" />
+    <link rel="modulepreload" href="/js/views/showcase.js" />
+    <link rel="modulepreload" href="/js/views/steamImport.js" />
+    <link rel="modulepreload" href="/js/qrscan.js" />
+    <link rel="modulepreload" href="/js/views/watchlist.js" />
   </head>
   <body>
     <div class="offline-banner" id="offline-banner" role="status" hidden>
