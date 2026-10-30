@@ -805,6 +805,14 @@ export const EN = {
   'вітрина знижок': 'deals showcase',
   'мій список': 'my list',
 
+  // Вітрина: швидкі добірки (views/showcase.js)
+  'Знижка 75%+': '75%+ off',
+  'До 100 ₴': 'Under 100 ₴',
+  Рольові: 'RPGs',
+  Стратегії: 'Strategy',
+  Забрати: 'Claim',
+  'Швидкий вибір': 'Quick picks',
+
   // Мій список (views/watchlist.js)
   'Умову виконано — саме час купувати': 'Condition met — time to buy',
   'Знижка зараз {now} · твоя умова від {goal}%': 'Discount now {now} · your condition: {goal}% or more',

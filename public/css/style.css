@@ -5369,6 +5369,117 @@ textarea.input {
   line-height: 1.3;
 }
 
+/* Одна роздача розтягується на весь рядок, праворуч — кнопка «Забрати». Висота та сама, що й місце під блок (147 px) */
+.home-freebies-row {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.home-freebie {
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  transition: border-color 0.15s;
+}
+
+.home-freebie:hover {
+  border-color: color-mix(in srgb, var(--good) 55%, var(--border));
+}
+
+.home-freebie-cta {
+  margin-right: 6px;
+  padding: 8px 18px;
+  border-radius: 10px;
+  background: var(--good);
+  color: #04130a;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+/* Швидкі добірки над фільтрами */
+.quick-picks {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.quick-pick {
+  display: inline-flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  color: var(--fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.quick-pick:hover {
+  border-color: var(--accent);
+}
+
+.quick-pick[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* «Ціна до» — у верхньому рядку поруч із пошуком; поле студії забирає решту рядка фільтрів */
+.filters-top .filter-price {
+  flex: none;
+  width: 150px;
+}
+
+.filter-group-grow {
+  flex: 1 1 180px;
+}
+
+.filter-group-grow .filter-company {
+  width: 100%;
+}
+
+/* Ціна ліворуч, кнопка праворуч — в усіх картках однаково, навіть коли ціна довга */
+.deal-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+@media (max-width: 760px) {
+  /* Пошук — окремим рядком на всю ширину, під ним ціна й сортування */
+  .filters-top .filter-search {
+    flex: 1 1 100%;
+  }
+  .filters-top .filter-price {
+    flex: 1 1 120px;
+    width: auto;
+  }
+  .filters .filter-sort {
+    flex: 1 1 150px;
+  }
+  /* Вузькі картки на телефоні: кнопка переходить під ціну, як і раніше */
+  .deal-foot {
+    display: flex;
+  }
+}
+
+@media (max-width: 600px) {
+  .home-freebie {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+  .home-freebie-cta {
+    display: none;
+  }
+}
+
 /* ---------- Графік ціни ---------- */
 .dialog.dialog-wide {
   width: min(880px, calc(100vw - 32px));

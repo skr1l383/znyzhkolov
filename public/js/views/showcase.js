@@ -35,6 +35,19 @@ const SORTS = [
 ];
 const DISCOUNTS = [25, 50, 75, 90];
 
+// Швидкі добірки над фільтрами: одне натискання ставить готовий набір фільтрів
+const QUICK_PICKS = [
+  ['🔥', 'Знижка 75%+', { minDiscount: '75' }],
+  ['💸', 'До 100 ₴', { maxPrice: '100' }],
+  ['⭐', 'Найкращі відгуки', { sort: 'rating' }],
+  ['⚔️', 'Рольові', { genre: 'rpg' }],
+  ['🧩', 'Інді', { genre: 'indie' }],
+  ['♟️', 'Стратегії', { genre: 'strategy' }],
+];
+/** Добірка вибрана, якщо фільтри — рівно її набір, а решта за замовчуванням. */
+const pickActive = (preset, filters) =>
+  Object.keys(DEFAULTS).every((k) => k === 'page' || filters[k] === (preset[k] ?? DEFAULTS[k]));
+
 // Ціна зараз найнижча за весь час спостережень (сервер рахує це з історії цін)
 const lowBadge = (d, cls) =>
   d.historicLow
@@ -89,6 +102,7 @@ function freebiesStrip(freebies) {
                 <strong>${f.title}</strong>
                 <span class="hint">${t('Забрати до {date}', { date: formatDate(f.endsAt) })}${f.originalPrice ? html` · <s>${formatUah(f.originalPrice)}</s>` : ''}</span>
               </span>
+              <span class="home-freebie-cta">${t('Забрати')}</span>
             </a>`
         )}
       </div>
@@ -368,12 +382,24 @@ export async function render(root, params) {
           </p>`}
       <div id="freebies" class="freebies-slot"></div>
 
+      <div class="quick-picks" role="group" aria-label="${t('Швидкий вибір')}">
+        ${QUICK_PICKS.map(
+          ([icon, label], i) => html`<button class="quick-pick" type="button" data-pick="${i}" aria-pressed="false">
+            <span aria-hidden="true">${icon}</span>${t(label)}</button>`
+        )}
+      </div>
+
       <form class="filters" role="search" aria-label="${t('Фільтри вітрини')}">
         <div class="filters-top">
           <div class="filter-search">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             <input class="input" type="search" name="q" placeholder="${t('Пошук за назвою')}" value="${filters.q}"
               aria-label="${t('Пошук за назвою')}" maxlength="80" />
+          </div>
+          <div class="input-suffix filter-price">
+            <input class="input num" type="number" name="maxPrice" min="0" step="1" inputmode="numeric" placeholder="${t('Ціна до')}"
+              value="${filters.maxPrice}" aria-label="${t('Максимальна ціна, гривень')}" />
+            <span>₴</span>
           </div>
           <select class="select filter-sort" name="sort" aria-label="${t('Сортування')}">
             ${SORTS.map(([v, label]) => html`<option value="${v}" ${filters.sort === v ? 'selected' : ''}>${t(label)}</option>`)}
@@ -409,21 +435,13 @@ export async function render(root, params) {
               ${GENRES.map(([v, label]) => html`<option value="${v}" ${filters.genre === v ? 'selected' : ''}>${t(label)}</option>`)}
             </select>
           </div>
-          <div class="filter-group">
+          <div class="filter-group filter-group-grow">
             <span class="filter-label" aria-hidden="true">${t('Студія')}</span>
             <div class="combo">
               <input class="input filter-company" type="search" name="company" maxlength="80" autocomplete="off"
                 role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="company-list"
                 placeholder="${t('Розробник або видавець')}" value="${filters.company}" aria-label="${t('Розробник або видавець')}" />
               <ul class="combo-list" id="company-list" role="listbox" aria-label="${t('Студії')}" hidden></ul>
-            </div>
-          </div>
-          <div class="filter-group">
-            <span class="filter-label" aria-hidden="true">${t('Ціна до')}</span>
-            <div class="input-suffix filter-price">
-              <input class="input num" type="number" name="maxPrice" min="0" step="1" inputmode="numeric" placeholder="${t('Будь-яка')}"
-                value="${filters.maxPrice}" aria-label="${t('Максимальна ціна, гривень')}" />
-              <span>₴</span>
             </div>
           </div>
           <button class="btn btn-ghost filters-reset" type="reset" id="filters-reset">
@@ -518,6 +536,7 @@ export async function render(root, params) {
     const name = e.target.name;
     if (!name) return;
     filters[name] = e.target.value.trim();
+    markPicks();
     clearTimeout(typing);
     // Текст і ціну чекаємо, поки людина допише; списки застосовуємо одразу
     typing = setTimeout(apply, e.target.tagName === 'SELECT' ? 0 : 350);
@@ -530,19 +549,33 @@ export async function render(root, params) {
     const key = btn.dataset.filter;
     filters[key] = btn.dataset.value;
     $$(`[data-filter="${key}"]`, form).forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    markPicks();
     apply();
   });
+  // Поля форми й кнопки — так, як зараз у filters (після скидання чи швидкої добірки)
+  const syncForm = () => {
+    for (const name of ['q', 'maxPrice', 'genre', 'company', 'sort']) form.elements[name].value = filters[name];
+    $$('[data-filter]', form).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === filters[b.dataset.filter])));
+    markPicks();
+  };
   const reset = () => {
     Object.assign(filters, DEFAULTS);
-    form.reset();
-    form.elements.q.value = '';
-    form.elements.maxPrice.value = '';
-    form.elements.genre.value = '';
-    form.elements.company.value = '';
-    form.elements.sort.value = 'popular';
-    $$('[data-filter]', form).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === '')));
+    syncForm();
     apply();
   };
+  const picks = $('.quick-picks', root);
+  const markPicks = () =>
+    $$('[data-pick]', picks).forEach((b) => b.setAttribute('aria-pressed', String(pickActive(QUICK_PICKS[Number(b.dataset.pick)][2], filters))));
+  picks.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-pick]');
+    if (!btn) return;
+    const preset = QUICK_PICKS[Number(btn.dataset.pick)][2];
+    // Повторне натискання на вибрану добірку знімає її
+    Object.assign(filters, DEFAULTS, pickActive(preset, filters) ? {} : preset);
+    syncForm();
+    apply();
+  });
+  markPicks();
   form.addEventListener('reset', (e) => {
     e.preventDefault();
     reset();
