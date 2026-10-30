@@ -87,7 +87,7 @@
 
 | № | Критерій | Стан | Як зробимо |
 |---|---|---|---|
-| 59 | Публічний URL | ✅ | **https://92-5-39-234.nip.io** — безкоштовний сервер Oracle Cloud (Always Free), HTTPS через Caddy і Let's Encrypt, автозапуск systemd, щоденна копія бази; файли в `deploy/` |
+| 59 | Публічний URL | ✅ | **https://znyzhkolov.duckdns.org** — безкоштовний сервер Oracle Cloud (Always Free), HTTPS через Caddy і Let's Encrypt, автозапуск systemd, щоденна копія бази; файли в `deploy/` |
 | 60 | Офлайн-режим | ✅ | Service worker зберігає сторінки, дані API й обкладинки: без сервера чи інтернету видно список і вітрину, смужка «Немає зв’язку» |
 | 61 | Мобільний застосунок | 🔨 5 | Android-застосунок (є телефон на Android) |
 | 62 | Desktop-застосунок | ⭐ 5 | Windows-обгортка (Electron) |
