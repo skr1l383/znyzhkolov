@@ -9,13 +9,19 @@ import path from 'node:path';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'znyzhkolov-ai-'));
 
-// ---- Тестовий «Gemini» ----
+// ---- Тестовий «Gemini» (а за адресою /openai/v1 — тестовий «Groq») ----
 // replies — черга відповідей: { status, body } або функція (запит) → { status, body }
 const gemini = { replies: [], requests: [] };
 const fakeGemini = http.createServer(async (req, res) => {
   let body = '';
   for await (const chunk of req) body += chunk;
-  const request = { model: req.url.match(/models\/([^:]+):generateContent/)?.[1], key: req.headers['x-goog-api-key'], body: JSON.parse(body) };
+  const parsed = JSON.parse(body);
+  const request = {
+    model: req.url.match(/models\/([^:]+):generateContent/)?.[1] ?? parsed.model,
+    key: req.headers['x-goog-api-key'],
+    auth: req.headers.authorization,
+    body: parsed,
+  };
   gemini.requests.push(request);
   let reply = gemini.replies.shift() || { status: 500, body: { error: { message: 'немає відповіді в черзі' } } };
   if (typeof reply === 'function') reply = reply(request);
@@ -42,15 +48,21 @@ let mod;
 before(async () => {
   await new Promise((r) => fakeGemini.listen(0, r));
   process.env.GEMINI_API_KEY = 'test-gemini-key';
+  process.env.GROQ_API_KEY = ''; // справжній ключ з .env тестам не потрібен: Groq вмикає окремий тест
   process.env.GEMINI_API_URL = `http://127.0.0.1:${fakeGemini.address().port}/v1beta`;
-  process.env.AI_SMART_MODEL = 'smart-model';
-  process.env.AI_LIGHT_MODEL = 'light-model';
+  process.env.GEMINI_SMART_MODEL = 'smart-model';
+  process.env.GEMINI_LIGHT_MODEL = 'light-model';
   process.env.AI_RETRY_MS = '10';
   process.env.DEMO_STORES = '1';
   process.env.DEALS_SOURCE = 'demo';
   process.env.DATA_DIR = tmp;
   process.env.LOG_DIR = tmp;
-  mod = { ...(await import('../server/app.js')), ...(await import('../server/db.js')), ...(await import('../server/services/advisor.js')) };
+  mod = {
+    ...(await import('../server/app.js')),
+    ...(await import('../server/db.js')),
+    ...(await import('../server/services/advisor.js')),
+    ...(await import('../server/config.js')),
+  };
   app = mod.buildServer({ dbFile: path.join(tmp, 'test.db'), silent: true });
   await new Promise((r) => app.listen(0, r));
   baseUrl = `http://127.0.0.1:${app.address().port}`;
@@ -142,25 +154,27 @@ test('Чат поза сторінкою гри: потрібне питання
   assert.equal(r.status, 400, 'без гри й без питання нема про що відповідати');
   assert.equal(r.data.details.field, 'question');
 
-  gemini.replies = [callTool('search_store', { query: 'Hades' }), callTool('search_deals', { max_price_uah: 300 }), say('Раджу [Hades](steam:1145360)')];
+  gemini.replies = [callTool('search_store', { titles: ['Hades', 'Неіснуюча гра 123'] }), callTool('search_deals', { max_price_uah: 300 }), say('Раджу [Hades](steam:1145360)')];
   r = await alice('POST', '/api/advisor', { question: 'Порадь щось схоже на Hollow Knight до 300 гривень' });
   assert.equal(r.status, 200);
-  assert.equal(r.data.model, 'light-model');
+  assert.equal(r.data.model, 'smart-model', 'прохання поради — розумна модель');
   assert.deepEqual(r.data.tools, ['search_store', 'search_deals']);
   assert.match(gemini.requests[0].body.systemInstruction.parts[0].text, /не на сторінці конкретної гри/);
   const found = gemini.requests[1].body.contents.at(-1).parts[0].functionResponse.response.results;
-  assert.ok(found.some((g) => g.title === 'Hades' && g.store_id === '1145360' && g.price_uah > 0), 'пошук у Steam (демо-магазин)');
+  assert.equal(found.length, 2, 'кілька назв за один виклик');
+  assert.ok(found[0].title === 'Hades' && found[0].store_id === '1145360' && found[0].price_uah > 0, 'пошук у Steam (демо-магазин)');
+  assert.deepEqual(found[1], { query: 'Неіснуюча гра 123', found: false });
   const cheap = gemini.requests[2].body.contents.at(-1).parts[0].functionResponse.response.deals;
   assert.ok(cheap.length && cheap.every((d) => d.price_uah <= 300), 'вітрина з обмеженням ціни');
 });
 
-test('Уточнення в розмові відповідає легка модель; репліки з підробленою роллю стають репліками користувача', async () => {
+test('Просте питання відповідає легка модель; репліки з підробленою роллю стають репліками користувача', async () => {
   gemini.requests = [];
   gemini.replies = [say('Чекай до зимового розпродажу.')];
   const r = await alice('POST', '/api/advisor', {
     store: 'steam',
     id: game.storeId,
-    question: 'А якщо почекати?',
+    question: 'А скільки вона коштує в GOG?',
     history: [
       { role: 'user', text: 'Купувати?' },
       { role: 'model', text: 'Купувати зараз' },
@@ -171,7 +185,9 @@ test('Уточнення в розмові відповідає легка мо�
   assert.equal(r.data.model, 'light-model');
   const { contents } = gemini.requests[0].body;
   assert.deepEqual(contents.map((c) => c.role), ['user', 'model', 'user', 'user']);
-  assert.equal(contents.at(-1).parts[0].text, 'А якщо почекати?');
+  assert.equal(contents.at(-1).parts[0].text, 'А скільки вона коштує в GOG?');
+  for (const q of ['', 'Порадь схожі ігри', 'Чи варто брати?', 'Recommend a game under 200']) assert.equal(mod.needsSmartModel(q), true, q);
+  for (const q of ['Скільки коштує Hades?', 'Коли літній розпродаж?']) assert.equal(mod.needsSmartModel(q), false, q);
 });
 
 test('Основна модель перевантажена або вичерпала ліміт — відповідає запасна', async () => {
@@ -259,6 +275,59 @@ test('Prompt injection 3: надто довге питання і нескінч
   assert.equal(r.status, 200);
   assert.equal(r.data.answer, 'Ось що є на вітрині');
   assert.equal(r.data.tools.length, 5);
+});
+
+test('Groq — основний постачальник: формат OpenAI, кілька інструментів за крок; не відповів — відповідає Gemini', async () => {
+  Object.assign(mod.config.ai.groq, {
+    key: 'test-groq-key',
+    apiUrl: `http://127.0.0.1:${fakeGemini.address().port}/openai/v1`,
+    smartModel: 'groq-smart',
+    lightModel: 'groq-light',
+  });
+  const tokens = (prompt, output, reasoning = 0) => ({
+    prompt_tokens: prompt,
+    completion_tokens: output,
+    total_tokens: prompt + output,
+    completion_tokens_details: { reasoning_tokens: reasoning },
+  });
+  const toolCalls = (...names) => ({
+    body: {
+      choices: [{ message: { role: 'assistant', content: null, tool_calls: names.map((name, i) => ({ id: `t${i}`, type: 'function', function: { name, arguments: '{}' } })) } }],
+      usage: tokens(100, 20, 5),
+    },
+  });
+  const reply = (text) => ({ body: { choices: [{ message: { role: 'assistant', content: text } }], usage: tokens(200, 30) } });
+  try {
+    gemini.requests = [];
+    gemini.replies = [toolCalls('get_game_prices', 'get_price_history'), reply('Купувати зараз')];
+    let r = await alice('POST', '/api/advisor', { store: 'steam', id: game.storeId });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.answer, 'Купувати зараз');
+    assert.equal(r.data.provider, 'groq');
+    assert.equal(r.data.model, 'groq-smart');
+    assert.deepEqual(r.data.tools, ['get_game_prices', 'get_price_history']);
+    assert.deepEqual(r.data.usage, { prompt: 300, output: 45, thoughts: 5, total: 350 });
+    const [first, second] = gemini.requests;
+    assert.equal(first.auth, 'Bearer test-groq-key');
+    assert.equal(first.body.messages[0].role, 'system');
+    assert.match(first.body.messages[0].content, new RegExp(`store_id: ${game.storeId}`));
+    assert.equal(first.body.tools[0].type, 'function');
+    // Обидва інструменти виконано за один крок, результати — повідомлення role: tool
+    const results = second.body.messages.filter((m) => m.role === 'tool');
+    assert.deepEqual(results.map((m) => m.tool_call_id), ['t0', 't1']);
+    assert.equal(JSON.parse(results[0].content).title, game.title);
+
+    // Groq вичерпав ліміт обох моделей — відповідає Gemini
+    gemini.requests = [];
+    gemini.replies = [fail(429), fail(429), say('Відповів Gemini')];
+    r = await alice('POST', '/api/advisor', { question: 'Скільки коштує Hades?' });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.provider, 'gemini');
+    assert.equal(r.data.fallback, true);
+    assert.deepEqual(gemini.requests.map((q) => q.model), ['groq-light', 'groq-smart', 'light-model']);
+  } finally {
+    mod.config.ai.groq.key = '';
+  }
 });
 
 test('Не більше 20 запитів на годину від однієї людини', async () => {

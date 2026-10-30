@@ -87,14 +87,24 @@ export const config = {
     userinfoUrl: env.GOOGLE_USERINFO_URL || 'https://openidconnect.googleapis.com/v1/userinfo',
   },
 
-  // ШІ-порадник на Google Gemini (безкоштовний ключ з aistudio.google.com). Без ключа порадника немає.
-  // Дві моделі: розумна для поради «купувати чи чекати», легка для коротких уточнень.
+  // ШІ-порадник: Groq (швидкий, безкоштовний ключ з console.groq.com) і запасний Google Gemini
+  // (безкоштовний ключ з aistudio.google.com). Потрібен хоча б один ключ, інакше порадника немає.
+  // У кожного дві моделі: розумна для поради «купувати чи чекати», легка для розмови.
   ai: {
-    key: (env.GEMINI_API_KEY || '').trim(),
-    apiUrl: (env.GEMINI_API_URL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, ''),
-    smartModel: env.AI_SMART_MODEL || 'gemini-3.5-flash',
-    lightModel: env.AI_LIGHT_MODEL || 'gemini-3.5-flash-lite',
-    timeoutMs: num(env.AI_TIMEOUT_MS, 30000),
+    groq: {
+      key: (env.GROQ_API_KEY || '').trim(),
+      apiUrl: (env.GROQ_API_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, ''),
+      smartModel: env.GROQ_SMART_MODEL || 'openai/gpt-oss-120b',
+      lightModel: env.GROQ_LIGHT_MODEL || 'openai/gpt-oss-20b',
+    },
+    gemini: {
+      key: (env.GEMINI_API_KEY || '').trim(),
+      apiUrl: (env.GEMINI_API_URL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, ''),
+      smartModel: env.GEMINI_SMART_MODEL || 'gemini-3.5-flash',
+      lightModel: env.GEMINI_LIGHT_MODEL || 'gemini-3.5-flash-lite',
+    },
+    // Скільки чекати одну відповідь моделі, перш ніж перейти до запасної
+    timeoutMs: num(env.AI_TIMEOUT_MS, 15000),
     retryMs: num(env.AI_RETRY_MS, 1500),
   },
 };
