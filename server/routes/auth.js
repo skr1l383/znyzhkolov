@@ -22,6 +22,7 @@ import {
 } from '../auth.js';
 import { emailLayout, mailProvider, sendMail, siteLink } from '../services/mailer.js';
 import { botStatus } from '../services/telegram.js';
+import { googleEnabled } from './google.js';
 import { getUsdRate } from '../stores/currency.js';
 import * as v from '../validate.js';
 
@@ -202,6 +203,7 @@ export function authRoutes(router) {
       app: {
         demo: config.demoStores,
         telegram: { enabled: bot.enabled, username: bot.username },
+        google: googleEnabled(),
         usdRate: getUsdRate().rate,
         mail: mailProvider(), // 'outbox' — тестова скринька замість справжньої пошти
       },

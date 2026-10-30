@@ -76,6 +76,16 @@ export const config = {
     from: (env.MAIL_FROM || '').trim(),
     fromName: (env.MAIL_FROM_NAME || 'Знижколов').trim(),
   },
+
+  // Вхід через Google (OAuth 2.0): ключі з Google Cloud Console. Без них кнопки «Увійти через Google» немає.
+  // Адреси Google можна підмінити — так тести працюють без справжнього Google.
+  google: {
+    clientId: (env.GOOGLE_CLIENT_ID || '').trim(),
+    clientSecret: (env.GOOGLE_CLIENT_SECRET || '').trim(),
+    authUrl: env.GOOGLE_AUTH_URL || 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: env.GOOGLE_TOKEN_URL || 'https://oauth2.googleapis.com/token',
+    userinfoUrl: env.GOOGLE_USERINFO_URL || 'https://openidconnect.googleapis.com/v1/userinfo',
+  },
 };
 
 export const isHttps = config.baseUrl.startsWith('https://');

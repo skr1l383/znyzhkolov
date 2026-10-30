@@ -230,6 +230,7 @@ const ADDED_COLUMNS = [
   ['deals', 'genres', 'TEXT'], // жанри вітрини у вигляді ",action,rpg," — так їх зручно шукати через LIKE
   ['deals', 'companies', 'TEXT'], // розробники й видавці, по одному в рядку
   ['deals', 'hero_url', 'TEXT'], // широка картинка для банера на головній
+  ['users', 'google_sub', 'TEXT'], // незмінний ідентифікатор акаунта Google — для входу через Google
   ['deals', 'hero_small_url', 'TEXT'], // легша картинка банера для телефона (у 3–4 рази менша)
 ];
 

@@ -116,6 +116,7 @@ node -v
 | `STEAM_COUNTRY`, `GOG_COUNTRY`, `EPIC_COUNTRY` | `UA` | Регіон магазинів |
 | `BREVO_API_KEY`, `MAIL_FROM` | — | Надсилання листів через Brevo: ключ API і підтверджена в Brevo адреса відправника |
 | `RESEND_API_KEY` | — | Або через Resend (без власного домену — лише на пошту власника акаунта) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | — | Вхід через Google (OAuth 2.0). Адреса повернення в Google Cloud Console: `BASE_URL/api/auth/google/callback` |
 | `USD_UAH_FALLBACK` | `45` | Курс, якщо сайт НБУ недоступний |
 | `DEMO_STORES` | `0` | `1` вмикає демо-режим |
 

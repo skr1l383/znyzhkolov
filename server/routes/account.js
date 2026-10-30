@@ -17,6 +17,8 @@ const userById = (id) => db.prepare('SELECT * FROM users WHERE id = ?').get(id);
 const EMAIL_IN_TEXT = /[^\s«»"'(),:;]+@[^\s«»"'(),:;]+\.[^\s«»"'(),:;]+/g;
 
 async function requirePassword(user, password) {
+  // Акаунт, створений через Google, пароля не має: людина вже довела, хто вона, входом через Google
+  if (!user.password_hash) return;
   if (typeof password !== 'string' || !password) throw v.fieldError('current', 'Введи поточний пароль');
   if (!(await verifyPassword(password, user.password_hash))) {
     log.warn('account.wrong_password', `${user.email}: невірний поточний пароль`, { userId: user.id });

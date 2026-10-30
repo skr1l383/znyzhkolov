@@ -7,8 +7,8 @@
 
 // Будь-яка зміна цього файлу (наприклад, версії) змушує браузер встановити service worker заново.
 // v2: перша версія могла встановитися із суворою CSP і блокувати обкладинки — нова її замінює.
-// v4: додано файли перекладу (i18n). v5: при 503 (база недоступна) — збережені дані. v6: коментарі. v7: карта цін.
-const VERSION = 'v9';
+// v4: додано файли перекладу (i18n). v5: при 503 (база недоступна) — збережені дані. v6: коментарі. v7: карта цін. v10: вхід через Google повз service worker.
+const VERSION = 'v10';
 const SHELL_CACHE = `zk-shell-${VERSION}`;
 const API_CACHE = 'zk-api'; // очищається при виході з акаунта
 const IMAGE_CACHE = 'zk-images';
@@ -135,6 +135,8 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin === self.location.origin) {
     if (url.pathname === '/sw.js') return;
+    // Вхід через Google — переадресації на інший сайт і назад: браузер обробляє їх сам
+    if (url.pathname.startsWith('/api/auth/google')) return;
     if (request.mode === 'navigate') {
       event.respondWith(networkFirst(request, SHELL_CACHE, { fallbackUrl: '/' }));
     } else if (url.pathname.startsWith('/api/')) {

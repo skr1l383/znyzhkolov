@@ -12,6 +12,7 @@ import { authRoutes } from './routes/auth.js';
 import { commentRoutes } from './routes/comments.js';
 import { dealRoutes, facetRoutes, featuredRoutes, gamePageRoutes } from './routes/deals.js';
 import { gameRoutes } from './routes/games.js';
+import { googleRoutes } from './routes/google.js';
 import { profileRoutes } from './routes/profile.js';
 import { shareRoutes } from './routes/share.js';
 import { wishlistRoutes } from './routes/wishlist.js';
@@ -70,6 +71,7 @@ export function buildServer({ dbFile, silent = false } = {}) {
   // Перевірка для хостингу й моніторингу: 200 — усе гаразд, 503 — база недоступна
   router.get('/api/health', () => ({ ok: true, db: 'ok', uptime: Math.round(process.uptime()) }));
   authRoutes(router);
+  googleRoutes(router);
   gameRoutes(router);
   featuredRoutes(router);
   facetRoutes(router);

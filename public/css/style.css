@@ -2139,6 +2139,34 @@ a.profile-stat:hover {
   font-weight: 700;
 }
 
+/* Вхід через Google: біла кнопка з логотипом, як радять правила оформлення Google */
+.btn-google {
+  gap: 10px;
+  background: #fff;
+  color: #1f1f1f;
+  border: 1px solid #dadce0;
+}
+
+.btn-google:hover {
+  background: #f6f8fb;
+  color: #1f1f1f;
+}
+
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.auth-or::before,
+.auth-or::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
 /* ---------- Діалоги й повідомлення ---------- */
 .dialog {
   width: min(560px, calc(100vw - 32px));

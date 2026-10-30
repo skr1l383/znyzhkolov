@@ -124,8 +124,39 @@ const fakeSteam = http.createServer((req, res) => {
   res.end();
 });
 
+// ---- Тестовий «Google»: обмін коду на токен і профіль. Код визначає, хто «увійшов» ----
+const GOOGLE_PROFILES = {
+  newbie: { sub: 'g-100', email: 'Google.User@test.ua', email_verified: true, name: 'Саша' },
+  sasha: { sub: 'g-200', email: 'sasha@test.ua', email_verified: true, name: 'Саша' },
+};
+const fakeGoogle = http.createServer(async (req, res) => {
+  let body = '';
+  for await (const chunk of req) body += chunk;
+  const send = (status, data) => {
+    res.writeHead(status, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+  };
+  if (req.url === '/token') {
+    const form = new URLSearchParams(body);
+    if (form.get('client_secret') !== 'test-secret' || !GOOGLE_PROFILES[form.get('code')]) return send(400, { error: 'invalid_grant' });
+    return send(200, { access_token: `token-${form.get('code')}`, token_type: 'Bearer' });
+  }
+  if (req.url === '/userinfo') {
+    const code = String(req.headers.authorization || '').replace('Bearer token-', '');
+    return GOOGLE_PROFILES[code] ? send(200, GOOGLE_PROFILES[code]) : send(401, { error: 'invalid_token' });
+  }
+  send(404, {});
+});
+
 before(async () => {
   await new Promise((r) => fakeTelegram.listen(0, r));
+  await new Promise((r) => fakeGoogle.listen(0, r));
+  const google = `http://127.0.0.1:${fakeGoogle.address().port}`;
+  process.env.GOOGLE_CLIENT_ID = 'test-client';
+  process.env.GOOGLE_CLIENT_SECRET = 'test-secret';
+  process.env.GOOGLE_AUTH_URL = `${google}/auth`;
+  process.env.GOOGLE_TOKEN_URL = `${google}/token`;
+  process.env.GOOGLE_USERINFO_URL = `${google}/userinfo`;
   await new Promise((r) => fakeSteam.listen(0, r));
   process.env.STEAM_API_URL = `http://127.0.0.1:${fakeSteam.address().port}`;
   process.env.STEAM_COMMUNITY_URL = `http://127.0.0.1:${fakeSteam.address().port}`;
@@ -148,6 +179,7 @@ after(async () => {
   await stopApp();
   fakeTelegram.close();
   fakeSteam.close();
+  fakeGoogle.close();
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
@@ -914,4 +946,61 @@ test('Вхід за ніком: нік унікальний без різниц�
     if (last.status === 429) break;
   }
   assert.equal(last.status, 429, 'масові реєстрації блокуються');
+});
+
+/** Проходить вхід через Google, як браузер: старт → «сторінка Google» → повернення з кодом. */
+async function googleLogin(code, { lang = 'uk', badState = false } = {}) {
+  const start = await fetch(`${baseUrl}/api/auth/google?lang=${lang}`, { redirect: 'manual' });
+  assert.equal(start.status, 302);
+  const state = new URL(start.headers.get('location')).searchParams.get('state');
+  const stateCookie = start.headers.getSetCookie()[0].split(';')[0];
+  const back = await fetch(`${baseUrl}/api/auth/google/callback?code=${code}&state=${badState ? 'forged' : state}`, {
+    redirect: 'manual',
+    headers: { Cookie: stateCookie },
+  });
+  const session = back.headers.getSetCookie().map((c) => c.split(';')[0]).find((c) => c.startsWith('zk_session=') && c !== 'zk_session=');
+  return { location: back.headers.get('location'), session };
+}
+
+test('Вхід через Google: новий акаунт, повторний вхід, привʼязка до наявної пошти, підроблений state', async () => {
+  assert.equal((await client()('GET', '/api/me')).data.app.google, true, 'кнопку видно, коли задано ключі');
+  const startUrl = new URL((await fetch(`${baseUrl}/api/auth/google`, { redirect: 'manual' })).headers.get('location'));
+  assert.equal(startUrl.searchParams.get('client_id'), 'test-client');
+  assert.equal(startUrl.searchParams.get('scope'), 'openid email profile');
+
+  // Перший вхід створює акаунт: пошта вже підтверджена Google, пароля немає, мова — з сайту
+  let r = await googleLogin('newbie', { lang: 'en' });
+  assert.equal(r.location, '/#/list', 'новачок одразу бачить добірку знижок');
+  const me = async (session) => (await fetch(`${baseUrl}/api/me`, { headers: { Cookie: session } })).json();
+  let { user } = await me(r.session);
+  assert.equal(user.email, 'google.user@test.ua');
+  assert.equal(user.name, 'Саша 2', 'нік «Саша» зайнятий — додаємо номер');
+  assert.equal(user.emailVerified, true);
+  assert.equal(user.hasPassword, false);
+  assert.equal(user.lang, 'en');
+
+  // Без пароля можна задати пароль, не вводячи «поточного»
+  const pw = await fetch(`${baseUrl}/api/me/password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: r.session },
+    body: JSON.stringify({ password: 'googlepass123' }),
+  });
+  assert.equal(pw.status, 200);
+
+  // Повторний вхід — той самий акаунт, а не новий
+  r = await googleLogin('newbie');
+  assert.equal(r.location, '/#/');
+  assert.equal((await me(r.session)).user.id, user.id);
+
+  // Пошта з Google збігається з наявним акаунтом — входимо в нього
+  r = await googleLogin('sasha');
+  ({ user } = await me(r.session));
+  assert.equal(user.email, 'sasha@test.ua');
+  assert.equal(user.googleLinked, true);
+  assert.equal(user.hasPassword, true, 'пароль наявного акаунта не чіпаємо');
+
+  // Чужий state (підроблене посилання) — вхід не відбувається
+  r = await googleLogin('newbie', { badState: true });
+  assert.equal(r.location, '/#/login?google=failed');
+  assert.equal(r.session, undefined);
 });

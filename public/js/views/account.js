@@ -4,16 +4,22 @@ import { t } from '../i18n.js';
 import { clearPrivateCache, go, refreshMe, state } from '../app.js';
 import { $, clearFormErrors, closeDialog, html, openDialog, showFormError, toast, withLoading } from '../ui.js';
 
+/** Поле «Поточний пароль». У акаунта, створеного через Google, пароля немає — і поля теж. */
+const currentPasswordField = (id) =>
+  state.user?.hasPassword === false
+    ? ''
+    : html`<div class="field">
+        <label for="${id}">${t('Поточний пароль')}</label>
+        <input class="input" id="${id}" name="current" type="password" autocomplete="current-password" required />
+      </div>`;
+
 export function securityPanels(u) {
   return html`
     <section class="panel stack">
       <h2>${t('Пароль')}</h2>
       <form class="stack" id="password-form" novalidate>
         <div class="form-error" role="alert" hidden></div>
-        <div class="field">
-          <label for="pw-current">${t('Поточний пароль')}</label>
-          <input class="input" id="pw-current" name="current" type="password" autocomplete="current-password" required />
-        </div>
+        ${currentPasswordField('pw-current')}
         <div class="field">
           <label for="pw-new">${t('Новий пароль')}</label>
           <input class="input" id="pw-new" name="password" type="password" autocomplete="new-password" minlength="8" required />
@@ -37,10 +43,7 @@ export function securityPanels(u) {
           <label for="em-new">${t('Нова пошта')}</label>
           <input class="input" id="em-new" name="email" type="email" autocomplete="email" required />
         </div>
-        <div class="field">
-          <label for="em-current">${t('Поточний пароль')}</label>
-          <input class="input" id="em-current" name="current" type="password" autocomplete="current-password" required />
-        </div>
+        ${currentPasswordField('em-current')}
         <div><button class="btn btn-primary" type="submit">${t('Змінити пошту')}</button></div>
         <p class="hint">${t('На нову пошту прийде лист для підтвердження, на стару — попередження про зміну.')}</p>
       </form>
@@ -78,10 +81,7 @@ function deleteDialog() {
         ${t('Перед цим можна')} <a href="/api/me/export.json" download>${t('завантажити свої дані')}</a>.
       </p>
       <div class="form-error" role="alert" hidden></div>
-      <div class="field">
-        <label for="del-current">${t('Поточний пароль')}</label>
-        <input class="input" id="del-current" name="current" type="password" autocomplete="current-password" required />
-      </div>
+      ${currentPasswordField('del-current')}
       <label class="check">
         <input type="checkbox" name="sure" />
         <span>${t('Розумію, що це назавжди')}</span>
@@ -96,13 +96,13 @@ function deleteDialog() {
   const submit = $('button[type="submit"]', form);
   $('[data-close]', form).addEventListener('click', closeDialog);
   form.elements.sure.addEventListener('change', (e) => (submit.disabled = !e.target.checked));
-  form.elements.current.focus();
+  form.elements.current?.focus();
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearFormErrors(form);
     await withLoading(submit, async () => {
       try {
-        await post('/api/me/delete', { current: form.elements.current.value });
+        await post('/api/me/delete', { current: form.elements.current?.value });
         closeDialog();
         await clearPrivateCache();
         state.user = null;
@@ -127,7 +127,7 @@ export function bindAccount(root) {
     }
     await withLoading($('button[type="submit"]', pw), async () => {
       try {
-        await post('/api/me/password', { current: pw.elements.current.value, password: pw.elements.password.value });
+        await post('/api/me/password', { current: pw.elements.current?.value, password: pw.elements.password.value });
         pw.reset();
         toast(t('Пароль змінено. На інших пристроях виконано вихід'));
       } catch (err) {
@@ -142,7 +142,7 @@ export function bindAccount(root) {
     clearFormErrors(em);
     await withLoading($('button[type="submit"]', em), async () => {
       try {
-        const { user } = await post('/api/me/email', { email: em.elements.email.value, current: em.elements.current.value });
+        const { user } = await post('/api/me/email', { email: em.elements.email.value, current: em.elements.current?.value });
         state.user = user;
         await refreshMe();
         toast(t('Пошту змінено на {email}. Підтверди її — лист уже надіслано', { email: user.email }));
