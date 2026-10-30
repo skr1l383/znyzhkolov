@@ -52,7 +52,7 @@ const assetUrl = (assets, name) =>
     ? `https://shared.akamai.steamstatic.com/store_item_assets/${assets.asset_url_format.replace('${FILENAME}', assets[name])}`
     : null;
 
-/** Відповідь IStoreBrowseService/GetItems → appid → { genres, companies, imageUrl?, heroUrl? }. */
+/** Відповідь IStoreBrowseService/GetItems → appid → { genres, companies, imageUrl?, heroUrl?, heroSmallUrl? }. */
 export function parseSteamExtras(json) {
   const result = new Map();
   for (const item of json?.response?.store_items || []) {
@@ -63,6 +63,8 @@ export function parseSteamExtras(json) {
       companies: uniqueCompanies((info.developers || []).map((d) => d.name), (info.publishers || []).map((p) => p.name)),
       ...(assetUrl(item.assets, 'header') && { imageUrl: assetUrl(item.assets, 'header') }),
       ...(assetUrl(item.assets, 'library_hero') && { heroUrl: assetUrl(item.assets, 'library_hero') }),
+      // 616×353 — для банера на телефоні: library_hero важить ~400 КБ, а екран однаково показує лише його середину
+      ...(assetUrl(item.assets, 'main_capsule') && { heroSmallUrl: assetUrl(item.assets, 'main_capsule') }),
     });
   }
   return result;

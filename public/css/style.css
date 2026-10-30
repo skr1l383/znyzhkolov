@@ -1293,6 +1293,15 @@ p {
   color: var(--muted);
 }
 
+.starter {
+  margin-top: 28px;
+}
+
+.starter h2 {
+  margin: 0 0 14px;
+  font-size: 1.15rem;
+}
+
 .empty-icon {
   width: 56px;
   height: 56px;

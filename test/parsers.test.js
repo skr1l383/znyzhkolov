@@ -360,7 +360,7 @@ test('Жанри: теги Steam і жанри GOG зводяться до од�
         {
           appid: 10,
           tags: [{ tagid: 1663 }, { tagid: 1667 }],
-          assets: { asset_url_format: 'steam/apps/10/${FILENAME}?t=1', header: 'ab12/header_alt.jpg', library_hero: 'cd34/library_hero.jpg' },
+          assets: { asset_url_format: 'steam/apps/10/${FILENAME}?t=1', header: 'ab12/header_alt.jpg', library_hero: 'cd34/library_hero.jpg', main_capsule: 'cd34/capsule_616x353.jpg' },
         },
       ],
     },
@@ -368,6 +368,7 @@ test('Жанри: теги Steam і жанри GOG зводяться до од�
   // Точні адреси картинок: у нових ігор вони в папці з хешем
   assert.equal(steam.get('10').imageUrl, 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/10/ab12/header_alt.jpg?t=1');
   assert.equal(steam.get('10').heroUrl, 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/10/cd34/library_hero.jpg?t=1');
+  assert.equal(steam.get('10').heroSmallUrl, 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/10/cd34/capsule_616x353.jpg?t=1');
   assert.deepEqual(steam.get('367520'), { genres: ['action', 'platformer', 'indie'], companies: ['Team Cherry'] });
   assert.deepEqual(steam.get('10').genres, ['shooter', 'horror'], 'FPS — це шутер');
   assert.deepEqual(genresFromGog({ genres: [{ slug: 'role-playing' }], tags: [{ slug: 'open-world' }, { slug: 'fantasy' }] }), ['rpg', 'openworld']);

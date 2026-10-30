@@ -1,7 +1,7 @@
 // Головна сторінка: вітрина популярних ігор зі знижками в Steam і GOG з фільтрами.
 // Фільтри зберігаються в адресі сторінки (#/?store=gog&minDiscount=50), тож вибірку можна надіслати другові.
 import { get } from '../api.js';
-import { setBackdrop } from '../backdrop.js';
+import { heroSrc, setBackdrop } from '../backdrop.js';
 import { go, state } from '../app.js';
 import { $, $$, STORE_NAMES, cover, gameHref, formatDate, formatMoney, formatUah, html, setHtml, timeAgo, toast } from '../ui.js';
 import { t, tp } from '../i18n.js';
@@ -41,7 +41,7 @@ const lowBadge = (d, cls) =>
     ? html`<span class="${cls}" title="${t('Дешевше не було з {date}', { date: formatDate(d.historicLow) })}">${t('Історичний мінімум')}</span>`
     : '';
 
-function dealCard(d, index) {
+export function dealCard(d, index) {
   const usd = d.currency === 'USD' ? t('{price} за курсом НБУ', { price: formatMoney(d.price, 'USD') }) : '';
   return html`
     <article class="deal-card" data-title="${d.title}">
@@ -104,7 +104,7 @@ function heroSlide(d, i, count) {
   return html`
     <article class="hero-slide ${i === 0 ? 'active' : ''}" aria-roledescription="${t('слайд')}" aria-label="${t('{n} з {count}', { n: i + 1, count })}: ${d.title}"
       aria-hidden="${String(i !== 0)}" data-title="${d.title}">
-      <img class="cover hero-img" ${i === 0 ? html`src="${d.heroImage}" fetchpriority="high"` : html`data-src="${d.heroImage}"`}
+      <img class="cover hero-img" ${i === 0 ? html`src="${heroSrc(d)}" fetchpriority="high"` : html`data-src="${heroSrc(d)}"`}
         data-fallback="${d.heroFallback || ''}" alt="" referrerpolicy="no-referrer" />
       <div class="hero-shade"></div>
       <div class="hero-content">
@@ -172,7 +172,7 @@ function mountHero(box, items, onWatch) {
       s.querySelectorAll('a, button').forEach((el) => (el.tabIndex = on ? 0 : -1));
     });
     dots.forEach((d, k) => d.classList.toggle('active', k === current));
-    setBackdrop(items[current].heroImage);
+    setBackdrop(heroSrc(items[current]));
   };
   // Хто просить менше руху на екрані — без автоперемикання
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -214,7 +214,7 @@ function mountHero(box, items, onWatch) {
   const onVisibility = () => (document.hidden ? pause() : play());
   document.addEventListener('visibilitychange', onVisibility);
   loadImage(1);
-  setBackdrop(items[0].heroImage);
+  setBackdrop(heroSrc(items[0]));
   play();
   return () => {
     pause();

@@ -17,13 +17,13 @@ function saveStore(store, deals, rate) {
     db.prepare('DELETE FROM deals WHERE store = ?').run(store);
     const insert = db.prepare(
       `INSERT OR IGNORE INTO deals (store, store_id, title, search_title, url, image_url, image_fallback, currency, price, base_price,
-         discount, price_uah, base_price_uah, rating, rank, updated_at, genres, companies, hero_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         discount, price_uah, base_price_uah, rating, rank, updated_at, genres, companies, hero_url, hero_small_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     deals.forEach((d, i) => {
       insert.run(d.store, d.storeId, d.title, normalizeTitle(d.title), d.url, d.imageUrl, d.imageFallback || null, d.currency, d.price, d.basePrice,
         d.discount, toUah(d.price, d.currency, rate), toUah(d.basePrice, d.currency, rate), d.rating, i + 1, at,
-        d.genres?.length ? `,${d.genres.join(',')},` : null, d.companies?.length ? d.companies.join('\n') : null, d.heroUrl || null);
+        d.genres?.length ? `,${d.genres.join(',')},` : null, d.companies?.length ? d.companies.join('\n') : null, d.heroUrl || null, d.heroSmallUrl || null);
     });
     recordDealPrices(deals, at);
   });
@@ -200,6 +200,8 @@ export function featuredDeals({ userId = null, limit = 6 } = {}) {
   return rows.map((r) => ({
     ...dealItem(r, watching),
     heroImage: heroImage(r),
+    // Для телефона: у GOG — звичайна обкладинка (вона й так ~800 px завширшки)
+    heroSmall: (r.store === 'steam' ? r.hero_small_url : r.image_url) || null,
     // Якщо великої картинки немає (буває в зовсім нових ігор) — звичайна обкладинка
     heroFallback: r.image_fallback || r.image_url,
   }));

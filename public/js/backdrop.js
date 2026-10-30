@@ -8,6 +8,11 @@ let front = 0;
 let wanted = '';
 let featured = null;
 
+// На телефоні банер займає 300 px, тож беремо легшу картинку (у 3–4 рази менше трафіку)
+const phone = matchMedia('(max-width: 760px)');
+/** Картинка банера для цього екрана. */
+export const heroSrc = (d) => (phone.matches && d.heroSmall) || d.heroImage;
+
 function mount() {
   box = document.createElement('div');
   box.className = 'page-backdrop';
@@ -45,7 +50,7 @@ export async function setPageBackdrop(page) {
   wanted = `page:${page}`;
   const ticket = wanted;
   try {
-    featured ??= (await get('/api/deals/featured')).items.map((d) => d.heroImage).filter(Boolean);
+    featured ??= (await get('/api/deals/featured')).items.map(heroSrc).filter(Boolean);
   } catch {
     featured = null; // офлайн чи сервер недоступний — спробуємо на наступній сторінці
     return;

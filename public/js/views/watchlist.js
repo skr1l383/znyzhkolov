@@ -25,10 +25,11 @@ import {
 import { t, tp } from '../i18n.js';
 import { state } from '../app.js';
 import { conditionsFields, conditionsText, readConditions } from './conditions.js';
+import { openAddDialog } from './search.js';
+import { dealCard } from './showcase.js';
 import { shareDialog } from './share.js';
 import { steamImportDialog } from './steamImport.js';
 
-const SUGGESTIONS = ['Hades', 'Stardew Valley', 'Hollow Knight', 'Cyberpunk 2077', 'The Witcher 3'];
 
 function offerNote(o, isBest) {
   if (!o.available) return t('Недоступно в магазині для України');
@@ -113,11 +114,29 @@ function emptyState() {
         <button class="btn btn-primary" type="button" id="steam-empty-btn">${t('Імпортувати список бажаного Steam')}</button>
         <a class="btn" href="#/search">${t('Знайти гру')}</a>
       </div>
-      <div class="suggestions">
-        ${SUGGESTIONS.map((s) => html`<a class="btn btn-sm" href="#/search?q=${encodeURIComponent(s)}">${s}</a>`)}
-      </div>
     </div>
+    <section class="starter" aria-labelledby="starter-title">
+      <h2 id="starter-title">${t('Популярні знижки зараз — почни з них')}</h2>
+      <div class="deal-grid" id="starter-deals">${Array.from({ length: 6 }, () => html`<div class="skeleton deal-skeleton"></div>`)}</div>
+    </section>
   `;
+}
+
+/** Порожній список: підвантажує кращі знижки вітрини, щоб новий користувач додав першу гру одним натиском. */
+async function loadStarter(root) {
+  const box = $('#starter-deals', root);
+  if (!box) return [];
+  try {
+    const { items } = await get('/api/deals/featured');
+    if (!box.isConnected) return [];
+    if (!items.length) throw new Error('empty');
+    setHtml(box, html`${items.map(dealCard)}`);
+    return items;
+  } catch {
+    // Вітрина ще не завантажилась — лишаються кнопки пошуку й імпорту
+    box.closest('.starter')?.remove();
+    return [];
+  }
 }
 
 function editDialog(item, onSaved) {
@@ -446,7 +465,9 @@ export async function render(root) {
         ${items.length ? html`<div class="game-list">${items.map(gameCard)}</div>` : emptyState()}
       `
     );
+    if (!items.length) loadStarter(root).then((list) => (starter = list));
   };
+  let starter = [];
 
   const replace = (updated) => {
     items = items.map((i) => (i.id === updated.id ? updated : i));
@@ -454,6 +475,16 @@ export async function render(root) {
   };
 
   root.onclick = async (e) => {
+    const starterBtn = e.target.closest('[data-watch]');
+    if (starterBtn) {
+      openAddDialog(starter[Number(starterBtn.dataset.watch)], {
+        onAdded: async () => {
+          items = (await get('/api/watch')).items;
+          draw();
+        },
+      });
+      return;
+    }
     if (e.target.closest('#steam-btn, #steam-empty-btn')) {
       steamImportDialog(async () => {
         items = (await get('/api/watch')).items;

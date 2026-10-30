@@ -492,6 +492,7 @@ export const EN = {
   'Знайди гру, яку хочеш купити, і вкажи свою умову. Ми перевірятимемо ціни в Steam і GOG та повідомимо, коли настане час купувати.':
     'Find a game you want to buy and set your condition. We will check prices on Steam and GOG and tell you when it is time to buy.',
   'Імпортувати список бажаного Steam': 'Import Steam wishlist',
+  'Популярні знижки зараз — почни з них': 'Popular deals right now — start with these',
   'Умови сповіщення': 'Alert conditions',
   'Умови збережено': 'Conditions saved',
   'Завантажити таблицю з цінами': 'Download the price table',
