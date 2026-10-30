@@ -5,7 +5,7 @@
 import { post } from './api.js';
 import { getLang, locale, t, tp } from './i18n.js';
 import { go, state } from './app.js';
-import { $, gameHref, html, setHtml } from './ui.js';
+import { $, gameHref, html, raw, setHtml } from './ui.js';
 
 const STORE_KEY = 'zk-advisor';
 const TOOL_NAMES = {
@@ -16,6 +16,14 @@ const TOOL_NAMES = {
   search_store: 'пошук у Steam',
   get_my_watchlist: 'мій список',
 };
+
+// Іконка порадника: бульбашка розмови з іскрою всередині (колір — currentColor, тож пасує до будь-якої теми)
+export const ADVISOR_ICON = `<svg class="advisor-icon" viewBox="0 0 24 24" aria-hidden="true">
+  <path class="advisor-icon-bubble" d="M12 3.5c4.7 0 8.5 3.3 8.5 7.5s-3.8 7.5-8.5 7.5c-1 0-2-.15-2.9-.43L4.5 20l1.2-3.7C4.3 14.9 3.5 13 3.5 11c0-4.2 3.8-7.5 8.5-7.5Z" />
+  <path class="advisor-icon-spark" d="M12 6.8c.38 2.3 1.6 3.55 3.9 3.95-2.3.4-3.52 1.65-3.9 3.95-.38-2.3-1.6-3.55-3.9-3.95 2.3-.4 3.52-1.65 3.9-3.95Z" />
+  <path class="advisor-icon-spark is-small" d="M17.6 2.2c.17 1 .7 1.55 1.7 1.72-1 .17-1.53.72-1.7 1.72-.17-1-.7-1.55-1.7-1.72 1-.17 1.53-.72 1.7-1.72Z" />
+</svg>`;
+const CLOSE_ICON = '<svg class="advisor-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>';
 
 let messages = load(); // { role: 'user' | 'model' | 'error', text, meta? }
 let game = null; // гра, на сторінці якої людина зараз: { store, storeId, title }
@@ -114,12 +122,11 @@ function chips() {
 function renderFrame() {
   const panel = $('#advisor-panel');
   shownLang = getLang();
-  $('#advisor-fab').setAttribute('aria-label', t('ШІ-порадник'));
   setHtml(
     panel,
     html`
       <header class="advisor-top">
-        <span class="advisor-badge" aria-hidden="true">AI</span>
+        <span class="advisor-badge">${raw(ADVISOR_ICON)}</span>
         <div class="advisor-title">
           <h2 id="advisor-title">${t('ШІ-порадник')}</h2>
           <p id="advisor-context"></p>
@@ -216,7 +223,9 @@ export function syncAdvisor() {
     mounted = true;
     document.body.insertAdjacentHTML(
       'beforeend',
-      String(html`<button class="advisor-fab" type="button" id="advisor-fab" aria-expanded="false" aria-controls="advisor-panel">AI</button>
+      String(html`<button class="advisor-fab" type="button" id="advisor-fab" aria-expanded="false" aria-controls="advisor-panel">
+          <span class="advisor-fab-open">${raw(ADVISOR_ICON)}</span><span class="advisor-fab-close">${raw(CLOSE_ICON)}</span>
+        </button>
         <section class="advisor-panel" id="advisor-panel" role="dialog" aria-labelledby="advisor-title" hidden></section>`)
     );
     $('#advisor-fab').addEventListener('click', () => setOpen($('#advisor-panel').hidden));
@@ -249,7 +258,10 @@ export function syncAdvisor() {
     });
   }
   const enabled = Boolean(state.app?.ai);
-  $('#advisor-fab').hidden = !enabled;
+  const fab = $('#advisor-fab');
+  fab.hidden = !enabled;
+  fab.setAttribute('aria-label', t('ШІ-порадник'));
+  fab.title = t('ШІ-порадник');
   if (!enabled) setOpen(false);
   // Змінилася мова або людина увійшла/вийшла — перемальовуємо відкрите вікно
   else if (!$('#advisor-panel').hidden && (shownLang !== getLang() || Boolean($('#advisor-form')) !== Boolean(state.user))) renderFrame();

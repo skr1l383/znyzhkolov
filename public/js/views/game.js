@@ -4,9 +4,9 @@ import { get } from '../api.js';
 import { setBackdrop } from '../backdrop.js';
 import { getLang, locale, t } from '../i18n.js';
 import { go, state } from '../app.js';
-import { $, STORE_NAMES, formatMoney, formatUah, html, setHtml, toast } from '../ui.js';
+import { $, STORE_NAMES, formatMoney, formatUah, html, raw, setHtml, toast } from '../ui.js';
 import { openAddDialog } from './search.js';
-import { askAboutGame, setAdvisorGame } from '../advisor.js';
+import { ADVISOR_ICON, askAboutGame, setAdvisorGame } from '../advisor.js';
 import { commentsSection, mountComments } from './comments.js';
 import { mountRegional, regionalSection } from './regional.js';
 
@@ -197,7 +197,7 @@ export async function render(root, params) {
                     <p class="hint">${t('Повідомимо на сайті й у Telegram, щойно гра подешевшає до твоєї ціни.')}</p>`}
             </div>
             ${state.app.ai
-              ? html`<button class="btn btn-block advisor-cta" type="button" id="advisor-ask"><span class="advisor-badge" aria-hidden="true">AI</span>${t('Купувати зараз чи чекати?')}</button>`
+              ? html`<button class="btn btn-block advisor-cta" type="button" id="advisor-ask"><span class="advisor-badge">${raw(ADVISOR_ICON)}</span>${t('Купувати зараз чи чекати?')}</button>`
               : ''}
             ${g.publishers.length ? html`<p class="hint">${t('Видавець:')} ${g.publishers.join(', ')}</p>` : ''}
           </aside>
