@@ -8,7 +8,7 @@ import { HttpError, readUpload, sendFile } from '../http.js';
 import { tr, userLang } from '../i18n.js';
 import { log } from '../logger.js';
 import { publicUser, requireAuth } from '../auth.js';
-import { listFreebies } from '../services/epicFree.js';
+import { freebieStats, listFreebies, listPastFreebies } from '../services/epicFree.js';
 import { notifyUser } from '../services/notifier.js';
 import { runJob } from '../services/scheduler.js';
 import { listWatch, summarizeWatch } from '../services/watch.js';
@@ -168,6 +168,6 @@ export function profileRoutes(router) {
         // покажемо те, що є, і помилку в журналі
       }
     }
-    return { items: listFreebies(), lastCheck: getSetting('job:epic:last_run') };
+    return { items: listFreebies(), past: listPastFreebies(), stats: freebieStats(), lastCheck: getSetting('job:epic:last_run') };
   });
 }

@@ -24,6 +24,35 @@ export function listFreebies() {
     }));
 }
 
+/** Роздачі, що вже закінчились, — найсвіжіші першими. */
+export function listPastFreebies(limit = 12) {
+  return db
+    .prepare("SELECT * FROM epic_freebies WHERE status = 'ended' ORDER BY ends_at DESC LIMIT ?")
+    .all(limit)
+    .map((f) => ({
+      id: f.id,
+      title: f.title,
+      url: f.url,
+      imageUrl: f.image_url,
+      originalPrice: f.original_price,
+      currency: f.currency,
+      startsAt: f.starts_at,
+      endsAt: f.ends_at,
+      status: f.status,
+    }));
+}
+
+/** Скільки ігор Epic роздав (і роздає зараз), поки ми стежимо, і скільки вони коштували б у гривнях. */
+export function freebieStats() {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS count, SUM(CASE WHEN currency = 'UAH' THEN original_price END) AS total, MIN(first_seen_at) AS since
+       FROM epic_freebies WHERE status IN ('current', 'ended')`
+    )
+    .get();
+  return { count: row.count, totalUah: row.total || 0, since: row.since };
+}
+
 const dateText = (iso, lang) => (iso ? new Date(iso).toLocaleDateString(dateLocale(lang), { day: 'numeric', month: 'long' }) : '?');
 
 /** Текст сповіщення про роздачу мовою користувача. */

@@ -1004,3 +1004,15 @@ test('Вхід через Google: новий акаунт, повторний в
   assert.equal(r.location, '/#/login?google=failed');
   assert.equal(r.session, undefined);
 });
+
+test('Роздачі Epic: що зараз, що скоро, історія і скільки роздано', async () => {
+  const r = await admin('GET', '/api/epic');
+  assert.equal(r.status, 200);
+  // Демо-роздачі: дві поточні й одна майбутня
+  assert.equal(r.data.items.filter((f) => f.status === 'current').length, 2);
+  assert.equal(r.data.items.filter((f) => f.status === 'upcoming').length, 1);
+  assert.ok(Array.isArray(r.data.past));
+  assert.equal(r.data.stats.count, 2, 'рахуємо роздані й ті, що роздаються зараз, — без майбутніх');
+  assert.equal(r.data.stats.totalUah, 15000 + 27500);
+  assert.ok(r.data.stats.since);
+});

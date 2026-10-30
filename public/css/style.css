@@ -1338,6 +1338,287 @@ p {
   flex-wrap: wrap;
 }
 
+/* Велика картка роздачі, що йде зараз: обкладинка, таймер, кнопка «Забрати» */
+.epic-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.epic-now {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--good) 35%, var(--border));
+  border-radius: var(--radius);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+}
+
+.epic-hero.is-single .epic-now {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+}
+
+.epic-now-art .cover {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+.epic-now-body {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 12px;
+  padding: 22px 24px;
+}
+
+.epic-now-body h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  line-height: 1.15;
+}
+
+.epic-now-body .hint {
+  margin: 0;
+}
+
+.epic-save {
+  margin: 0;
+  color: var(--muted);
+}
+
+.epic-save b {
+  color: var(--good);
+}
+
+.epic-timer {
+  display: flex;
+  gap: 8px;
+}
+
+.epic-timer-cell {
+  display: grid;
+  justify-items: center;
+  min-width: 58px;
+  padding: 8px 6px 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.epic-timer-cell b {
+  font: 700 1.5rem/1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.epic-timer-cell small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.epic-now .btn {
+  min-height: 48px;
+  padding: 0 26px;
+  font-size: 16px;
+}
+
+/* Нижче: «Скоро» та історія ліворуч, корисні картки праворуч */
+.epic-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+.epic-main {
+  display: grid;
+  gap: 14px;
+}
+
+.epic-main .section-title {
+  margin-top: 4px;
+}
+
+.epic-side {
+  display: grid;
+  gap: 14px;
+}
+
+.epic-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.epic-card h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.epic-card .hint {
+  margin: 0;
+}
+
+.epic-stats {
+  grid-template-columns: 1fr 1fr;
+}
+
+.epic-stats > div {
+  display: grid;
+  gap: 2px;
+}
+
+.epic-stats b {
+  font: 700 1.6rem/1.1 var(--font-display);
+  color: var(--accent-strong);
+}
+
+.epic-stats span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.epic-stats .hint {
+  grid-column: 1 / -1;
+}
+
+.epic-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.epic-steps li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  column-gap: 10px;
+  counter-increment: step;
+}
+
+.epic-steps li::before {
+  content: counter(step);
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.epic-steps span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.epic-soon {
+  align-content: start;
+}
+
+.epic-soon-body {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.epic-soon h3,
+.epic-soon .hint {
+  margin: 0;
+}
+
+.epic-past-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 10px;
+}
+
+.epic-past {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  color: inherit;
+  text-decoration: none;
+}
+
+.epic-past:hover {
+  border-color: var(--accent);
+}
+
+.epic-past .cover {
+  flex: none;
+  width: 96px;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+}
+
+.epic-past-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.epic-past-text b {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.epic-past-text small {
+  color: var(--muted);
+}
+
+.epic-past-price {
+  flex: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .epic-hero.is-single .epic-now {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .epic-now-art .cover {
+    min-height: 0;
+  }
+  .epic-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .epic-timer-cell {
+    min-width: 0;
+    flex: 1;
+  }
+  .epic-now-body {
+    padding: 18px 16px;
+  }
+}
+
 /* ---------- Сповіщення ---------- */
 .notice-list {
   display: grid;
@@ -4877,6 +5158,21 @@ textarea.input {
   body.has-nav .toasts {
     bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   }
+  /* Кнопка ШІ-порадника — над нижньою панеллю навігації, а не поверх неї */
+  body.has-nav .advisor-fab {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Планшет: вікно чату над кнопкою (на телефоні воно й так на весь екран) */
+@media (min-width: 601px) and (max-width: 760px) {
+  body.has-nav .advisor-panel {
+    bottom: calc(146px + env(safe-area-inset-bottom, 0px));
+    height: min(560px, calc(100dvh - var(--topbar-h) - 170px));
+  }
+}
+
+@media (max-width: 760px) {
   .container {
     padding-block: 20px 48px;
   }
