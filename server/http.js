@@ -230,10 +230,12 @@ function serveStatic(publicDir, pathname, req, res) {
   const isHtml = ext === '.html';
   const isSw = path.basename(file) === 'sw.js';
   // Код і стилі браузер щоразу звіряє з сервером (304, якщо файл не змінився) — нова версія сайту видна одразу.
-  // Картинки й шрифти змінюються рідко, їх можна тримати 5 хвилин без перевірки.
+  // Картинки змінюються рідко, їх можна тримати 5 хвилин без перевірки, а шрифти — рік:
+  // файл шрифту не змінюється ніколи (нова версія — нова назва файлу).
   const isCode = isHtml || isSw || ext === '.js' || ext === '.css' || ext === '.webmanifest';
   const etag = `"${stat.size.toString(36)}-${Math.floor(stat.mtimeMs).toString(36)}"`;
-  const cacheHeaders = { ETag: etag, 'Cache-Control': isCode ? 'no-cache' : 'public, max-age=300' };
+  const cache = isCode ? 'no-cache' : ext === '.woff2' ? 'public, max-age=31536000, immutable' : 'public, max-age=300';
+  const cacheHeaders = { ETag: etag, 'Cache-Control': cache };
   if (req.headers['if-none-match'] === etag) {
     res.writeHead(304, cacheHeaders);
     res.end();

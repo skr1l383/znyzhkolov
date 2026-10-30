@@ -3675,6 +3675,18 @@ textarea.input {
   display: flex;
 }
 
+/* Місце під банер і роздачі Epic, поки вони вантажаться, — інакше фільтри й ігри «стрибають» униз */
+.hero-slot:empty {
+  height: clamp(260px, 34vw, 400px);
+  margin: -8px 0 24px;
+  border-radius: calc(var(--radius) + 4px);
+  background: var(--surface-2);
+}
+
+.freebies-slot:empty {
+  min-height: 147px;
+}
+
 /* Крапка 10px, а натискати можна на 24×24 (поле навколо — прозорий padding): зручно пальцем */
 .hero-dots button {
   box-sizing: content-box;
@@ -3699,6 +3711,10 @@ textarea.input {
     height: 300px;
     margin-top: -4px;
     border-radius: var(--radius);
+  }
+  .hero-slot:empty {
+    height: 300px;
+    margin-top: -4px;
   }
   .hero-arrow {
     display: none; /* на телефоні — свайп */

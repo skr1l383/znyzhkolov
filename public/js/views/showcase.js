@@ -351,7 +351,7 @@ export async function render(root, params) {
   setHtml(
     root,
     html`
-      <div id="hero"></div>
+      <div id="hero" class="hero-slot"></div>
       <div class="page-head">
         <div>
           <h1>${t('Знижки зараз')}</h1>
@@ -366,7 +366,7 @@ export async function render(root, params) {
         : html`<p class="intro">
             ${t('Знижколов стежить за цінами в Steam і GOG. Натисни «Стежити» на будь-якій грі — і ми повідомимо на сайті й у Telegram, щойно вона подешевшає до твоєї ціни.')}
           </p>`}
-      <div id="freebies"></div>
+      <div id="freebies" class="freebies-slot"></div>
 
       <form class="filters" role="search" aria-label="${t('Фільтри вітрини')}">
         <div class="filters-top">
@@ -500,6 +500,7 @@ export async function render(root, params) {
       .filter(Boolean)
       .join(' · ');
     setHtml($('#freebies', root), freebiesStrip(data.freebies));
+    $('#freebies', root).classList.remove('freebies-slot');
     draw();
     if (!heroShown) loadHero();
   }
@@ -593,11 +594,16 @@ export async function render(root, params) {
 
   // Банер вантажимо окремо: він не залежить від фільтрів і не перемальовується при їх зміні
   let heroShown = false;
+  let heroBusy = false;
   let stopHero = () => {};
   async function loadHero() {
+    if (heroBusy) return;
+    heroBusy = true;
     try {
       const { items: featured } = await get('/api/deals/featured');
-      if (!featured.length || !root.isConnected) return;
+      if (!root.isConnected) return;
+      // Банера немає — прибираємо зарезервоване під нього місце
+      if (!featured.length) return $('#hero', root).classList.remove('hero-slot');
       heroShown = true;
       stopHero();
       stopHero = mountHero($('#hero', root), featured, (d, button) =>
@@ -610,9 +616,14 @@ export async function render(root, params) {
       );
     } catch {
       // без банера вітрина однаково працює
+      $('#hero', root)?.classList.remove('hero-slot');
+    } finally {
+      heroBusy = false;
     }
   }
 
+  // Банер і вітрину вантажимо одночасно: банер — найбільша картинка сторінки, хай з'являється якнайраніше
+  loadHero();
   await load();
   return () => {
     clearTimeout(pollTimer);
