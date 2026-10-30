@@ -8,7 +8,7 @@
 // Будь-яка зміна цього файлу (наприклад, версії) змушує браузер встановити service worker заново.
 // v2: перша версія могла встановитися із суворою CSP і блокувати обкладинки — нова її замінює.
 // v4: додано файли перекладу (i18n). v5: при 503 (база недоступна) — збережені дані. v6: коментарі. v7: карта цін. v10: вхід через Google повз service worker.
-const VERSION = 'v11';
+const VERSION = 'v12';
 const SHELL_CACHE = `zk-shell-${VERSION}`;
 const API_CACHE = 'zk-api'; // очищається при виході з акаунта
 const IMAGE_CACHE = 'zk-images';
@@ -27,6 +27,7 @@ const SHELL = [
   '/img/icon-192.png',
   '/js/theme-init.js',
   '/js/app.js',
+  '/js/advisor.js',
   '/js/api.js',
   '/js/backdrop.js',
   '/js/ui.js',
@@ -35,7 +36,6 @@ const SHELL = [
   '/js/chart.js',
   '/js/worldmap.js',
   '/js/views/account.js',
-  '/js/views/advisor.js',
   '/js/views/admin.js',
   '/js/views/auth.js',
   '/js/views/comments.js',

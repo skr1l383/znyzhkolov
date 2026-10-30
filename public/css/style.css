@@ -3218,58 +3218,129 @@ textarea.input {
   justify-items: start;
 }
 
-/* ---- ШІ-порадник на сторінці гри ---- */
-.advisor {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
-  border-radius: var(--radius-sm);
-  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%), var(--surface-2);
+/* ---- ШІ-порадник: кнопка в куті й вікно чату ---- */
+.advisor-cta {
+  gap: 8px;
 }
 
-.advisor-head {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.advisor-head h2 {
-  margin: 0;
-  font-size: 15px;
-}
-
-.advisor-head .hint {
-  margin: 2px 0 0;
+.advisor-cta .advisor-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 10px;
 }
 
 .advisor-badge {
   flex: none;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 9px;
   background: var(--accent);
   color: var(--on-accent);
   font: 700 12px/1 var(--font-display);
 }
 
-.advisor-log {
-  display: grid;
-  gap: 8px;
-  max-height: 420px;
-  overflow-y: auto;
-  scrollbar-width: thin;
+.advisor-fab {
+  position: fixed;
+  z-index: 40;
+  right: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 16px/1 var(--font-display);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.28);
+  cursor: pointer;
+  transition: transform 0.15s ease;
 }
 
-.advisor-log:empty {
+.advisor-fab:hover {
+  transform: translateY(-2px);
+}
+
+.advisor-fab:focus-visible {
+  outline: none;
+  box-shadow: var(--ring), 0 8px 24px rgb(0 0 0 / 0.28);
+}
+
+.advisor-fab[aria-expanded='true'] {
+  background: var(--surface-2);
+  color: var(--fg);
+}
+
+.advisor-fab[hidden],
+.advisor-panel[hidden] {
   display: none;
 }
 
+.advisor-panel {
+  position: fixed;
+  z-index: 40;
+  right: 20px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  width: min(400px, calc(100vw - 40px));
+  height: min(600px, calc(100dvh - var(--topbar-h) - 110px));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.35);
+  overflow: hidden;
+}
+
+.advisor-top {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 10px 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+}
+
+.advisor-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.advisor-title h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.advisor-title p {
+  margin: 1px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.advisor-top .icon-btn {
+  flex: none;
+  font-size: 22px;
+}
+
+.advisor-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
 .advisor-msg {
-  padding: 9px 11px;
-  border-radius: 10px;
+  max-width: 92%;
+  padding: 9px 12px;
+  border-radius: 12px;
   font-size: 14px;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -3280,24 +3351,30 @@ textarea.input {
   margin: 0 0 6px;
 }
 
+.advisor-msg > :last-child {
+  margin-bottom: 0;
+}
+
 .advisor-msg ul {
   padding-left: 18px;
 }
 
-.advisor-msg p:first-child {
+.advisor-msg a {
+  color: var(--accent-strong);
   font-weight: 700;
 }
 
 .advisor-msg.is-user {
-  justify-self: end;
-  max-width: 90%;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
   background: var(--accent);
   color: var(--on-accent);
 }
 
 .advisor-msg.is-ai {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  background: var(--surface-2);
 }
 
 .advisor-msg.is-thinking {
@@ -3305,6 +3382,7 @@ textarea.input {
   gap: 8px;
   align-items: center;
   color: var(--muted);
+  background: var(--surface-2);
 }
 
 .advisor-msg.is-error {
@@ -3330,23 +3408,97 @@ textarea.input {
   display: flex;
   flex-wrap: wrap;
   gap: 2px 10px;
-  margin: 6px 0 0 !important;
-  font-weight: 400 !important;
-  font-size: 12px;
+  margin: 8px 0 0 !important;
   color: var(--muted);
+  font-size: 12px;
 }
 
-.advisor-form {
+.advisor-chips {
   display: flex;
   gap: 6px;
+  padding: 0 14px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.advisor-form input {
+.advisor-chips:empty {
+  display: none;
+}
+
+.advisor-chip {
+  flex: none;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.advisor-chip:hover {
+  border-color: var(--accent);
+}
+
+.advisor-form,
+.advisor-guest {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.advisor-guest {
+  display: grid;
+}
+
+.advisor-guest .hint {
+  margin: 0;
+}
+
+.advisor-form .input {
   flex: 1;
   min-width: 0;
 }
 
+.advisor-form .btn {
+  flex: none;
+  width: 44px;
+  padding: 0;
+}
+
+@media (max-width: 600px) {
+  /* На телефоні чат займає весь екран, а кнопка ховається під ним */
+  .advisor-panel {
+    inset: 0;
+    width: auto;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .advisor-open .advisor-fab {
+    display: none;
+  }
+  .advisor-fab {
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    width: 50px;
+    height: 50px;
+    border-radius: 16px;
+  }
+}
+
+@media print {
+  .advisor-fab,
+  .advisor-panel {
+    display: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .advisor-fab {
+    transition: none;
+  }
   .advisor-dots {
     animation: none;
     clip-path: none;

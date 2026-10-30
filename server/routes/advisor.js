@@ -1,4 +1,4 @@
-// ШІ-порадник на сторінці гри: POST /api/advisor.
+// ШІ-порадник (чат у кутку сайту): POST /api/advisor.
 // Відповідь містить модель і кількість токенів; якщо ШІ недоступний — 503 з поясненням, решта сайту працює.
 import { requireAuth } from '../auth.js';
 import { HttpError, templateError } from '../http.js';
@@ -36,10 +36,11 @@ export function advisorRoutes(router) {
   router.post('/api/advisor', async (ctx) => {
     requireAuth(ctx);
     const body = ctx.body || {};
-    const store = String(body.store || '');
-    const storeId = String(body.id || '');
-    if (!['steam', 'gog'].includes(store) || !/^\d{1,12}$/.test(storeId)) throw new HttpError(404, 'Гру не знайдено');
-    const question = v.text(body.question ?? '', { field: 'question', label: 'Питання', max: 500, required: false });
+    // Гра — та, на сторінці якої людина зараз; поза сторінкою гри її немає, і тоді потрібне питання
+    const store = body.store ? String(body.store) : null;
+    const storeId = body.store ? String(body.id || '') : null;
+    if (store && (!['steam', 'gog'].includes(store) || !/^\d{1,12}$/.test(storeId))) throw new HttpError(404, 'Гру не знайдено');
+    const question = v.text(body.question ?? '', { field: 'question', label: 'Питання', max: 500, required: !store });
     // Попередні репліки розмови: не більше 6 і обмеженої довжини — щоб не роздувати запит до моделі
     const history = (Array.isArray(body.history) ? body.history : [])
       .slice(-6)

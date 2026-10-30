@@ -1,4 +1,5 @@
 // Головний модуль інтерфейсу: стан користувача, навігація між сторінками, тема.
+import { syncAdvisor } from './advisor.js';
 import { get, patch, post } from './api.js';
 import { setPageBackdrop } from './backdrop.js';
 import { LANGS, getLang, setLang, t, translateStatic } from './i18n.js';
@@ -103,6 +104,7 @@ function renderChrome(activeNav) {
   $('#nav-profile').hidden = !loggedIn;
   $('#nav-admin').hidden = state.user?.role !== 'admin';
   $('#demo-banner').hidden = !state.app.demo;
+  syncAdvisor(); // кнопка ШІ-порадника в кутку
   // Нагадування про непідтверджену пошту (можна сховати до кінця сеансу)
   let hidden = false;
   try {

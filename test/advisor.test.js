@@ -122,6 +122,7 @@ test('Вердикт: розумна модель сама викликає ін
     'get_price_history',
     'get_steam_key_offers',
     'search_deals',
+    'search_store',
     'get_my_watchlist',
   ]);
   assert.match(first.body.systemInstruction.parts[0].text, new RegExp(`store_id: ${game.storeId}`));
@@ -133,6 +134,24 @@ test('Вердикт: розумна модель сама викликає ін
   assert.equal(prices.response.title, game.title);
   assert.equal(prices.response.offers[0].price_uah, Math.round(game.priceUah / 100));
   assert.ok(third.body.contents[4].parts[0].functionResponse.response.points.length > 0, 'історія цін з вітрини');
+});
+
+test('Чат поза сторінкою гри: потрібне питання, модель шукає ігри в Steam і на вітрині', async () => {
+  gemini.requests = [];
+  let r = await alice('POST', '/api/advisor', { question: '' });
+  assert.equal(r.status, 400, 'без гри й без питання нема про що відповідати');
+  assert.equal(r.data.details.field, 'question');
+
+  gemini.replies = [callTool('search_store', { query: 'Hades' }), callTool('search_deals', { max_price_uah: 300 }), say('Раджу [Hades](steam:1145360)')];
+  r = await alice('POST', '/api/advisor', { question: 'Порадь щось схоже на Hollow Knight до 300 гривень' });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.model, 'light-model');
+  assert.deepEqual(r.data.tools, ['search_store', 'search_deals']);
+  assert.match(gemini.requests[0].body.systemInstruction.parts[0].text, /не на сторінці конкретної гри/);
+  const found = gemini.requests[1].body.contents.at(-1).parts[0].functionResponse.response.results;
+  assert.ok(found.some((g) => g.title === 'Hades' && g.store_id === '1145360' && g.price_uah > 0), 'пошук у Steam (демо-магазин)');
+  const cheap = gemini.requests[2].body.contents.at(-1).parts[0].functionResponse.response.deals;
+  assert.ok(cheap.length && cheap.every((d) => d.price_uah <= 300), 'вітрина з обмеженням ціни');
 });
 
 test('Уточнення в розмові відповідає легка модель; репліки з підробленою роллю стають репліками користувача', async () => {
