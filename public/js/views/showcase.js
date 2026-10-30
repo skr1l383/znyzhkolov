@@ -104,7 +104,7 @@ function heroSlide(d, i, count) {
   return html`
     <article class="hero-slide ${i === 0 ? 'active' : ''}" aria-roledescription="${t('слайд')}" aria-label="${t('{n} з {count}', { n: i + 1, count })}: ${d.title}"
       aria-hidden="${String(i !== 0)}" data-title="${d.title}">
-      <img class="cover hero-img" ${i === 0 ? html`src="${d.heroImage}"` : html`data-src="${d.heroImage}"`}
+      <img class="cover hero-img" ${i === 0 ? html`src="${d.heroImage}" fetchpriority="high"` : html`data-src="${d.heroImage}"`}
         data-fallback="${d.heroFallback || ''}" alt="" referrerpolicy="no-referrer" />
       <div class="hero-shade"></div>
       <div class="hero-content">

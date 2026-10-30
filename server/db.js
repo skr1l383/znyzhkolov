@@ -229,6 +229,7 @@ const ADDED_COLUMNS = [
   ['notifications', 'sent_email', 'INTEGER NOT NULL DEFAULT 0'],
   ['deals', 'genres', 'TEXT'], // жанри вітрини у вигляді ",action,rpg," — так їх зручно шукати через LIKE
   ['deals', 'companies', 'TEXT'], // розробники й видавці, по одному в рядку
+  ['deals', 'hero_url', 'TEXT'], // широка картинка для банера на головній
 ];
 
 /** Нік для порівняння: без пробілів на краях і без різниці в регістрі (і для кирилиці). */

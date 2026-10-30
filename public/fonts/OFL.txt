@@ -1,0 +1,5 @@
+Manrope — Copyright 2018 The Manrope Project Authors (https://github.com/sharanda/manrope)
+Unbounded — Copyright 2022 The Unbounded Project Authors (https://github.com/googlefonts/unbounded)
+
+Шрифти поширюються за ліцензією SIL Open Font License 1.1: https://openfontlicense.org
+Файли — підмножини (кирилиця й латиниця) з Google Fonts, без змін.

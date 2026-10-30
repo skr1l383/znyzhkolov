@@ -45,7 +45,14 @@ export function uniqueCompanies(...lists) {
   return [...seen.values()];
 }
 
-/** Відповідь IStoreBrowseService/GetItems → appid → { genres, companies }. */
+// У нових ігор картинки лежать у папках з хешем (…/apps/4348910/b241a3…/header.jpg),
+// тож «вгадати» адресу з appid не вийде — беремо точну з відповіді Steam
+const assetUrl = (assets, name) =>
+  assets?.asset_url_format && assets[name]
+    ? `https://shared.akamai.steamstatic.com/store_item_assets/${assets.asset_url_format.replace('${FILENAME}', assets[name])}`
+    : null;
+
+/** Відповідь IStoreBrowseService/GetItems → appid → { genres, companies, imageUrl?, heroUrl? }. */
 export function parseSteamExtras(json) {
   const result = new Map();
   for (const item of json?.response?.store_items || []) {
@@ -54,19 +61,21 @@ export function parseSteamExtras(json) {
     result.set(String(item.appid), {
       genres: genresFromSteamTags(item.tagids || (item.tags || []).map((t) => t.tagid)),
       companies: uniqueCompanies((info.developers || []).map((d) => d.name), (info.publishers || []).map((p) => p.name)),
+      ...(assetUrl(item.assets, 'header') && { imageUrl: assetUrl(item.assets, 'header') }),
+      ...(assetUrl(item.assets, 'library_hero') && { heroUrl: assetUrl(item.assets, 'library_hero') }),
     });
   }
   return result;
 }
 
-/** Жанри й студії для ігор вітрини Steam: публічний API Steam, по 50 ігор за запит. */
+/** Жанри, студії й точні адреси картинок для ігор вітрини Steam: публічний API Steam, по 50 ігор за запит. */
 export async function fetchSteamExtras(appIds) {
   const result = new Map();
   for (let i = 0; i < appIds.length; i += 50) {
     const input = {
       ids: appIds.slice(i, i + 50).map((id) => ({ appid: Number(id) })),
       context: { language: 'english', country_code: config.stores.steamCountry },
-      data_request: { include_basic_info: true, include_tag_count: 20 },
+      data_request: { include_basic_info: true, include_tag_count: 20, include_assets: true },
     };
     const json = await fetchJson('Steam', `${config.steam.apiBase}/IStoreBrowseService/GetItems/v1/?input_json=${encodeURIComponent(JSON.stringify(input))}`);
     for (const [id, extra] of parseSteamExtras(json)) result.set(id, extra);

@@ -205,7 +205,8 @@ function updateLangButton() {
   const btn = $('#lang-toggle');
   const other = getLang() === 'uk' ? 'en' : 'uk';
   btn.textContent = LANGS[other].short;
-  btn.setAttribute('aria-label', other === 'en' ? 'Switch to English' : 'Перемкнути на українську');
+  // Назва кнопки для читачів екрана починається з видимого напису (EN), як радить WCAG
+  btn.setAttribute('aria-label', `${LANGS[other].short} — ${other === 'en' ? 'Switch to English' : 'Перемкнути на українську'}`);
   btn.title = btn.getAttribute('aria-label');
 }
 

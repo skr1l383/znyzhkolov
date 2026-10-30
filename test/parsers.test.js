@@ -357,10 +357,17 @@ test('Жанри: теги Steam і жанри GOG зводяться до од�
           tagids: [1628, 1625, 19, 492, 4026],
           basic_info: { developers: [{ name: 'Team Cherry' }], publishers: [{ name: 'Team Cherry' }] },
         },
-        { appid: 10, tags: [{ tagid: 1663 }, { tagid: 1667 }] },
+        {
+          appid: 10,
+          tags: [{ tagid: 1663 }, { tagid: 1667 }],
+          assets: { asset_url_format: 'steam/apps/10/${FILENAME}?t=1', header: 'ab12/header_alt.jpg', library_hero: 'cd34/library_hero.jpg' },
+        },
       ],
     },
   });
+  // Точні адреси картинок: у нових ігор вони в папці з хешем
+  assert.equal(steam.get('10').imageUrl, 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/10/ab12/header_alt.jpg?t=1');
+  assert.equal(steam.get('10').heroUrl, 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/10/cd34/library_hero.jpg?t=1');
   assert.deepEqual(steam.get('367520'), { genres: ['action', 'platformer', 'indie'], companies: ['Team Cherry'] });
   assert.deepEqual(steam.get('10').genres, ['shooter', 'horror'], 'FPS — це шутер');
   assert.deepEqual(genresFromGog({ genres: [{ slug: 'role-playing' }], tags: [{ slug: 'open-world' }, { slug: 'fantasy' }] }), ['rpg', 'openworld']);

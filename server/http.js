@@ -47,8 +47,8 @@ const SECURITY_HEADERS = {
   'Content-Security-Policy': [
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     "img-src 'self' data: https:",
     // Трейлери Steam (HLS) завантажує hls.js і програє через blob:, трейлери GOG — вбудований YouTube
     "connect-src 'self' https://video.akamai.steamstatic.com",

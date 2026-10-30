@@ -17,20 +17,23 @@ function saveStore(store, deals, rate) {
     db.prepare('DELETE FROM deals WHERE store = ?').run(store);
     const insert = db.prepare(
       `INSERT OR IGNORE INTO deals (store, store_id, title, search_title, url, image_url, image_fallback, currency, price, base_price,
-         discount, price_uah, base_price_uah, rating, rank, updated_at, genres, companies)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         discount, price_uah, base_price_uah, rating, rank, updated_at, genres, companies, hero_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     deals.forEach((d, i) => {
       insert.run(d.store, d.storeId, d.title, normalizeTitle(d.title), d.url, d.imageUrl, d.imageFallback || null, d.currency, d.price, d.basePrice,
         d.discount, toUah(d.price, d.currency, rate), toUah(d.basePrice, d.currency, rate), d.rating, i + 1, at,
-        d.genres?.length ? `,${d.genres.join(',')},` : null, d.companies?.length ? d.companies.join('\n') : null);
+        d.genres?.length ? `,${d.genres.join(',')},` : null, d.companies?.length ? d.companies.join('\n') : null, d.heroUrl || null);
     });
     recordDealPrices(deals, at);
   });
   setSetting(`deals:${store}:updated_at`, at);
 }
 
-/** Сторінка знижок Steam не містить жанрів і студій — догружаємо їх окремо. Не вийшло — вітрина буде без них. */
+/**
+ * Сторінка знижок Steam не містить жанрів, студій і точних адрес картинок — догружаємо їх окремо.
+ * Не вийшло — вітрина буде без них, а картинки візьмемо за стандартною адресою.
+ */
 async function withSteamExtras(deals) {
   try {
     const extras = await fetchSteamExtras(deals.map((d) => d.storeId));
@@ -175,7 +178,7 @@ function dealItem(r, watching) {
 
 /** Широка картинка для банера: у Steam — «library_hero» 1920×620, у GOG — обкладинка 1020×574. */
 function heroImage(r) {
-  if (r.store === 'steam') return `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${r.store_id}/library_hero.jpg`;
+  if (r.store === 'steam') return r.hero_url || `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${r.store_id}/library_hero.jpg`;
   return r.image_url?.replace(/_product_tile_398_2x\.jpg$/, '_ggvgm_2x.jpg') || r.image_url;
 }
 

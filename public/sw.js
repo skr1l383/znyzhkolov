@@ -8,7 +8,7 @@
 // Будь-яка зміна цього файлу (наприклад, версії) змушує браузер встановити service worker заново.
 // v2: перша версія могла встановитися із суворою CSP і блокувати обкладинки — нова її замінює.
 // v4: додано файли перекладу (i18n). v5: при 503 (база недоступна) — збережені дані. v6: коментарі. v7: карта цін.
-const VERSION = 'v8';
+const VERSION = 'v9';
 const SHELL_CACHE = `zk-shell-${VERSION}`;
 const API_CACHE = 'zk-api'; // очищається при виході з акаунта
 const IMAGE_CACHE = 'zk-images';
@@ -19,6 +19,10 @@ const SHELL = [
   '/',
   '/manifest.webmanifest',
   '/css/style.css',
+  '/fonts/manrope-cyrillic.woff2',
+  '/fonts/manrope-latin.woff2',
+  '/fonts/unbounded-cyrillic.woff2',
+  '/fonts/unbounded-latin.woff2',
   '/img/icon.svg',
   '/img/icon-192.png',
   '/js/theme-init.js',
@@ -49,7 +53,7 @@ const SHELL = [
   '/js/views/watchlist.js',
 ];
 
-const CACHED_HOSTS = ['steamstatic.com', 'gog-statics.com', 'epicgames.com', 'ytimg.com', 'youtube.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+const CACHED_HOSTS = ['steamstatic.com', 'gog-statics.com', 'epicgames.com', 'ytimg.com', 'youtube.com'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
