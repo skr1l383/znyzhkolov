@@ -1671,6 +1671,337 @@ p {
   color: var(--muted);
 }
 
+/* ---------- Пошук: великий блок угорі й підказки, поки нічого не шукаємо ---------- */
+.search-hero {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 26px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
+    var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow);
+}
+
+.search-hero.is-compact {
+  gap: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.search-hero-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.search-hero-head h1 {
+  margin: 0;
+}
+
+.search-hero-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.search-hero-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: var(--advisor-gradient);
+  color: #fff;
+  box-shadow: 0 8px 22px color-mix(in srgb, #f2762e 35%, transparent);
+}
+
+.search-hero-icon svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.search-hero.is-compact .search-hero-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+}
+
+.search-hero .search-bar {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  margin: 0;
+}
+
+.search-hero .search-bar .btn {
+  min-height: 50px;
+  padding: 0 24px;
+}
+
+.search-hero .suggestions {
+  align-items: center;
+}
+
+.search-hero .suggestions .hint {
+  margin: 0 4px 0 0;
+}
+
+.suggestion {
+  color: var(--fg);
+  text-decoration: none;
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+
+.suggestion:hover {
+  border-color: var(--accent);
+}
+
+.how-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.how-steps li {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.how-steps span:not(.how-icon) {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.how-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-size: 21px;
+}
+
+.import-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border: 1px solid color-mix(in srgb, var(--steam) 45%, var(--border));
+  border-radius: var(--radius);
+  background:
+    linear-gradient(110deg, color-mix(in srgb, var(--steam) 18%, transparent), transparent 60%),
+    var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.import-card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.import-card p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+/* ---------- Сповіщення: дні, фільтр, обкладинки, канали ---------- */
+.notice-filter {
+  justify-self: start;
+  margin-bottom: 4px;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+}
+
+.notice-filter .count {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.notice-day {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#notice-days {
+  display: grid;
+  gap: 10px;
+}
+
+.notice {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.notice-deal .notice-icon {
+  background: color-mix(in srgb, #f2762e 18%, var(--surface-2));
+}
+
+.notice-epic .notice-icon {
+  background: color-mix(in srgb, var(--good) 18%, var(--surface-2));
+}
+
+.notice-cover .cover {
+  width: 116px;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+}
+
+.notice-meta a {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.notice-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 48px 24px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.notice-empty h2,
+.notice-empty p {
+  margin: 0;
+}
+
+.notice-empty p {
+  max-width: 440px;
+  color: var(--muted);
+}
+
+.notice-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 6px;
+  border-radius: 22px;
+  background: var(--advisor-gradient);
+  color: #fff;
+  box-shadow: 0 10px 28px color-mix(in srgb, #f2762e 35%, transparent);
+}
+
+.notice-empty-icon svg {
+  width: 34px;
+  height: 34px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.notify-channels,
+.notice-kinds {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notify-channel {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.notify-channel-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 17px;
+}
+
+.notify-channel-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.notify-channel-text small {
+  overflow: hidden;
+  color: var(--muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.notify-channel-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--good);
+  box-shadow: 0 0 0 4px var(--good-bg);
+}
+
+.notice-kinds li {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.notice-kinds li > span {
+  flex: none;
+}
+
+@media (max-width: 760px) {
+  .search-hero {
+    padding: 18px;
+  }
+  .search-hero .search-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .how-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .notice {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+  .notice-cover {
+    display: none;
+  }
+}
+
 /* ---------- Профіль ---------- */
 .ico {
   width: 18px;

@@ -16,10 +16,10 @@ export async function notifyUser(user, { kind, gameId = null, title, body, html,
   const button = url ? { label: buttonLabel || tr(lang, kind === 'epic' ? 'Забрати в Epic Games' : 'Відкрити в магазині'), url } : null;
   const info = db
     .prepare(
-      `INSERT INTO notifications (user_id, game_id, kind, title, body, url, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO notifications (user_id, game_id, kind, title, body, url, image_url, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(user.id, gameId, kind, title, body || null, url || null, now());
+    .run(user.id, gameId, kind, title, body || null, url || null, image || null, now());
 
   let sent = false;
   if (user.telegram_chat_id) {

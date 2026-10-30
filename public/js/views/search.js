@@ -18,6 +18,8 @@ import {
   withLoading,
 } from '../ui.js';
 import { conditionsFields, readConditions } from './conditions.js';
+import { dealCard } from './showcase.js';
+import { steamImportDialog } from './steamImport.js';
 
 const STORES = ['steam', 'gog'];
 const SUGGESTIONS = ['Hades', 'Stardew Valley', 'Hollow Knight', 'Cyberpunk 2077', 'The Witcher 3', 'Terraria'];
@@ -140,44 +142,108 @@ export async function openAddDialog(offer, { onAdded } = {}) {
   });
 }
 
+/**
+ * Поки нічого не шукаємо: як працює стеження, імпорт зі Steam і популярні знижки,
+ * за якими можна почати стежити одним натиском.
+ */
+async function discover(box) {
+  const steps = [
+    ['🔍', t('Знайди гру'), t('У Steam або GOG — ту саму гру в іншому магазині підберемо самі.')],
+    ['🎯', t('Вкажи умову'), t('Знижка від якогось відсотка або ціна, нижче якої ти готовий купити.')],
+    ['🔔', t('Отримай сповіщення'), t('Щойно ціна підійде — напишемо на сайті, у Telegram і на пошту.')],
+  ];
+  setHtml(
+    box,
+    html`
+      <ol class="how-steps">
+        ${steps.map(([icon, title, text]) => html`<li><span class="how-icon" aria-hidden="true">${icon}</span><b>${title}</b><span>${text}</span></li>`)}
+      </ol>
+      <section class="import-card">
+        <div>
+          <h2>${t('Маєш список бажаного в Steam?')}</h2>
+          <p>${t('Встав посилання на профіль — і стеж за всіма іграми зі списку за хвилину.')}</p>
+        </div>
+        <button class="btn btn-primary" type="button" id="search-steam-import">${t('Імпортувати зі Steam')}</button>
+      </section>
+      <section class="starter">
+        <h2>${t('Популярні знижки зараз')}</h2>
+        <div class="deal-grid" id="search-deals">${Array.from({ length: 6 }, () => html`<div class="skeleton deal-skeleton"></div>`)}</div>
+      </section>
+    `
+  );
+  $('#search-steam-import', box).addEventListener('click', () => steamImportDialog(() => go('#/list')));
+
+  const grid = $('#search-deals', box);
+  let deals = [];
+  try {
+    deals = (await get('/api/deals/featured')).items;
+    if (!grid.isConnected) return;
+    if (!deals.length) throw new Error('empty');
+    setHtml(grid, html`${deals.map(dealCard)}`);
+  } catch {
+    grid.closest('.starter')?.remove(); // вітрина ще не завантажилась — без добірки
+    return;
+  }
+  grid.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-watch]');
+    if (!btn) return;
+    openAddDialog(deals[Number(btn.dataset.watch)], {
+      onAdded: () => {
+        btn.replaceWith(Object.assign(document.createElement('span'), { className: 'pill pill-good', textContent: t('У списку') }));
+      },
+    });
+  });
+}
+
 export async function render(root, params) {
   const storeName = STORES.includes(params.store) ? params.store : 'steam';
   const q = (params.q || '').trim();
   const linkId = params.link ? Number(params.link) : null;
+  const hashFor = (query, store) => {
+    const p = new URLSearchParams({ q: query, store });
+    if (linkId) p.set('link', String(linkId));
+    return `#/search?${p}`;
+  };
 
   setHtml(
     root,
     html`
-      <div class="page-head">
-        <div>
-          <h1>${linkId ? t('Додати магазин до гри') : t('Знайти гру')}</h1>
-          <p>${linkId
-            ? t('Знайди цю гру в іншому магазині, щоб порівнювати ціни.')
-            : t('Шукай у Steam або GOG. Ту саму гру в іншому магазині ми спробуємо знайти автоматично.')}</p>
+      <section class="search-hero ${q ? 'is-compact' : ''}">
+        <div class="search-hero-head">
+          <span class="search-hero-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          </span>
+          <div>
+            <h1>${linkId ? t('Додати магазин до гри') : t('Знайти гру')}</h1>
+            <p>${linkId
+              ? t('Знайди цю гру в іншому магазині, щоб порівнювати ціни.')
+              : t('Шукай у Steam або GOG. Ту саму гру в іншому магазині ми спробуємо знайти автоматично.')}</p>
+          </div>
         </div>
-        <div class="segmented" role="group" aria-label="${t('Магазин')}">
-          ${STORES.map(
-            (s) => html`<button type="button" data-store="${s}" aria-pressed="${s === storeName}">${STORE_NAMES[s]}</button>`
-          )}
-        </div>
-      </div>
-      <form class="search-bar" role="search">
-        <label class="visually-hidden" for="search-q">${t('Назва гри')}</label>
-        <input class="input" id="search-q" name="q" type="search" placeholder="${t('Назва гри, наприклад Hades')}" value="${q}"
-          minlength="2" maxlength="80" autocomplete="off" />
-        <button class="btn btn-primary" type="submit">${t('Шукати')}</button>
-      </form>
+        <form class="search-bar" role="search">
+          <div class="segmented" role="group" aria-label="${t('Магазин')}">
+            ${STORES.map(
+              (s) => html`<button type="button" data-store="${s}" aria-pressed="${s === storeName}">${STORE_NAMES[s]}</button>`
+            )}
+          </div>
+          <label class="visually-hidden" for="search-q">${t('Назва гри')}</label>
+          <input class="input" id="search-q" name="q" type="search" placeholder="${t('Назва гри, наприклад Hades')}" value="${q}"
+            minlength="2" maxlength="80" autocomplete="off" />
+          <button class="btn btn-primary" type="submit">${t('Шукати')}</button>
+        </form>
+        ${q || linkId
+          ? ''
+          : html`<div class="suggestions">
+              <span class="hint">${t('Популярне:')}</span>
+              ${SUGGESTIONS.map((s) => html`<a class="chip suggestion" href="${hashFor(s, storeName)}">${s}</a>`)}
+            </div>`}
+      </section>
       <div id="results"></div>
     `
   );
 
   const form = $('.search-bar', root);
   const input = $('#search-q', root);
-  const hashFor = (query, store) => {
-    const p = new URLSearchParams({ q: query, store });
-    if (linkId) p.set('link', String(linkId));
-    return `#/search?${p}`;
-  };
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -196,16 +262,7 @@ export async function render(root, params) {
 
   const box = $('#results', root);
   if (!q) {
-    setHtml(
-      box,
-      html`<div class="empty">
-        <h2>${t('Що шукаємо?')}</h2>
-        <p>${t('Почни з гри зі свого списку бажаного. Ось кілька популярних:')}</p>
-        <div class="suggestions">
-          ${SUGGESTIONS.map((s) => html`<a class="btn btn-sm" href="${hashFor(s, storeName)}">${s}</a>`)}
-        </div>
-      </div>`
-    );
+    if (!linkId) discover(box);
     input.focus();
     return;
   }

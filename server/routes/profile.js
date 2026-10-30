@@ -138,7 +138,14 @@ export function profileRoutes(router) {
   router.get('/api/notifications', requireAuth, (ctx) => {
     const limit = Math.min(Number(ctx.query.limit) || 50, 200);
     const items = db
-      .prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?')
+      // Обкладинка — збережена разом зі сповіщенням або гри зі списку; game — сторінка гри на сайті (Steam, якщо є)
+      .prepare(
+        `SELECT n.*, COALESCE(n.image_url, g.image_url) AS cover,
+           (SELECT o.store || ':' || o.store_id FROM offers o WHERE o.game_id = n.game_id AND o.store IN ('steam', 'gog')
+            ORDER BY o.store = 'steam' DESC LIMIT 1) AS page
+         FROM notifications n LEFT JOIN games g ON g.id = n.game_id
+         WHERE n.user_id = ? ORDER BY n.created_at DESC, n.id DESC LIMIT ?`
+      )
       .all(ctx.user.id, limit)
       .map((n) => ({
         id: n.id,
@@ -146,6 +153,8 @@ export function profileRoutes(router) {
         title: n.title,
         body: n.body,
         url: n.url,
+        imageUrl: n.cover || null,
+        game: n.page ? { store: n.page.split(':')[0], storeId: n.page.split(':')[1] } : null,
         telegram: Boolean(n.sent_telegram),
         read: Boolean(n.read_at),
         createdAt: n.created_at,
