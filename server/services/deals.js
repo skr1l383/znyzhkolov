@@ -7,6 +7,7 @@ import { fetchGogDeals, fetchSteamSpecials } from '../stores/deals.js';
 import { GENRE_KEYS, fetchSteamExtras } from '../stores/genres.js';
 import { demoDeals } from '../stores/demo.js';
 import { normalizeTitle } from '../stores/match.js';
+import { historicLowSince, recordDealPrices } from './lows.js';
 import { STORE_NAMES } from '../stores/index.js';
 
 /** Перезаписує вітрину одного магазину. Якщо магазин не відповів, лишаються вчорашні дані. */
@@ -24,6 +25,7 @@ function saveStore(store, deals, rate) {
         d.discount, toUah(d.price, d.currency, rate), toUah(d.basePrice, d.currency, rate), d.rating, i + 1, at,
         d.genres?.length ? `,${d.genres.join(',')},` : null, d.companies?.length ? d.companies.join('\n') : null);
     });
+    recordDealPrices(deals, at);
   });
   setSetting(`deals:${store}:updated_at`, at);
 }
@@ -165,6 +167,8 @@ function dealItem(r, watching) {
     priceUah: r.price_uah,
     basePriceUah: r.base_price_uah,
     rating: r.rating,
+    // Дата, з якої ціна не була нижчою, — значок «Історичний мінімум»
+    historicLow: historicLowSince({ store: r.store, storeId: r.store_id, currency: r.currency, price: r.price, discount: r.discount }),
     watching: watching.has(`${r.store}:${r.store_id}`),
   };
 }

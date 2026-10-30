@@ -154,6 +154,18 @@ CREATE TABLE IF NOT EXISTS deals (
   PRIMARY KEY (store, store_id)
 );
 
+-- Ціни вітрини по днях (одна найнижча за добу) — з них рахуємо «історичний мінімум».
+-- На відміну від deals, рядки не видаляються, коли гра зникає з вітрини.
+CREATE TABLE IF NOT EXISTS deal_prices (
+  store    TEXT NOT NULL,
+  store_id TEXT NOT NULL,
+  day      TEXT NOT NULL,
+  currency TEXT,
+  price    INTEGER NOT NULL,
+  discount INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (store, store_id, day)
+);
+
 -- Одноразові ключі з листів: підтвердження пошти (verify) і відновлення пароля (reset).
 -- Як і для сесій, у базі лише хеш ключа: навіть маючи копію бази, посилання з листа не підробиш.
 CREATE TABLE IF NOT EXISTS email_tokens (

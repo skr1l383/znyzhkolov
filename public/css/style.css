@@ -3977,6 +3977,24 @@ textarea.input {
   font-variant-numeric: tabular-nums;
 }
 
+/* Поверх картинки, тож кольори однакові в обох темах */
+.deal-low,
+.hero-low {
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: #137a39;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.deal-low {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+
 .deal-body {
   display: flex;
   flex: 1;

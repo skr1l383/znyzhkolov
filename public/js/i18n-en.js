@@ -428,6 +428,8 @@ export const EN = {
 
   // ---- Пошук і додавання ----
   'У списку': 'On the list',
+  'Історичний мінімум': 'Historical low',
+  'Дешевше не було з {date}': 'Never cheaper since {date}',
   'Додати до гри': 'Add to game',
   Стежити: 'Follow',
   'Ця гра в інших магазинах': 'This game in other stores',

@@ -59,8 +59,11 @@ const priceLine = (o) => {
   return `${storeLabel(o)}: ${formatUah(o.price_uah)}${sale}`;
 };
 
-/** Текст сповіщення про знижку для сайту і для Telegram. */
-export function dealMessage(game, watch, evaluation, offers) {
+/** «з 11.10.2026» — з якого дня спостерігаємо ціну. */
+const sinceDate = (day) => day.split('-').reverse().join('.');
+
+/** Текст сповіщення про знижку для сайту і для Telegram. lowSince — ціна є історичним мінімумом з цієї дати. */
+export function dealMessage(game, watch, evaluation, offers, lowSince = null) {
   const t = evaluation.trigger.offer;
   const storeName = storeLabel(t);
   const title = t.is_free
@@ -68,7 +71,8 @@ export function dealMessage(game, watch, evaluation, offers) {
     : `${game.title}: ${formatUah(t.price_uah)} у ${storeName}${t.discount > 0 ? ` (−${t.discount}%)` : ''}`;
 
   const others = offers.filter((o) => o.id !== t.id && o.available && o.price_uah != null).map(priceLine);
-  const body = [`Твоя умова: ${conditionText(watch)}.`, others.length ? `Інші магазини: ${others.join('; ')}.` : '']
+  const low = lowSince ? `Історичний мінімум: дешевше не було з ${sinceDate(lowSince)}.` : '';
+  const body = [low, `Твоя умова: ${conditionText(watch)}.`, others.length ? `Інші магазини: ${others.join('; ')}.` : '']
     .filter(Boolean)
     .join(' ');
 
@@ -76,6 +80,7 @@ export function dealMessage(game, watch, evaluation, offers) {
     `${t.is_free ? '🎁' : '🔥'} <b>${escapeHtml(game.title)}</b>`,
     '',
     `<b>${escapeHtml(priceLine(t))}</b>`,
+    ...(low ? [`📉 ${escapeHtml(low)}`] : []),
     ...others.map(escapeHtml),
     '',
     `Твоя умова: ${escapeHtml(conditionText(watch))}`,

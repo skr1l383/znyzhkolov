@@ -8,6 +8,7 @@ import { demoHistory } from '../stores/demo.js';
 import { gogImage } from '../stores/gog.js';
 import { fetchKeyPrices, findKeyGameId } from '../stores/keys.js';
 import { STORE_NAMES, store } from '../stores/index.js';
+import { historicLowSince } from './lows.js';
 import { dealMessage, notifyUser } from './notifier.js';
 import { evaluateWatch, offersForGame } from './watch.js';
 
@@ -185,7 +186,9 @@ export async function evaluateWatches({ watchId = null } = {}) {
     if (evaluation.met && evaluation.key !== w.last_alert_key) {
       const user = getUser(w.user_id);
       if (!user) continue;
-      const msg = dealMessage({ title: w.game_title }, w, evaluation, offers);
+      const o = evaluation.trigger.offer;
+      const lowSince = o.is_free ? null : historicLowSince({ store: o.store, storeId: o.store_id, currency: o.currency, price: o.price, discount: o.discount });
+      const msg = dealMessage({ title: w.game_title }, w, evaluation, offers, lowSince);
       await notifyUser(user, { kind: evaluation.trigger.offer.is_free ? 'free' : 'deal', gameId: w.game_id, ...msg });
       db.prepare('UPDATE watch_items SET last_alert_key = ?, last_alert_at = ? WHERE id = ?').run(evaluation.key, now(), w.id);
       alerts += 1;

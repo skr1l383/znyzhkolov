@@ -35,6 +35,12 @@ const SORTS = [
 ];
 const DISCOUNTS = [25, 50, 75, 90];
 
+// Ціна зараз найнижча за весь час спостережень (сервер рахує це з історії цін)
+const lowBadge = (d, cls) =>
+  d.historicLow
+    ? html`<span class="${cls}" title="${t('Дешевше не було з {date}', { date: formatDate(d.historicLow) })}">${t('Історичний мінімум')}</span>`
+    : '';
+
 function dealCard(d, index) {
   const usd = d.currency === 'USD' ? t('{price} за курсом НБУ', { price: formatMoney(d.price, 'USD') }) : '';
   return html`
@@ -42,6 +48,7 @@ function dealCard(d, index) {
       <a class="deal-cover" href="${gameHref(d.store, d.storeId)}" tabindex="-1" aria-hidden="true">
         ${cover(d.imageUrl, d.title, '', d.imageFallback)}
         <span class="deal-badge">−${d.discount}%</span>
+        ${lowBadge(d, 'deal-low')}
       </a>
       <div class="deal-body">
         <div class="deal-meta">
@@ -110,6 +117,7 @@ function heroSlide(d, i, count) {
           <span class="hero-discount">−${d.discount}%</span>
           ${d.basePriceUah ? html`<s>${formatUah(d.basePriceUah)}</s>` : ''}
           <strong>${usd}${formatUah(d.priceUah)}</strong>
+          ${lowBadge(d, 'hero-low')}
         </div>
         <div class="hero-actions">
           <a class="btn btn-primary" href="${gameHref(d.store, d.storeId)}" tabindex="${i === 0 ? '0' : '-1'}">${t('Детальніше')}</a>
