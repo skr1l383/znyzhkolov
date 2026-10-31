@@ -3422,6 +3422,20 @@ a.profile-stat:hover {
   margin-bottom: 12px;
 }
 
+/* Графік на сторінці гри — у картці, як і блоки карти цін поруч */
+.game-history .chart-box {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+@media (max-width: 760px) {
+  .game-history .chart-box {
+    padding: 12px;
+  }
+}
+
 .regional-fact {
   display: grid;
   gap: 2px;
