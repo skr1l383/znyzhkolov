@@ -5744,10 +5744,6 @@ textarea.input {
   pointer-events: none;
 }
 
-.chart-tip.flip {
-  transform: translateX(-100%);
-}
-
 .chart-tip-date {
   color: var(--muted);
   font-weight: 700;

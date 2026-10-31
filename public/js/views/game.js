@@ -87,7 +87,7 @@ function keysBox(data, steamPriceUah) {
         ? html`${t('Історичний мінімум: ≈ {price} ({usd}), {date}.', {
             price: formatUah(low.priceUah),
             usd: formatMoney(low.price, 'USD'),
-            date: new Date(low.at).toLocaleDateString(locale(), { month: 'long', year: 'numeric' }),
+            date: new Date(low.at).toLocaleDateString(locale(), { month: 'long', year: 'numeric' }).replace(/\.$/, ''), // без «р..»
           })} `
         : ''}
       ${t('Ціни для США за даними CheapShark. Перед покупкою перевір, чи ключ активується в Україні.')}

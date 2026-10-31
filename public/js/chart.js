@@ -102,7 +102,7 @@ export function priceChart(container, rawSeries) {
       <div class="chart-plot" tabindex="0" role="img"></div>
       <p class="hint">
         ${spanDays < 7
-          ? t("Історія збирається з {date}. Ціни перевіряються автоматично, і кожна зміна з'явиться тут.", { date: longDate(first) })
+          ? t("Історія збирається з {date}. Ціни перевіряються автоматично, і кожна зміна з'явиться тут.", { date: longDate(first).replace(/\.$/, '') }) // «2026 р.» + крапка речення
           : t('Ціни в гривнях. Ціни GOG перераховано за курсом НБУ на день перевірки.')}
         ${t('Наведи на графік (або вибери його і натискай ← →), щоб побачити ціну на будь-який день.')}
       </p>
@@ -123,7 +123,9 @@ export function priceChart(container, rawSeries) {
 
     const width = Math.max(280, plot.clientWidth);
     const narrow = width < 520;
-    const pad = { top: 22, right: narrow ? 52 : 64, bottom: 28, left: narrow ? 58 : 70 };
+    // На вузькому екрані підписів у кінці ліній немає (магазини видно в легенді), інакше — місце під найдовший
+    const longest = Math.max(...series.map((s) => STORE_NAMES[s.store].length));
+    const pad = { top: 22, right: narrow ? 16 : Math.max(64, longest * 7 + 16), bottom: 28, left: narrow ? 58 : 70 };
     const w = width - pad.left - pad.right;
     const h = HEIGHT - pad.top - pad.bottom;
     const visible = series.map((s) => ({ ...s, seg: segment(s, from, now) })).filter((s) => s.seg.length);
@@ -170,10 +172,10 @@ export function priceChart(container, rawSeries) {
           )}
           ${xTicks.map(
             (t, i) => html`<text class="chart-axis" x="${x(t)}" y="${HEIGHT - 8}"
-              text-anchor="${i === 0 ? 'start' : i === tickCount - 1 ? 'end' : 'middle'}">${shortDate(t)}</text>`
+              text-anchor="${i === 0 ? 'start' : i === tickCount - 1 ? 'end' : 'middle'}">${i && shortDate(t) === shortDate(xTicks[i - 1]) ? '' : shortDate(t)}</text>`
           )}
           ${visible.map((s) => html`<path class="chart-line series-${s.store}" d="${path(s.seg)}"></path>`)}
-          ${ends.map((e) => html`<text class="chart-end-label" x="${pad.left + w + 8}" y="${e.y + 4}">${STORE_NAMES[e.store]}</text>`)}
+          ${(narrow ? [] : ends).map((e) => html`<text class="chart-end-label" x="${pad.left + w + 8}" y="${e.y + 4}">${STORE_NAMES[e.store]}</text>`)}
           <circle class="chart-min-dot" cx="${minX}" cy="${y(min.v)}" r="5"></circle>
           <text class="chart-min-label" x="${minX}" y="${y(min.v) - 10}" text-anchor="${minAnchor}">${t('мін.')} ${formatUah(min.v)}</text>
           <g class="chart-hover" style="display: none">
@@ -246,11 +248,11 @@ export function priceChart(container, rawSeries) {
     }
     setHtml(tip, html`<div class="chart-tip-date">${longDate(cursor)}</div>${rows.length ? rows : html`<div class="muted">${t('Ще не відстежувалось')}</div>`}`);
     tip.hidden = false;
-    // Підказка з того боку від перехрестя, де більше місця
+    // Підказка з того боку від перехрестя, де більше місця, і не виходить за краї графіка
     const scale = plot.clientWidth / width;
-    const flip = cx > pad.left + w / 2;
-    tip.classList.toggle('flip', flip);
-    tip.style.left = `${(flip ? cx - 12 : cx + 12) * scale}px`;
+    const tipWidth = tip.offsetWidth;
+    const pos = cx > pad.left + w / 2 ? (cx - 12) * scale - tipWidth : (cx + 12) * scale;
+    tip.style.left = `${Math.max(0, Math.min(plot.clientWidth - tipWidth, pos))}px`;
   }
 
   function hide() {
