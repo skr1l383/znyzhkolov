@@ -60,6 +60,7 @@ export const config = {
     epicMinutes: num(env.EPIC_INTERVAL_MINUTES, 360),
     dealsMinutes: num(env.DEALS_INTERVAL_MINUTES, 60),
     rateMinutes: num(env.RATE_INTERVAL_MINUTES, 720),
+    steamSyncMinutes: num(env.STEAM_SYNC_INTERVAL_MINUTES, 360),
   },
 
   // Звідки брати вітрину: live — справжні знижки (і в демо-режимі), demo — тестові без інтернету

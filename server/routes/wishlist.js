@@ -1,43 +1,23 @@
 // Імпорт списку бажаного Steam: показати ігри з цінами → вибрати → стежити за всіма одним натисканням.
 // Ігри додаються одразу зі Steam, а та сама гра в GOG шукається у фоні (по одній, щоб не засипати GOG запитами).
-import { config } from '../config.js';
 import { db } from '../db.js';
 import { HttpError, templateError } from '../http.js';
 import { log } from '../logger.js';
 import { requireAuth } from '../auth.js';
-import { evaluateWatches, refreshGame, upsertGameWithOffers } from '../services/prices.js';
-import { store } from '../stores/index.js';
-import { rankMatches } from '../stores/match.js';
-import { sleep } from '../stores/util.js';
+import { disableSync, enableSync, linkGogInBackground, syncStatus, syncUser, watchedSteamIds } from '../services/steamSync.js';
 import { fetchProfile, fetchStoreItems, fetchWishlist, parseProfileInput } from '../stores/wishlist.js';
 import { cleanOffer, createWatch } from './games.js';
 
 const MAX_IMPORT = 200;
 
-/** Steam-ігри, за якими користувач уже стежить. */
-function watchedSteamIds(userId) {
-  return new Set(
-    db
-      .prepare("SELECT o.store_id FROM offers o JOIN watch_items w ON w.game_id = o.game_id WHERE w.user_id = ? AND o.store = 'steam'")
-      .all(userId)
-      .map((r) => r.store_id)
-  );
+/** Умова «знижка від N%» для доданих ігор: порожньо — сповіщати про будь-яку знижку. */
+function cleanDiscount(value) {
+  const n = value == null || value === '' ? null : Number(value);
+  if (n != null && !(Number.isInteger(n) && n >= 1 && n <= 100)) throw new HttpError(400, 'Знижка має бути від 1 до 100%');
+  return n;
 }
 
-/** Фон: знайти кожну нову гру в GOG (лише з дуже схожою назвою), оновити ціни й перевірити умови. */
-async function linkGogInBackground(steamOffers) {
-  for (const offer of steamOffers) {
-    try {
-      const match = rankMatches(offer.title, await store('gog').search(offer.title), 0.9)[0];
-      const gameId = upsertGameWithOffers(match ? [offer, cleanOffer(match)] : [offer]);
-      await refreshGame(gameId);
-    } catch (err) {
-      log.warn('wishlist.gog', `Не вдалося знайти «${offer.title}» у GOG: ${err.message}`);
-    }
-    if (!config.demoStores) await sleep(400);
-  }
-  await evaluateWatches().catch(() => {});
-}
+const freshUser = (id) => db.prepare('SELECT * FROM users WHERE id = ?').get(id);
 
 export function wishlistRoutes(router) {
   // Крок 1: профіль → список бажаного з цінами (нічого не додається)
@@ -75,10 +55,7 @@ export function wishlistRoutes(router) {
     const appids = Array.isArray(ctx.body.appids) ? [...new Set(ctx.body.appids.map(String))].filter((id) => /^\d{1,10}$/.test(id)) : [];
     if (!appids.length) throw new HttpError(400, 'Вибери хоча б одну гру');
     if (appids.length > MAX_IMPORT) throw templateError(400, 'За один раз можна додати до {max} ігор', { max: MAX_IMPORT });
-    const minDiscount = ctx.body.minDiscount == null || ctx.body.minDiscount === '' ? null : Number(ctx.body.minDiscount);
-    if (minDiscount != null && !(Number.isInteger(minDiscount) && minDiscount >= 1 && minDiscount <= 100)) {
-      throw new HttpError(400, 'Знижка має бути від 1 до 100%');
-    }
+    const minDiscount = cleanDiscount(ctx.body.minDiscount);
     const conditions = { min_discount: minDiscount, max_price_uah: null, notify_free: 1, active: 1 };
 
     // Назви й ціни беремо зі Steam заново, а не з браузера
@@ -108,5 +85,27 @@ export function wishlistRoutes(router) {
     });
     linkGogInBackground(newOffers);
     return { added, skipped };
+  });
+
+  // Автосинхронізація: нові ігри з бажаного Steam додаються до стеження самі (перевірка кілька разів на день)
+  router.get('/api/steam/sync', requireAuth, (ctx) => syncStatus(ctx.user));
+
+  router.post('/api/steam/sync', requireAuth, async (ctx) => {
+    if (!ctx.user.steam_id) throw new HttpError(400, 'Спершу імпортуй список бажаного Steam — так ми дізнаємось твій профіль');
+    const total = await enableSync(ctx.user.id, ctx.user.steam_id, cleanDiscount(ctx.body.minDiscount));
+    log.info('steam.sync', `${ctx.user.email} увімкнув синхронізацію з бажаним Steam (${total} ігор уже в бажаному)`, { userId: ctx.user.id });
+    return syncStatus(freshUser(ctx.user.id));
+  });
+
+  router.delete('/api/steam/sync', requireAuth, (ctx) => {
+    disableSync(ctx.user.id);
+    return syncStatus(freshUser(ctx.user.id));
+  });
+
+  // «Перевірити зараз» — не чекаючи розкладу
+  router.post('/api/steam/sync/run', requireAuth, async (ctx) => {
+    if (!ctx.user.steam_sync) throw new HttpError(400, 'Синхронізацію з бажаним Steam не ввімкнено');
+    const added = await syncUser(ctx.user);
+    return { added, ...syncStatus(freshUser(ctx.user.id)) };
   });
 }

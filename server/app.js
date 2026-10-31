@@ -24,6 +24,7 @@ import { refreshDeals } from './services/deals.js';
 import { runEpicCheck } from './services/epicFree.js';
 import { repairImages, runPriceCheck } from './services/prices.js';
 import { defineJob } from './services/scheduler.js';
+import { runSteamSync } from './services/steamSync.js';
 
 function defineJobs() {
   defineJob('rate', {
@@ -50,6 +51,11 @@ function defineJobs() {
     title: 'Вітрина знижок',
     everyMinutes: config.schedule.dealsMinutes,
     run: () => refreshDeals(),
+  });
+  defineJob('steamsync', {
+    title: 'Синхронізація бажаного Steam',
+    everyMinutes: config.schedule.steamSyncMinutes,
+    run: () => runSteamSync(),
   });
   defineJob('cleanup', {
     title: 'Очищення старих сесій',

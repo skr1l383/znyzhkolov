@@ -103,6 +103,10 @@ const EN = {
   // ШІ-порадник (advisor.js)
   'Купувати цю гру зараз чи чекати знижки?': 'Should I buy this game now or wait for a sale?',
   'Не можу допомогти з цим. Спитай мене про ціну чи знижки на гру.': 'I cannot help with that. Ask me about the price or discounts on the game.',
+
+  // Синхронізація з бажаним Steam (steamSync.js)
+  'Нові ігри з бажаного Steam: {n}': 'New games from your Steam wishlist: {n}',
+  'Тепер стежимо й за ними: {list}.': 'We are now tracking them too: {list}.',
 };
 
 /** Мова користувача для листів і повідомлень: англійська, якщо він вибрав її на сайті, інакше українська. */

@@ -1145,6 +1145,52 @@ p {
   color: var(--good);
 }
 
+/* Синхронізація з бажаним Steam над списком */
+.sync-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--steam) 45%, var(--border));
+  border-radius: var(--radius);
+  background: linear-gradient(110deg, color-mix(in srgb, var(--steam) 16%, transparent), transparent 60%), var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.sync-strip.is-on {
+  border-color: color-mix(in srgb, var(--good) 40%, var(--border));
+  background: linear-gradient(110deg, color-mix(in srgb, var(--good) 12%, transparent), transparent 60%), var(--glass);
+}
+
+.sync-icon {
+  font-size: 22px;
+}
+
+.sync-text {
+  display: grid;
+  flex: 1 1 260px;
+  gap: 2px;
+}
+
+.sync-text span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sync-strip .select {
+  width: auto;
+  min-height: 34px;
+}
+
+@media print {
+  .sync-strip {
+    display: none !important;
+  }
+}
+
 .list-toolbar {
   display: flex;
   flex-wrap: wrap;

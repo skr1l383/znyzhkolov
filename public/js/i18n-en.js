@@ -805,6 +805,23 @@ export const EN = {
   'вітрина знижок': 'deals showcase',
   'мій список': 'my list',
 
+  // Синхронізація з бажаним Steam (views/watchlist.js)
+  'Синхронізація бажаного Steam': 'Steam wishlist sync',
+  'Спершу імпортуй список бажаного Steam — так ми дізнаємось твій профіль': 'Import your Steam wishlist first — that is how we learn your profile',
+  'Синхронізацію з бажаним Steam не ввімкнено': 'Steam wishlist sync is not on',
+  'Синхронізацію ввімкнено: нові ігри з бажаного Steam з’являтимуться тут самі': 'Sync is on: new games from your Steam wishlist will appear here on their own',
+  'Синхронізацію з бажаним Steam вимкнено': 'Steam wishlist sync is off',
+  'Додано з бажаного Steam: {list}': 'Added from your Steam wishlist: {list}',
+  'Нових ігор у бажаному Steam немає': 'No new games in your Steam wishlist',
+  'Синхронізація з бажаним Steam увімкнена': 'Steam wishlist sync is on',
+  'Нові ігри з бажаного з’являються тут самі — перевіряємо кожні 6 годин.': 'New wishlist games show up here on their own — we check every 6 hours.',
+  'Востаннє {when}.': 'Last checked {when}.',
+  'Перевірити зараз': 'Check now',
+  'Стежити за бажаним Steam автоматично?': 'Track your Steam wishlist automatically?',
+  'Додав гру в бажане в Steam — і вона сама з’явиться тут, а ми повідомимо про знижку.': 'Add a game to your Steam wishlist and it will appear here on its own — we will tell you about discounts.',
+  'Умова для нових ігор': 'Condition for new games',
+  'Знижка від {n}%': '{n}% off or more',
+
   // Пуш-сповіщення (push.js, views/profile.js, routes/push.js)
   'Браузер не дозволив сповіщення. Дозволь їх у налаштуваннях сайту й спробуй ще раз.': 'The browser did not allow notifications. Allow them in the site settings and try again.',
   'надіслано на пристрій': 'sent to device',

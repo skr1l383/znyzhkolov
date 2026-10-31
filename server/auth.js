@@ -117,6 +117,8 @@ export function publicUser(u) {
     hasPassword: Boolean(u.password_hash), // хто зареєструвався через Google, пароля не має
     googleLinked: Boolean(u.google_sub),
     steamId: u.steam_id || null,
+    steamSync: Boolean(u.steam_sync), // нові ігри з бажаного Steam додаються самі
+    steamSyncedAt: u.steam_synced_at || null,
     notifyEmail: Boolean(u.notify_email ?? 1),
     createdAt: u.created_at,
   };

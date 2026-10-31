@@ -72,7 +72,11 @@ const STEAM_GAMES = {
   413150: { name: 'Stardew Valley', final: 17175, original: 22900, pct: 25 },
   105600: { name: 'Terraria', final: 18900 },
   999999: { name: 'Майбутня гра', coming: true },
+  2000001: { name: 'Нова гра з бажаного', final: 37900 },
+  2000002: { name: 'Ще одна нова гра', final: 35900 },
 };
+// Ігри, які «людина додала в бажане» посеред тесту синхронізації
+const extraWishlist = [];
 const fakeSteam = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   const send = (type, body) => {
@@ -93,6 +97,7 @@ const fakeSteam = http.createServer((req, res) => {
           { appid: 413150, priority: 1, date_added: 1600000000 },
           { appid: 999999, priority: 0, date_added: 1750000000 },
           { appid: 367520, priority: 2, date_added: 1650000000 },
+          ...extraWishlist.map((appid) => ({ appid, priority: 3, date_added: 1760000000 })),
         ],
       },
     });
@@ -792,6 +797,45 @@ test('Імпорт списку бажаного Steam: перегляд, зак
 
   assert.equal((await user('POST', '/api/steam/wishlist/import', { appids: [] })).status, 400);
   assert.equal((await user('POST', '/api/steam/wishlist/import', { appids: ['413150'], minDiscount: 500 })).status, 400);
+});
+
+test('Синхронізація з бажаним Steam: додає лише нові ігри, не повертає прибрані, сповіщає', async () => {
+  assert.equal((await client()('POST', '/api/steam/sync')).status, 401);
+  let r = await user('POST', '/api/steam/sync', { minDiscount: 40 });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.enabled, true);
+  assert.equal(r.data.minDiscount, 40);
+  assert.equal((await user('GET', '/api/me')).data.user.steamSync, true);
+
+  // Поки в бажаному нічого нового — нічого й не додається (те, що вже було, не чіпаємо)
+  r = await user('POST', '/api/steam/sync/run');
+  assert.deepEqual(r.data.added, []);
+
+  // Людина додала в бажане Steam нову гру — вона з'являється в списку з умовою синхронізації
+  extraWishlist.push(2000001);
+  r = await user('POST', '/api/steam/sync/run');
+  assert.deepEqual(r.data.added, ['Нова гра з бажаного']);
+  const celeste = (await user('GET', '/api/watch')).data.items.find((i) => i.title === 'Нова гра з бажаного');
+  assert.equal(celeste.minDiscount, 40);
+  const notice = (await user('GET', '/api/notifications')).data.items[0];
+  assert.match(notice.title, /Нові ігри з бажаного Steam: 1/);
+  assert.match(notice.body, /Нова гра з бажаного/);
+
+  // Прибрали гру зі списку Знижколова — синхронізація не повертає її знову
+  assert.equal((await user('DELETE', `/api/watch/${celeste.id}`)).status, 200);
+  r = await user('POST', '/api/steam/sync/run');
+  assert.deepEqual(r.data.added, []);
+
+  // Задача за розкладом робить те саме для всіх, у кого синхронізацію ввімкнено
+  extraWishlist.push(2000002);
+  const job = await admin('POST', '/api/admin/jobs/steamsync/run');
+  assert.equal(job.status, 200);
+  assert.ok((await user('GET', '/api/watch')).data.items.some((i) => i.title === 'Ще одна нова гра'));
+
+  r = await user('DELETE', '/api/steam/sync');
+  assert.equal(r.data.enabled, false);
+  assert.equal((await user('POST', '/api/steam/sync/run')).status, 400, 'вимкнено — вручну теж не перевіряємо');
+  extraWishlist.length = 0;
 });
 
 test('Акаунт: зміна пароля і пошти, мої дані, видалення', async () => {

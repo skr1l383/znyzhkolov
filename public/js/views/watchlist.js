@@ -24,7 +24,7 @@ import {
   withLoading,
 } from '../ui.js';
 import { t, tp } from '../i18n.js';
-import { state } from '../app.js';
+import { refreshMe, state } from '../app.js';
 import { conditionsFields, conditionsText, readConditions } from './conditions.js';
 import { openAddDialog } from './search.js';
 import { dealCard } from './showcase.js';
@@ -530,6 +530,38 @@ function statsHtml(items) {
   `;
 }
 
+/** Смужка синхронізації з бажаним Steam: увімкнено — стан і кнопки, відомий профіль — пропозиція ввімкнути. */
+function syncStrip() {
+  const u = state.user;
+  if (u.steamSync) {
+    return html`
+      <div class="sync-strip is-on">
+        <span class="sync-icon" aria-hidden="true">🔄</span>
+        <div class="sync-text">
+          <b>${t('Синхронізація з бажаним Steam увімкнена')}</b>
+          <span>${t('Нові ігри з бажаного з’являються тут самі — перевіряємо кожні 6 годин.')}
+            ${u.steamSyncedAt ? t('Востаннє {when}.', { when: timeAgo(u.steamSyncedAt) }) : ''}</span>
+        </div>
+        <button class="btn btn-sm" type="button" data-sync="run">${t('Перевірити зараз')}</button>
+        <button class="btn btn-sm btn-ghost" type="button" data-sync="off">${t('Вимкнути')}</button>
+      </div>`;
+  }
+  if (!u.steamId) return '';
+  return html`
+    <div class="sync-strip">
+      <span class="sync-icon" aria-hidden="true">🔄</span>
+      <div class="sync-text">
+        <b>${t('Стежити за бажаним Steam автоматично?')}</b>
+        <span>${t('Додав гру в бажане в Steam — і вона сама з’явиться тут, а ми повідомимо про знижку.')}</span>
+      </div>
+      <select class="select" id="sync-discount" aria-label="${t('Умова для нових ігор')}">
+        <option value="">${t('Будь-яка знижка')}</option>
+        ${[25, 50, 75].map((n) => html`<option value="${n}" ${n === 50 ? 'selected' : ''}>${t('Знижка від {n}%', { n })}</option>`)}
+      </select>
+      <button class="btn btn-sm btn-primary" type="button" data-sync="on">${t('Увімкнути')}</button>
+    </div>`;
+}
+
 export async function render(root) {
   setHtml(root, html`<div class="stack"><div class="skeleton"></div><div class="skeleton"></div></div>`);
   let items = (await get('/api/watch')).items;
@@ -582,7 +614,7 @@ export async function render(root) {
           </div>
         </div>
         ${items.length
-          ? html`${statsHtml(items)}
+          ? html`${statsHtml(items)}${syncStrip()}
               <div class="list-toolbar">
                 <div class="segmented" role="group" aria-label="${t('Показати')}">
                   ${FILTERS.filter(([key]) => key === 'all' || items.some((i) => matchesFilter(i, key))).map(
@@ -634,6 +666,7 @@ export async function render(root) {
     if (e.target.closest('#steam-btn, #steam-empty-btn')) {
       steamImportDialog(async () => {
         items = (await get('/api/watch')).items;
+        await refreshMe().catch(() => {}); // профіль Steam тепер відомий — можна ввімкнути синхронізацію
         draw();
       });
       return;
@@ -651,6 +684,31 @@ export async function render(root) {
         items = (await get('/api/watch')).items;
         draw();
       });
+      return;
+    }
+    const syncBtn = e.target.closest('[data-sync]');
+    if (syncBtn) {
+      await withLoading(syncBtn, async () => {
+        try {
+          const action = syncBtn.dataset.sync;
+          if (action === 'on') {
+            const value = $('#sync-discount', root).value;
+            await post('/api/steam/sync', { minDiscount: value ? Number(value) : null });
+            toast(t('Синхронізацію ввімкнено: нові ігри з бажаного Steam з’являтимуться тут самі'));
+          } else if (action === 'off') {
+            await del('/api/steam/sync');
+            toast(t('Синхронізацію з бажаним Steam вимкнено'));
+          } else {
+            const { added } = await post('/api/steam/sync/run');
+            toast(added.length ? t('Додано з бажаного Steam: {list}', { list: added.join(', ') }) : t('Нових ігор у бажаному Steam немає'));
+            if (added.length) items = (await get('/api/watch')).items;
+          }
+          await refreshMe();
+        } catch (err) {
+          toast(err.message, 'error');
+        }
+      });
+      draw();
       return;
     }
     const filterBtn = e.target.closest('[data-filter]');

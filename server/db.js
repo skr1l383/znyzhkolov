@@ -227,6 +227,13 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
+
+-- Ігри з бажаного Steam, які синхронізація вже бачила: їх не додаємо повторно, навіть якщо людина прибрала гру зі списку.
+CREATE TABLE IF NOT EXISTS steam_sync_seen (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  app_id  TEXT NOT NULL,
+  PRIMARY KEY (user_id, app_id)
+);
 `;
 
 // Стовпці, додані після першої версії. Бази, створені раніше, отримують їх при запуску,
@@ -246,6 +253,9 @@ const ADDED_COLUMNS = [
   ['deals', 'hero_small_url', 'TEXT'], // легша картинка банера для телефона (у 3–4 рази менша)
   ['notifications', 'image_url', 'TEXT'], // обкладинка гри в списку сповіщень (для роздач Epic іншої немає)
   ['notifications', 'sent_push', 'INTEGER NOT NULL DEFAULT 0'], // скільком пристроям доставлено пуш
+  ['users', 'steam_sync', 'INTEGER NOT NULL DEFAULT 0'], // автоматично додавати нові ігри з бажаного Steam
+  ['users', 'steam_sync_discount', 'INTEGER'], // з якою умовою знижки їх додавати
+  ['users', 'steam_synced_at', 'TEXT'],
 ];
 
 /** Нік для порівняння: без пробілів на краях і без різниці в регістрі (і для кирилиці). */
