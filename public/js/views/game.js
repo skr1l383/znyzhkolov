@@ -6,6 +6,7 @@ import { getLang, locale, t } from '../i18n.js';
 import { go, state } from '../app.js';
 import { $, STORE_NAMES, formatMoney, formatUah, html, raw, setHtml, toast } from '../ui.js';
 import { openAddDialog } from './search.js';
+import { priceChart } from '../chart.js';
 import { ADVISOR_ICON, askAboutGame, setAdvisorGame } from '../advisor.js';
 import { commentsSection, mountComments } from './comments.js';
 import { mountRegional, regionalSection } from './regional.js';
@@ -106,6 +107,23 @@ async function mountKeys(root, steam) {
   }
 }
 
+// Графік ціни: окремий запит, щоб сторінка не чекала на історію
+async function mountHistory(root, store, id, offers) {
+  const box = $('#history-box', root);
+  const other = offers.find((o) => o.store !== store && ['steam', 'gog'].includes(o.store));
+  try {
+    const { series } = await get(
+      `/api/games/${encodeURIComponent(store)}/${encodeURIComponent(id)}/history${other ? `?with=${other.store}:${encodeURIComponent(other.storeId)}` : ''}`
+    );
+    if (!box.isConnected) return;
+    if (Object.keys(series).length) priceChart(box, series);
+    else
+      setHtml(box, html`<p class="muted">${t('Ми ще не бачили цю гру на вітрині, тож історії ціни поки немає. Стеж за ціною — і графік почне будуватися з першої перевірки.')}</p>`);
+  } catch {
+    box.closest('section')?.remove(); // без графіка сторінка гри однаково повна
+  }
+}
+
 function mediaThumb(m, i) {
   return html`
     <button class="media-thumb ${m.kind !== 'image' ? 'is-video' : ''}" type="button" data-media="${i}"
@@ -166,6 +184,11 @@ export async function render(root, params) {
                 : html`<p class="muted">${g.limited ? t('Магазин зараз не відповідає, тому показуємо лише основне. Спробуй оновити сторінку пізніше.') : t('Опису поки немає.')}</p>`}
             </section>
 
+            <section class="game-history" aria-labelledby="history-title">
+              <div class="section-title"><h2 id="history-title">${t('Історія ціни')}</h2></div>
+              <div class="chart-box" id="history-box"><div class="skeleton" style="height: 260px"></div></div>
+            </section>
+
             ${steam ? regionalSection() : ''}
 
             ${commentsSection()}
@@ -218,6 +241,7 @@ export async function render(root, params) {
   mountComments(root, g.offers[0]);
   if (steam) mountRegional(root, steam.storeId);
   if (steam) mountKeys(root, steam);
+  mountHistory(root, store, id, g.offers);
   // Чат порадника в кутку тепер знає, про яку гру мова
   setAdvisorGame({ store, storeId: id, title: g.title });
   $('#advisor-ask', root)?.addEventListener('click', askAboutGame);

@@ -8,6 +8,7 @@ import { listFreebies } from '../services/epicFree.js';
 import { getRegionalPrices } from '../services/regional.js';
 import { dealFacets, dealsStatus, featuredDeals, listDeals } from '../services/deals.js';
 import { runJob } from '../services/scheduler.js';
+import { gameHistory } from '../services/lows.js';
 
 const int = (value, min, max) => {
   const n = Math.round(Number(value));
@@ -61,6 +62,17 @@ export function gamePageRoutes(router) {
     const { store, id } = ctx.params;
     if (!['steam', 'gog'].includes(store) || !/^\d{1,12}$/.test(id)) throw new HttpError(404, 'Гру не знайдено');
     return getGameDetails(store, id, ctx.user?.id ?? null, ctx.query.lang === 'en' ? 'en' : 'uk');
+  });
+
+  // Історія ціни для графіка на сторінці гри — відкрита й для гостей.
+  // ?with=gog:123 — ще одна пропозиція зі сторінки (GOG-версія Steam-гри і навпаки).
+  router.get('/api/games/:store/:id/history', (ctx) => {
+    const { store, id } = ctx.params;
+    if (!['steam', 'gog'].includes(store) || !/^\d{1,12}$/.test(id)) throw new HttpError(404, 'Гру не знайдено');
+    const pairs = [{ store, storeId: id }];
+    const extra = /^(steam|gog):(\d{1,12})$/.exec(String(ctx.query.with || ''));
+    if (extra) pairs.push({ store: extra[1], storeId: extra[2] });
+    return { series: gameHistory(pairs) };
   });
 
   // Ключі Steam в офіційних магазинах. Окремий запит: сторінка гри не чекає на CheapShark,

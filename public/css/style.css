@@ -3406,7 +3406,8 @@ a.profile-stat:hover {
   --tone-5: #d9534f;
 }
 
-.game-regional .section-title {
+.game-regional .section-title,
+.game-history .section-title {
   margin-top: 8px;
 }
 

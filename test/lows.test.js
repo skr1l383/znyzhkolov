@@ -2,7 +2,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { closeDb, db, initDb } from '../server/db.js';
-import { LOW_MIN_DAYS, historicLowSince, lowestPrice, recordDealPrices } from '../server/services/lows.js';
+import { LOW_MIN_DAYS, gameHistory, historicLowSince, lowestPrice, recordDealPrices } from '../server/services/lows.js';
 import { dealMessage } from '../server/services/notifier.js';
 
 initDb(':memory:');
@@ -47,4 +47,21 @@ test('Сповіщення про знижку англійською для т�
   assert.match(msg.body, /Historical low: not this cheap since 01\.10\.2026\. Your condition: discount of 50% or more\./);
   assert.equal(msg.buttonLabel, 'Open on Steam');
   assert.doesNotMatch(`${msg.title} ${msg.body} ${msg.html}`, /[а-яіїєґ]/i);
+});
+
+test('Графік на сторінці гри: дні з вітрини, далі докладна історія зі списку, разом з іншими магазинами гри', () => {
+  const games = db.prepare("INSERT INTO games (title, created_at) VALUES ('Hades', ?)").run(daysAgo(10));
+  const offer = (store, storeId) =>
+    db.prepare("INSERT INTO offers (game_id, store, store_id, title, currency) VALUES (?, ?, ?, 'Hades', 'USD')").run(games.lastInsertRowid, store, storeId).lastInsertRowid;
+  const steamOffer = offer('steam', '1145360');
+  offer('gog', '77');
+  db.prepare('INSERT INTO price_history (offer_id, price, discount, price_uah, recorded_at) VALUES (?, 1000, 50, 41000, ?)').run(steamOffer, daysAgo(5));
+  recordDealPrices([{ store: 'steam', storeId: '1145360', currency: 'USD', price: 2000, discount: 0 }], daysAgo(20));
+  recordDealPrices([{ store: 'steam', storeId: '1145360', currency: 'USD', price: 900, discount: 55 }], daysAgo(5)); // перекрито точною історією
+
+  const { steam, gog } = gameHistory([{ store: 'steam', storeId: '1145360' }], 40);
+  assert.deepEqual(steam.map((p) => p.priceUah), [80000, 41000]);
+  assert.equal(gog, undefined, 'GOG без цін — серії немає');
+  assert.deepEqual(gameHistory([{ store: 'gog', storeId: '999' }]), {}, 'гра, якої ми не бачили, — порожня історія');
+  assert.deepEqual(Object.keys(gameHistory([{ store: 'steam', storeId: '620' }], 40)), ['steam'], 'лише вітрина');
 });
