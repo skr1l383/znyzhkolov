@@ -107,6 +107,17 @@ const EN = {
   // Синхронізація з бажаним Steam (steamSync.js)
   'Нові ігри з бажаного Steam: {n}': 'New games from your Steam wishlist: {n}',
   'Тепер стежимо й за ними: {list}.': 'We are now tracking them too: {list}.',
+
+  // Тижневий дайджест (digest.js)
+  безкоштовно: 'free',
+  'Тижневий дайджест Знижколова': 'Znyzhkolov weekly digest',
+  'Зі знижкою зараз {n} з твого списку ({total} у стеженні), можна заощадити {sum}.': 'On sale now: {n} from your list ({total} tracked), you can save {sum}.',
+  'Цього тижня жодна гра з твого списку ({total}) не має знижки — продовжуємо стежити.': 'No game from your list ({total}) is on sale this week — we keep watching.',
+  'умову виконано': 'condition met',
+  'З твого списку': 'From your list',
+  'Найкращі знижки тижня': 'Best deals of the week',
+  'Безкоштовно в Epic Games': 'Free on Epic Games',
+  'Відкрити мій список': 'Open my list',
 };
 
 /** Мова користувача для листів і повідомлень: англійська, якщо він вибрав її на сайті, інакше українська. */

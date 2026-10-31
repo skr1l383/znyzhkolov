@@ -26,7 +26,15 @@ export const siteLink = (hash) => `${config.baseUrl}/${hash.replace(/^\//, '')}`
  * а розмітка — таблицями (так лист однаково виглядає в Gmail, Outlook і на телефоні).
  * Повертає HTML і текстову версію (для поштовиків без HTML). lang — мова службових написів листа.
  */
-export function emailLayout({ lang = 'uk', heading, image = null, paragraphs = [], button = null, footnote = '' }) {
+/** Список ігор у листі (дайджест): обкладинка, назва-посилання і рядок з ціною. */
+function sectionsHtml(sections) {
+  const row = (r) =>
+    `<tr><td style="padding:6px 0;border-bottom:1px solid #eaeef5"><a href="${escapeHtml(r.url)}" style="text-decoration:none;color:#121826"><table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="width:112px;padding-right:12px">${r.image ? `<img src="${escapeHtml(r.image)}" width="112" alt="" style="display:block;width:112px;border-radius:6px;border:0">` : ''}</td><td style="font-size:15px;line-height:1.35"><b>${escapeHtml(r.title)}</b><br><span style="font-size:13px;color:#5a6478">${escapeHtml(r.line)}</span></td></tr></table></a></td></tr>`;
+  return sections
+    .map((s) => `<h2 style="margin:22px 0 10px;font-size:17px;color:#121826">${escapeHtml(s.heading)}</h2><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${s.rows.map(row).join('')}</table>`)
+    .join('\n');
+}
+export function emailLayout({ lang = 'uk', heading, image = null, paragraphs = [], sections = [], button = null, footnote = '' }) {
   const p = (t) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#121826">${escapeHtml(t)}</p>`;
   const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
 <body style="margin:0;padding:0;background:#f2f4f8;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif">
@@ -40,6 +48,7 @@ ${image ? `<tr><td><img src="${escapeHtml(image)}" width="560" alt="" style="dis
 <tr><td style="padding:26px 24px 8px">
   <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#121826">${escapeHtml(heading)}</h1>
   ${paragraphs.map(p).join('\n  ')}
+  ${sectionsHtml(sections)}
   ${
     button
       ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:8px 0 18px"><tr><td style="background:#f29a2e;border-radius:10px">
@@ -53,7 +62,8 @@ ${image ? `<tr><td><img src="${escapeHtml(image)}" width="560" alt="" style="dis
   ${escapeHtml(footnote || tr(lang, 'Цей лист надіслав Знижколов — сервіс стеження за знижками на ігри.'))}
 </td></tr>
 </table></td></tr></table></body></html>`;
-  const text = [heading, '', ...paragraphs, ...(button ? ['', `${button.label}: ${button.url}`] : []), '', footnote].join('\n').trim();
+  const sectionText = sections.flatMap((s) => ['', s.heading, ...s.rows.map((r) => `• ${r.title} — ${r.line}: ${r.url}`)]);
+  const text = [heading, '', ...paragraphs, ...sectionText, ...(button ? ['', `${button.label}: ${button.url}`] : []), '', footnote].join('\n').trim();
   return { html, text };
 }
 

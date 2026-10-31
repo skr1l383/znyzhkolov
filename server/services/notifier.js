@@ -9,11 +9,12 @@ import { emailLayout, sendMail, siteLink } from './mailer.js';
 import { escapeHtml, sendMessage } from './telegram.js';
 import { pushToUser } from './webpush.js';
 
-const EMAIL_KINDS = new Set(['deal', 'free', 'epic']);
+const EMAIL_KINDS = new Set(['deal', 'free', 'epic', 'digest']);
 
 /** Куди веде натискання на пуш: сторінка гри на сайті (Steam, якщо є), роздачі Epic або список сповіщень. */
 function sitePage(kind, gameId) {
   if (kind === 'epic') return '/#/epic';
+  if (kind === 'digest') return '/#/list';
   const offer = gameId
     ? db.prepare("SELECT store, store_id FROM offers WHERE game_id = ? AND store IN ('steam', 'gog') ORDER BY store = 'steam' DESC LIMIT 1").get(gameId)
     : null;
@@ -21,9 +22,10 @@ function sitePage(kind, gameId) {
 }
 
 /** image — картинка гри (фото в Telegram, обкладинка в листі), buttonLabel — підпис кнопки з посиланням url. */
-export async function notifyUser(user, { kind, gameId = null, title, body, html, url, image = null, buttonLabel = null }) {
+export async function notifyUser(user, { kind, gameId = null, title, body, html, url, image = null, buttonLabel = null, sections = [] }) {
   const lang = userLang(user);
-  const button = url ? { label: buttonLabel || tr(lang, kind === 'epic' ? 'Забрати в Epic Games' : 'Відкрити в магазині'), url } : null;
+  const defaultLabel = kind === 'epic' ? tr(lang, 'Забрати в Epic Games') : kind === 'digest' ? tr(lang, 'Відкрити мій список') : tr(lang, 'Відкрити в магазині');
+  const button = url ? { label: buttonLabel || defaultLabel, url } : null;
   const info = db
     .prepare(
       `INSERT INTO notifications (user_id, game_id, kind, title, body, url, image_url, created_at)
@@ -49,6 +51,7 @@ export async function notifyUser(user, { kind, gameId = null, title, body, html,
       heading: title,
       image,
       paragraphs: [body].filter(Boolean),
+      sections, // списки ігор (тижневий дайджест)
       button,
       footnote: tr(lang, 'Ти отримав цей лист, бо стежиш за цінами в Знижколові. Вимкнути листи можна в профілі: {url}', { url: siteLink('#/profile') }),
     });

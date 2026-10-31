@@ -294,6 +294,16 @@ function alertsTab(u) {
             <input type="checkbox" role="switch" id="p-epic" ${u.notifyEpicFree ? 'checked' : ''} aria-label="${t('Повідомляти про нові безкоштовні роздачі Epic Games')}" />
           </label>
         </div>
+        <div class="channel">
+          <span class="channel-icon">${ICONS.mail}</span>
+          <div class="channel-text">
+            <div class="channel-title"><b>${t('Тижневий дайджест')}</b></div>
+            <p class="hint">${t('Щонеділі зранку: що зі знижкою з твого списку і найкращі знижки тижня.')}</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" role="switch" id="p-digest" ${u.notifyDigest ? 'checked' : ''} aria-label="${t('Надсилати тижневий дайджест')}" />
+          </label>
+        </div>
       </div>
     </section>
   `;
@@ -435,6 +445,7 @@ export async function render(root, params) {
     });
   toggle($('#p-notify-email', root), 'notifyEmail', (user) => (user.notifyEmail ? t('Листи про знижки увімкнено') : t('Листи про знижки вимкнено')));
   toggle($('#p-epic', root), 'notifyEpicFree', (user) => (user.notifyEpicFree ? t('Повідомлятимемо про нові роздачі') : t('Сповіщення про роздачі вимкнено')));
+  toggle($('#p-digest', root), 'notifyDigest', (user) => (user.notifyDigest ? t('Дайджест приходитиме щонеділі') : t('Тижневий дайджест вимкнено')));
 
   $('#p-resend', root)?.addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {

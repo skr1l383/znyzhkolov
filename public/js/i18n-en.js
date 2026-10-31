@@ -805,6 +805,14 @@ export const EN = {
   'вітрина знижок': 'deals showcase',
   'мій список': 'my list',
 
+  // Тижневий дайджест (views/profile.js)
+  'Тижневий дайджест': 'Weekly digest',
+  'Щонеділі зранку: що зі знижкою з твого списку і найкращі знижки тижня.': 'Every Sunday morning: what is on sale from your list and the best deals of the week.',
+  'Надсилати тижневий дайджест': 'Send the weekly digest',
+  'Дайджест приходитиме щонеділі': 'The digest will arrive every Sunday',
+  'Тижневий дайджест вимкнено': 'Weekly digest is off',
+  'не час': 'not the time yet',
+
   // Синхронізація з бажаним Steam (views/watchlist.js)
   'Синхронізація бажаного Steam': 'Steam wishlist sync',
   'Спершу імпортуй список бажаного Steam — так ми дізнаємось твій профіль': 'Import your Steam wishlist first — that is how we learn your profile',

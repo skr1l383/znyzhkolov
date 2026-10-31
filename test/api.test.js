@@ -838,6 +838,34 @@ test('Синхронізація з бажаним Steam: додає лише н
   extraWishlist.length = 0;
 });
 
+test('Тижневий дайджест: лише в неділю, раз на тиждень, з іграми зі списку; вимикається в профілі', async () => {
+  const { runDigest } = await import('../server/services/digest.js');
+  // За розкладом — лише в неділю після 10:00 за Києвом
+  assert.equal((await runDigest({ trigger: 'schedule', at: new Date('2026-11-04T10:00:00Z') })).skipped, true, 'середа');
+  assert.equal((await runDigest({ trigger: 'schedule', at: new Date('2026-11-01T06:00:00Z') })).skipped, true, 'неділя, 8:00 за Києвом');
+
+  assert.equal((await user('GET', '/api/me')).data.user.notifyDigest, true, 'увімкнено за замовчуванням');
+  const job = await admin('POST', '/api/admin/jobs/digest/run');
+  assert.equal(job.status, 200);
+  assert.ok(job.data.result?.sent >= 1 || job.data.sent >= 1, 'надіслано тим, у кого є список');
+  const digest = (await user('GET', '/api/notifications')).data.items.find((n) => n.kind === 'digest');
+  assert.ok(digest, 'дайджест на сторінці сповіщень');
+  assert.equal(digest.title, 'Тижневий дайджест Знижколова');
+  assert.match(digest.body, /з твого списку/);
+
+  // Telegram отримав список ігор з посиланнями на сайт
+  const tgText = tg.sent.map((m) => m.text || m.caption || '').find((x) => x.includes('Тижневий дайджест'));
+  if (tgText) assert.match(tgText, /#\/game\?store=/);
+
+  // Повторно протягом тижня не надсилається, навіть якщо запустити вручну
+  const before = (await user('GET', '/api/notifications')).data.items.filter((n) => n.kind === 'digest').length;
+  await admin('POST', '/api/admin/jobs/digest/run');
+  assert.equal((await user('GET', '/api/notifications')).data.items.filter((n) => n.kind === 'digest').length, before);
+
+  const r = await user('PATCH', '/api/me', { notifyDigest: false });
+  assert.equal(r.data.user.notifyDigest, false);
+});
+
 test('Акаунт: зміна пароля і пошти, мої дані, видалення', async () => {
   const marko = client();
   const phone = client(); // той самий користувач на іншому пристрої

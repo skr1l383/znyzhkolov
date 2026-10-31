@@ -25,6 +25,7 @@ import { runEpicCheck } from './services/epicFree.js';
 import { repairImages, runPriceCheck } from './services/prices.js';
 import { defineJob } from './services/scheduler.js';
 import { runSteamSync } from './services/steamSync.js';
+import { runDigest } from './services/digest.js';
 
 function defineJobs() {
   defineJob('rate', {
@@ -56,6 +57,11 @@ function defineJobs() {
     title: 'Синхронізація бажаного Steam',
     everyMinutes: config.schedule.steamSyncMinutes,
     run: () => runSteamSync(),
+  });
+  defineJob('digest', {
+    title: 'Тижневий дайджест',
+    everyMinutes: 60, // сама задача надсилає лише в неділю після 10:00 за Києвом
+    run: ({ trigger }) => runDigest({ trigger }),
   });
   defineJob('cleanup', {
     title: 'Очищення старих сесій',

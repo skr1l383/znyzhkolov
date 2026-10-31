@@ -51,6 +51,7 @@ export function profileRoutes(router) {
       if (taken) throw new HttpError(409, 'Цей нік уже зайнятий. Вигадай інший', { field: 'name' });
     }
     if ('notifyEpicFree' in ctx.body) changes.notify_epic_free = ctx.body.notifyEpicFree ? 1 : 0;
+    if ('notifyDigest' in ctx.body) changes.notify_digest = ctx.body.notifyDigest ? 1 : 0;
     if ('notifyEmail' in ctx.body) changes.notify_email = ctx.body.notifyEmail ? 1 : 0;
     if ('lang' in ctx.body) {
       if (!['uk', 'en'].includes(ctx.body.lang)) throw new HttpError(400, 'Непідтримувана мова');

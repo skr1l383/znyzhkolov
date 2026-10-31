@@ -6,7 +6,7 @@ import { setUnread, state } from '../app.js';
 import { $, cover, formatDate, gameHref, html, setHtml, timeAgo } from '../ui.js';
 import { pushState } from '../push.js';
 
-const ICONS = { deal: '🔥', free: '🎁', epic: '🎮', system: '✓' };
+const ICONS = { deal: '🔥', free: '🎁', epic: '🎮', digest: '📬', system: '✓' };
 const FILTERS = [
   ['all', 'Усі'],
   ['deal', 'Знижки'],
@@ -14,7 +14,7 @@ const FILTERS = [
   ['system', 'Інше'],
 ];
 // «Безкоштовно» — теж знижка (100%), тож фільтр у них спільний
-const group = (n) => (n.kind === 'free' ? 'deal' : n.kind in ICONS ? n.kind : 'system');
+const group = (n) => (n.kind === 'free' ? 'deal' : n.kind === 'deal' || n.kind === 'epic' ? n.kind : 'system');
 
 function notice(n) {
   const kind = group(n);
@@ -29,7 +29,11 @@ function notice(n) {
           ${n.telegram ? html`<span>${t('надіслано в Telegram')}</span>` : ''}
           ${n.push ? html`<span>${t('надіслано на пристрій')}</span>` : ''}
           ${n.game ? html`<a href="${gameHref(n.game.store, n.game.storeId)}">${t('Сторінка гри')}</a>` : ''}
-          ${n.url ? html`<a href="${n.url}" target="_blank" rel="noopener noreferrer">${t('Відкрити магазин')}</a>` : ''}
+          ${n.kind === 'digest'
+            ? html`<a href="#/list">${t('Відкрити мій список')}</a>`
+            : n.url
+              ? html`<a href="${n.url}" target="_blank" rel="noopener noreferrer">${t('Відкрити магазин')}</a>`
+              : ''}
         </div>
       </div>
       ${n.imageUrl ? html`<span class="notice-cover">${cover(n.imageUrl, n.title)}</span>` : ''}

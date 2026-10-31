@@ -256,6 +256,8 @@ const ADDED_COLUMNS = [
   ['users', 'steam_sync', 'INTEGER NOT NULL DEFAULT 0'], // автоматично додавати нові ігри з бажаного Steam
   ['users', 'steam_sync_discount', 'INTEGER'], // з якою умовою знижки їх додавати
   ['users', 'steam_synced_at', 'TEXT'],
+  ['users', 'notify_digest', 'INTEGER NOT NULL DEFAULT 1'], // тижневий дайджест щонеділі
+  ['users', 'digest_sent_at', 'TEXT'],
 ];
 
 /** Нік для порівняння: без пробілів на краях і без різниці в регістрі (і для кирилиці). */
