@@ -149,13 +149,15 @@ export async function render(root, params) {
   const best = priced.length > 1 ? priced.reduce((a, b) => (b.priceUah < a.priceUah ? b : a)) : null;
   const meta = [g.developers.join(', '), g.releaseDate, g.platforms.map((p) => PLATFORMS[p] || p).join(' · ')].filter(Boolean);
   const steam = g.offers.find((o) => o.store === 'steam');
+  // Шапку прикрашає скриншот: фон зі Steam (background) майже чорний. Перший скриншот уже є в галереї, тож беремо другий
+  const heroBg = (g.screenshots[1] || g.screenshots[0])?.full || g.background;
 
   setHtml(
     root,
     html`
       <article class="game-page">
         <header class="game-hero">
-          ${g.background ? html`<img class="game-hero-bg" src="${g.background}" alt="" />` : ''}
+          ${heroBg ? html`<img class="game-hero-bg" src="${heroBg}" alt="" />` : ''}
           <div class="game-hero-inner">
             <a class="back-link" href="#/" data-back>← ${t('Назад')}</a>
             <h1>${g.title}</h1>
