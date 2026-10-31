@@ -1,4 +1,4 @@
-// Сповіщення: зберігаються на сайті (сторінка «Сповіщення») і надсилаються в Telegram.
+// Сповіщення: зберігаються на сайті (сторінка «Сповіщення») і надсилаються в Telegram, пушем на пристрої та листом.
 import { db, now } from '../db.js';
 import { tr, userLang } from '../i18n.js';
 import { log } from '../logger.js';
@@ -7,8 +7,18 @@ import { STORE_NAMES } from '../stores/index.js';
 import { formatUah } from '../stores/util.js';
 import { emailLayout, sendMail, siteLink } from './mailer.js';
 import { escapeHtml, sendMessage } from './telegram.js';
+import { pushToUser } from './webpush.js';
 
 const EMAIL_KINDS = new Set(['deal', 'free', 'epic']);
+
+/** Куди веде натискання на пуш: сторінка гри на сайті (Steam, якщо є), роздачі Epic або список сповіщень. */
+function sitePage(kind, gameId) {
+  if (kind === 'epic') return '/#/epic';
+  const offer = gameId
+    ? db.prepare("SELECT store, store_id FROM offers WHERE game_id = ? AND store IN ('steam', 'gog') ORDER BY store = 'steam' DESC LIMIT 1").get(gameId)
+    : null;
+  return offer ? `/#/game?store=${offer.store}&id=${offer.store_id}` : '/#/notifications';
+}
 
 /** image — картинка гри (фото в Telegram, обкладинка в листі), buttonLabel — підпис кнопки з посиланням url. */
 export async function notifyUser(user, { kind, gameId = null, title, body, html, url, image = null, buttonLabel = null }) {
@@ -27,6 +37,10 @@ export async function notifyUser(user, { kind, gameId = null, title, body, html,
     if (sent) db.prepare('UPDATE notifications SET sent_telegram = 1 WHERE id = ?').run(info.lastInsertRowid);
   }
 
+  // Пуш на телефон і комп'ютер. Натискання відкриває сторінку гри на сайті (або роздачі Epic, або сповіщення)
+  const pushed = await pushToUser(user.id, { title, body: body || '', url: sitePage(kind, gameId), image, tag: `${kind}-${gameId || info.lastInsertRowid}` });
+  if (pushed) db.prepare('UPDATE notifications SET sent_push = ? WHERE id = ?').run(pushed, info.lastInsertRowid);
+
   // Лист — лише про знижки й роздачі і лише на підтверджену пошту
   let emailed = false;
   if (EMAIL_KINDS.has(kind) && user.email_verified_at && user.notify_email !== 0) {
@@ -41,11 +55,11 @@ export async function notifyUser(user, { kind, gameId = null, title, body, html,
     emailed = (await sendMail({ to: user.email, subject: title, ...mail, kind, userId: user.id })).ok;
     if (emailed) db.prepare('UPDATE notifications SET sent_email = 1 WHERE id = ?').run(info.lastInsertRowid);
   }
-  log.info('notify.sent', `Сповіщення «${title}» для ${user.email}${sent ? ' (+Telegram)' : ''}${emailed ? ' (+лист)' : ''}`, {
+  log.info('notify.sent', `Сповіщення «${title}» для ${user.email}${sent ? ' (+Telegram)' : ''}${pushed ? ` (+пуш: ${pushed})` : ''}${emailed ? ' (+лист)' : ''}`, {
     userId: user.id,
     meta: { kind, gameId },
   });
-  return { id: Number(info.lastInsertRowid), telegram: sent, email: emailed };
+  return { id: Number(info.lastInsertRowid), telegram: sent, push: pushed, email: emailed };
 }
 
 function conditionText(watch, lang) {

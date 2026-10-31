@@ -156,6 +156,7 @@ export function profileRoutes(router) {
         imageUrl: n.cover || null,
         game: n.page ? { store: n.page.split(':')[0], storeId: n.page.split(':')[1] } : null,
         telegram: Boolean(n.sent_telegram),
+        push: n.sent_push || 0,
         read: Boolean(n.read_at),
         createdAt: n.created_at,
       }));

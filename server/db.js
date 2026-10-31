@@ -215,6 +215,18 @@ CREATE TABLE IF NOT EXISTS settings (
   value      TEXT,
   updated_at TEXT NOT NULL
 );
+
+-- Пристрої, на які людина дозволила пуш-сповіщення: адреса сервісу сповіщень браузера і ключі шифрування.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint   TEXT NOT NULL UNIQUE,
+  p256dh     TEXT NOT NULL,
+  auth       TEXT NOT NULL,
+  user_agent TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
 `;
 
 // Стовпці, додані після першої версії. Бази, створені раніше, отримують їх при запуску,
@@ -233,6 +245,7 @@ const ADDED_COLUMNS = [
   ['users', 'google_sub', 'TEXT'], // незмінний ідентифікатор акаунта Google — для входу через Google
   ['deals', 'hero_small_url', 'TEXT'], // легша картинка банера для телефона (у 3–4 рази менша)
   ['notifications', 'image_url', 'TEXT'], // обкладинка гри в списку сповіщень (для роздач Epic іншої немає)
+  ['notifications', 'sent_push', 'INTEGER NOT NULL DEFAULT 0'], // скільком пристроям доставлено пуш
 ];
 
 /** Нік для порівняння: без пробілів на краях і без різниці в регістрі (і для кирилиці). */

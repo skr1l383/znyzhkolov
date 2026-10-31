@@ -15,6 +15,7 @@ import { dealRoutes, facetRoutes, featuredRoutes, gamePageRoutes } from './route
 import { gameRoutes } from './routes/games.js';
 import { googleRoutes } from './routes/google.js';
 import { profileRoutes } from './routes/profile.js';
+import { pushRoutes } from './routes/push.js';
 import { shareRoutes } from './routes/share.js';
 import { wishlistRoutes } from './routes/wishlist.js';
 import { saveUsdRate } from './stores/currency.js';
@@ -85,6 +86,7 @@ export function buildServer({ dbFile, silent = false } = {}) {
   wishlistRoutes(router);
   adminRoutes(router);
   advisorRoutes(router);
+  pushRoutes(router);
 
   const handler = createApp({
     router,

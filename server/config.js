@@ -50,6 +50,11 @@ export const config = {
     usdUahFallback: num(env.USD_UAH_FALLBACK, 45),
   },
 
+  // Пуш-сповіщення: ключі VAPID створюються самі й лежать у базі. testOrigin — тестовий «сервіс сповіщень» в автотестах.
+  push: {
+    testOrigin: (env.PUSH_TEST_ORIGIN || '').replace(/\/$/, ''),
+  },
+
   schedule: {
     pricesMinutes: num(env.CHECK_INTERVAL_MINUTES, 180),
     epicMinutes: num(env.EPIC_INTERVAL_MINUTES, 360),

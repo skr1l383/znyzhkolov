@@ -299,7 +299,7 @@ function setupVerifyBanner() {
 }
 
 /** Інструкція для iPhone: «Поділитися» → «На початковий екран» → «Додати». */
-function iosInstallDialog() {
+export function iosInstallDialog() {
   const share = html`<svg class="ios-share" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4" /><path d="M6 11H5v10h14V11h-1" /></svg>`;
   const dialog = openDialog(html`
     <div class="dialog-body ios-install">

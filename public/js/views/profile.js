@@ -1,7 +1,8 @@
 // Профіль: шапка з фото й підсумком списку та вкладки «Профіль», «Сповіщення», «Безпека», «Мої дані».
 import { del, get, patch, post, upload } from '../api.js';
 import { getLang, LANGS, t, tp } from '../i18n.js';
-import { clearPrivateCache, go, refreshMe, reload, state, switchLang } from '../app.js';
+import { clearPrivateCache, go, iosInstallDialog, refreshMe, reload, state, switchLang } from '../app.js';
+import { disablePush, enablePush, pushState, testPush } from '../push.js';
 import { bindAccount, dataPanels, securityPanels } from './account.js';
 import { $, avatar, bindDropZone, clearFormErrors, formatDate, formatSize, formatUah, html, setHtml, showFormError, toast, withLoading } from '../ui.js';
 
@@ -18,6 +19,7 @@ const ICONS = {
   mail: svg(html`<rect x="3" y="5.5" width="18" height="13" rx="2" /><path d="m4 7 8 6 8-6" />`),
   gift: svg(html`<rect x="4" y="9" width="16" height="11" rx="1.5" /><path d="M3 9h18M12 9v11M12 9c-1.5-3-5-4-5-1.5S10 9 12 9Zm0 0c1.5-3 5-4 5-1.5S14 9 12 9Z" />`),
   tag: svg(html`<path d="M3 12V4.5A1.5 1.5 0 0 1 4.5 3H12l9 9-9 9Z" /><circle cx="7.5" cy="7.5" r="1.5" />`),
+  phone: svg(html`<rect x="6.5" y="2.5" width="11" height="19" rx="2.5" /><path d="M10.5 18.5h3" /><circle cx="17.5" cy="6" r="3" class="ico-dot" />`),
   logout: svg(html`<path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h10" />`),
 };
 
@@ -175,6 +177,60 @@ function telegramChannel() {
   `;
 }
 
+/** Рядок «Пуш на цьому пристрої»: стан залежить від браузера, тож заповнюється після показу сторінки. */
+async function mountPushChannel(root) {
+  const box = $('#push-channel', root);
+  if (!box) return;
+  const st = await pushState();
+  const PILLS = {
+    on: html`<span class="pill pill-good">${t('Увімкнено')}</span>`,
+    off: html`<span class="pill">${t('вимкнено')}</span>`,
+    denied: html`<span class="pill">${t('заборонено в браузері')}</span>`,
+    'ios-install': html`<span class="pill">${t('потрібне встановлення')}</span>`,
+    unsupported: html`<span class="pill">${t('не підтримується')}</span>`,
+  };
+  const HINTS = {
+    on: t('Сповіщення з’являтимуться на цьому пристрої, навіть коли сайт закрито.'),
+    off: t('Сповіщення як від звичайного застосунку — навіть коли сайт закрито.'),
+    denied: t('Сповіщення для цього сайту заблоковані в налаштуваннях браузера. Дозволь їх там (значок біля адреси сайту) і онови сторінку.'),
+    'ios-install': t('На iPhone пуш-сповіщення працюють, коли Знижколов додано на головний екран (iOS 16.4 і новіші).'),
+    unsupported: t('Цей браузер не вміє пуш-сповіщення. Спробуй Chrome, Edge, Firefox або Safari.'),
+  };
+  const ACTIONS = {
+    on: html`<button class="btn btn-sm" type="button" data-push="test">${t('Тестове сповіщення')}</button>
+      <button class="btn btn-sm btn-ghost btn-danger" type="button" data-push="off">${t('Вимкнути')}</button>`,
+    off: html`<button class="btn btn-sm btn-primary" type="button" data-push="on">${t('Увімкнути')}</button>`,
+    'ios-install': html`<button class="btn btn-sm" type="button" data-push="install">${t('Як встановити')}</button>`,
+  };
+  setHtml($('#push-status', box), PILLS[st]);
+  $('#push-hint', box).textContent = HINTS[st];
+  setHtml($('#push-actions', box), ACTIONS[st] || '');
+
+  box.onclick = (e) => {
+    const btn = e.target.closest('[data-push]');
+    if (!btn) return;
+    const action = btn.dataset.push;
+    if (action === 'install') return iosInstallDialog();
+    withLoading(btn, async () => {
+      try {
+        if (action === 'on') {
+          await enablePush();
+          toast(t('Пуш-сповіщення увімкнено на цьому пристрої'));
+        } else if (action === 'off') {
+          await disablePush();
+          toast(t('Пуш-сповіщення на цьому пристрої вимкнено'));
+        } else {
+          await testPush();
+          toast(t('Сповіщення надіслано — зараз з’явиться'));
+        }
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+      mountPushChannel(root);
+    });
+  };
+}
+
 function alertsTab(u) {
   return html`
     <section class="panel stack">
@@ -191,6 +247,14 @@ function alertsTab(u) {
           </div>
         </div>
         ${telegramChannel()}
+        <div class="channel" id="push-channel">
+          <span class="channel-icon is-push">${ICONS.phone}</span>
+          <div class="channel-text">
+            <div class="channel-title"><b>${t('Пуш на цьому пристрої')}</b><span id="push-status"></span></div>
+            <p class="hint" id="push-hint">${t('Сповіщення як від звичайного застосунку — навіть коли сайт закрито.')}</p>
+          </div>
+          <div class="channel-actions" id="push-actions"></div>
+        </div>
         <div class="channel">
           <span class="channel-icon">${ICONS.mail}</span>
           <div class="channel-text">
@@ -327,6 +391,8 @@ export async function render(root, params) {
   });
 
   $('#logout', root).addEventListener('click', async () => {
+    // Пуші цього пристрою прив'язані до акаунта — після виходу вони не мають приходити сюди
+    await disablePush().catch(() => {});
     await post('/api/auth/logout').catch(() => {});
     await clearPrivateCache();
     state.user = null;
@@ -380,6 +446,8 @@ export async function render(root, params) {
       }
     })
   );
+
+  mountPushChannel(root);
 
   $('#tg-test', root)?.addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {

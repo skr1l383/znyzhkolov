@@ -8,7 +8,7 @@
 // Будь-яка зміна цього файлу (наприклад, версії) змушує браузер встановити service worker заново.
 // v2: перша версія могла встановитися із суворою CSP і блокувати обкладинки — нова її замінює.
 // v4: додано файли перекладу (i18n). v5: при 503 (база недоступна) — збережені дані. v6: коментарі. v7: карта цін. v10: вхід через Google повз service worker.
-const VERSION = 'v18';
+const VERSION = 'v19';
 const SHELL_CACHE = `zk-shell-${VERSION}`;
 const API_CACHE = 'zk-api'; // очищається при виході з акаунта
 const IMAGE_CACHE = 'zk-images';
@@ -29,6 +29,7 @@ const SHELL = [
   '/js/app.js',
   '/js/advisor.js',
   '/js/api.js',
+  '/js/push.js',
   '/js/backdrop.js',
   '/js/ui.js',
   '/js/i18n.js',
@@ -154,4 +155,42 @@ self.addEventListener('fetch', (event) => {
   if (external && (request.destination === 'image' || request.destination === 'font' || request.destination === 'style')) {
     event.respondWith(cacheFirst(request));
   }
+});
+
+// ---------- Пуш-сповіщення ----------
+// Сервер шифрує повідомлення ключами цього браузера; тут воно вже розшифроване: { title, body, url, image, tag }.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data?.json() || {};
+  } catch {
+    data = { body: event.data?.text() || '' };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Знижколов', {
+      body: data.body || '',
+      icon: '/img/icon-192.png',
+      badge: '/img/icon-192.png',
+      image: data.image || undefined,
+      tag: data.tag || undefined, // те саме сповіщення про ту саму гру замінює попереднє, а не множиться
+      data: { url: data.url || '/#/notifications' },
+    })
+  );
+});
+
+// Натискання на сповіщення: якщо сайт уже відкрито — переходимо в ньому, інакше відкриваємо нове вікно
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || '/#/notifications', self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
+      if (open) {
+        await open.focus();
+        return open.navigate(url).catch(() => open.postMessage({ type: 'open', url }));
+      }
+      return self.clients.openWindow(url);
+    })()
+  );
 });

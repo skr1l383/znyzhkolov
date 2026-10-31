@@ -2549,6 +2549,16 @@ a.profile-stat:hover {
   color: #2aabee;
 }
 
+.channel-icon.is-push {
+  background: color-mix(in srgb, #f2762e 16%, transparent);
+  color: #f2762e;
+}
+
+.ico .ico-dot {
+  fill: var(--accent);
+  stroke: none;
+}
+
 .channel-text {
   display: grid;
   gap: 4px;

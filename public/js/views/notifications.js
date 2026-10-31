@@ -4,6 +4,7 @@ import { get, post } from '../api.js';
 import { locale, t } from '../i18n.js';
 import { setUnread, state } from '../app.js';
 import { $, cover, formatDate, gameHref, html, setHtml, timeAgo } from '../ui.js';
+import { pushState } from '../push.js';
 
 const ICONS = { deal: '🔥', free: '🎁', epic: '🎮', system: '✓' };
 const FILTERS = [
@@ -26,6 +27,7 @@ function notice(n) {
         <div class="notice-meta">
           <time datetime="${n.createdAt}" title="${formatDate(n.createdAt, true)}">${timeAgo(n.createdAt)}</time>
           ${n.telegram ? html`<span>${t('надіслано в Telegram')}</span>` : ''}
+          ${n.push ? html`<span>${t('надіслано на пристрій')}</span>` : ''}
           ${n.game ? html`<a href="${gameHref(n.game.store, n.game.storeId)}">${t('Сторінка гри')}</a>` : ''}
           ${n.url ? html`<a href="${n.url}" target="_blank" rel="noopener noreferrer">${t('Відкрити магазин')}</a>` : ''}
         </div>
@@ -73,8 +75,8 @@ function emptyState() {
 
 function channels() {
   const u = state.user;
-  const row = (icon, name, on, text, link) => html`
-    <li class="notify-channel ${on ? 'is-on' : ''}">
+  const row = (icon, name, on, text, link, id = null) => html`
+    <li class="notify-channel ${on ? 'is-on' : ''}" ${id ? html`id="${id}"` : ''}>
       <span class="notify-channel-icon" aria-hidden="true">${icon}</span>
       <span class="notify-channel-text"><b>${name}</b><small>${text}</small></span>
       ${link ? html`<a class="btn btn-sm" href="${link[0]}">${link[1]}</a>` : html`<span class="notify-channel-dot" title="${t('Увімкнено')}"></span>`}
@@ -87,6 +89,7 @@ function channels() {
         ${u.telegramLinked
           ? row('✈️', 'Telegram', true, u.telegramUsername ? `@${u.telegramUsername}` : t('Підключено'), null)
           : row('✈️', 'Telegram', false, t('Миттєво на телефон'), ['#/profile', t('Підключити')])}
+        ${row('📲', t('Пуш на пристрої'), false, t('Як від застосунку, навіть коли сайт закрито'), ['#/profile', t('Увімкнути')], 'push-row')}
         ${u.notifyEmail && u.emailVerified
           ? row('✉️', t('Пошта'), true, u.email, null)
           : row('✉️', t('Пошта'), false, u.emailVerified ? t('Вимкнено') : t('Пошту не підтверджено'), ['#/profile', t('Налаштувати')])}
@@ -149,6 +152,15 @@ export async function render(root) {
     root.querySelectorAll('[data-filter]').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
     const key = btn.dataset.filter;
     setHtml($('#notice-days', root), listHtml(key === 'all' ? items : items.filter((n) => group(n) === key)));
+  });
+
+  // Пуш залежить від браузера цього пристрою — дізнаємось після показу сторінки
+  pushState().then((st) => {
+    const li = $('#push-row', root);
+    if (!li || st !== 'on') return;
+    li.classList.add('is-on');
+    $('small', li).textContent = t('Увімкнено на цьому пристрої');
+    li.querySelector('.btn').replaceWith(Object.assign(document.createElement('span'), { className: 'notify-channel-dot', title: t('Увімкнено') }));
   });
 
   if (unread) {
