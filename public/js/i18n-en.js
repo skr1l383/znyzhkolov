@@ -805,6 +805,18 @@ export const EN = {
   'вітрина знижок': 'deals showcase',
   'мій список': 'my list',
 
+  // Встановлення на iPhone (app.js)
+  'Встановити на iPhone': 'Install on iPhone',
+  'Знижколов на головному екрані': 'Znyzhkolov on your home screen',
+  'Натисни «Поділитися»': 'Tap “Share”',
+  'Кнопка зі стрілкою вгору — внизу екрана в Safari.': 'The button with an up arrow at the bottom of Safari.',
+  'Вибери «На початковий екран»': 'Choose “Add to Home Screen”',
+  'Якщо не видно — прогорни список дій нижче.': 'If you do not see it, scroll the list of actions down.',
+  'Натисни «Додати»': 'Tap “Add”',
+  'Знижколов з’явиться серед застосунків і відкриватиметься на весь екран.': 'Znyzhkolov will appear among your apps and open full screen.',
+  'Якщо кнопки «Поділитися» немає, відкрий сайт у Safari.': 'If there is no Share button, open the site in Safari.',
+  Зрозуміло: 'Got it',
+
   // Вітрина: швидкі добірки (views/showcase.js)
   'Знижка 75%+': '75%+ off',
   'До 100 ₴': 'Under 100 ₴',

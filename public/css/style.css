@@ -2964,6 +2964,39 @@ a.profile-stat:hover {
   align-items: center;
 }
 
+/* Інструкція «Встановити на iPhone» */
+.ios-install {
+  display: grid;
+  gap: 16px;
+  max-width: 440px;
+}
+
+.ios-install-icon {
+  flex: none;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.ios-install h2 {
+  margin: 2px 0 0;
+}
+
+.ios-install .hint {
+  margin: 0;
+}
+
+.ios-share {
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  vertical-align: -3px;
+  fill: none;
+  stroke: var(--steam);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .dialog-head .cover {
   width: 120px;
   flex-shrink: 0;

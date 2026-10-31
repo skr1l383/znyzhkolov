@@ -10,6 +10,9 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <!-- iPhone: з головного екрана відкривається на весь екран, без панелей Safari (iOS до 16.4 читає лише цей тег) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Знижколов" />
     <link rel="preload" href="/fonts/manrope-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin />

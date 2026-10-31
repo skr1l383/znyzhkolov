@@ -3,7 +3,7 @@ import { syncAdvisor } from './advisor.js';
 import { get, patch, post } from './api.js';
 import { setPageBackdrop } from './backdrop.js';
 import { LANGS, getLang, setLang, t, translateStatic } from './i18n.js';
-import { $, $$, avatar, closeDialog, html, initials, setHtml, toast } from './ui.js';
+import { $, $$, avatar, closeDialog, html, initials, openDialog, setHtml, toast } from './ui.js';
 import * as admin from './views/admin.js';
 import * as auth from './views/auth.js';
 import * as epic from './views/epic.js';
@@ -298,6 +298,27 @@ function setupVerifyBanner() {
   });
 }
 
+/** Інструкція для iPhone: «Поділитися» → «На початковий екран» → «Додати». */
+function iosInstallDialog() {
+  const share = html`<svg class="ios-share" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4" /><path d="M6 11H5v10h14V11h-1" /></svg>`;
+  const dialog = openDialog(html`
+    <div class="dialog-body ios-install">
+      <div class="dialog-head">
+        <img class="ios-install-icon" src="/img/icon-192.png" alt="" width="56" height="56" />
+        <div><p class="muted">${t('Встановити на iPhone')}</p><h2>${t('Знижколов на головному екрані')}</h2></div>
+      </div>
+      <ol class="epic-steps">
+        <li><b>${t('Натисни «Поділитися»')} ${share}</b><span>${t('Кнопка зі стрілкою вгору — внизу екрана в Safari.')}</span></li>
+        <li><b>${t('Вибери «На початковий екран»')}</b><span>${t('Якщо не видно — прогорни список дій нижче.')}</span></li>
+        <li><b>${t('Натисни «Додати»')}</b><span>${t('Знижколов з’явиться серед застосунків і відкриватиметься на весь екран.')}</span></li>
+      </ol>
+      <p class="hint">${t('Якщо кнопки «Поділитися» немає, відкрий сайт у Safari.')}</p>
+      <div class="dialog-foot"><button class="btn btn-primary" type="button" data-close>${t('Зрозуміло')}</button></div>
+    </div>
+  `);
+  $('[data-close]', dialog).addEventListener('click', closeDialog);
+}
+
 function setupPwa() {
   // Service worker працює лише на https або localhost
   if ('serviceWorker' in navigator && window.isSecureContext) {
@@ -322,7 +343,13 @@ function setupPwa() {
     installPrompt = e;
     installBtn.hidden = false;
   });
+  // iPhone і iPad не повідомляють, що сайт можна встановити, і не дають викликати встановлення з кнопки.
+  // Тож там кнопка показує, як додати Знижколов на головний екран через «Поділитися».
+  const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  if (isIos && !standalone) installBtn.hidden = false;
   installBtn.addEventListener('click', async () => {
+    if (isIos && !installPrompt) return iosInstallDialog();
     if (!installPrompt) return;
     installPrompt.prompt();
     await installPrompt.userChoice.catch(() => null);
