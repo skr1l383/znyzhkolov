@@ -6,6 +6,8 @@ export const EN = {
   Знижколов: 'Znyzhkolov',
   'Знижколов, на головну': 'Znyzhkolov, home page',
   'Знижколов · знижки на ігри в Steam, GOG та Epic Games': 'Znyzhkolov · game deals on Steam, GOG and Epic Games',
+  "Назви, зображення й трейлери ігор належать їхнім правовласникам. Дані: Steam, GOG, Epic Games, CheapShark. Знижколов не пов'язаний із цими компаніями.":
+    'Game titles, images and trailers belong to their respective owners. Data: Steam, GOG, Epic Games, CheapShark. Znyzhkolov is not affiliated with these companies.',
   Розділи: 'Sections',
   Знижки: 'Deals',
   'Знижки зараз': 'Deals now',

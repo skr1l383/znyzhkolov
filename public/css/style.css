@@ -4478,6 +4478,22 @@ textarea.input {
   font-weight: 700;
 }
 
+/* Хто власник зображень і звідки дані — окремим рядком під назвою сайту */
+.site-footer .footer-legal {
+  flex-basis: 100%;
+  font-size: 12px;
+  text-align: center;
+  text-wrap: balance;
+  opacity: 0.85;
+}
+
+/* На телефоні кругла кнопка порадника стоїть у кутку — низ сторінки не ховаємо під нею */
+@media (max-width: 760px) {
+  .site-footer {
+    padding-bottom: 96px;
+  }
+}
+
 .doc {
   max-width: 760px;
 }
