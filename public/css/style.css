@@ -1886,6 +1886,9 @@ p {
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow);
+  /* Над картками нижче, інакше список підказок ховається під ними («скло» створює окремий шар) */
+  position: relative;
+  z-index: 5;
 }
 
 .search-hero.is-compact {
@@ -5258,6 +5261,58 @@ textarea.input {
   background: none;
   color: var(--accent-strong);
   font-weight: 800;
+}
+
+/* Підказки ігор на сторінці «Знайти гру»: обкладинка, назва, ціна */
+.game-suggest {
+  width: 100%;
+  max-width: none;
+  max-height: 380px;
+}
+
+.combo-list.game-suggest li {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.game-suggest img,
+.game-suggest-noimg {
+  width: 92px;
+  height: 35px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.game-suggest-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-suggest-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .combo-list.game-suggest li {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  .game-suggest img,
+  .game-suggest-noimg {
+    width: 64px;
+    height: 24px;
+  }
+  .game-suggest-price {
+    grid-column: 2;
+  }
 }
 
 .combo-count {

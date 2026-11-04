@@ -103,6 +103,7 @@ export const EN = {
   'Ще не відстежувалось': 'Not tracked yet',
   'Графік ціни': 'Price chart',
   'Історія ціни': 'Price history',
+  Підказки: 'Suggestions',
   'Ми ще не бачили цю гру на вітрині, тож історії ціни поки немає. Стеж за ціною — і графік почне будуватися з першої перевірки.':
     "We haven't seen this game in our showcase yet, so there is no price history. Watch its price and the chart will start with the first check.",
 

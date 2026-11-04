@@ -38,6 +38,98 @@ function priceBlock(o) {
   `;
 }
 
+/**
+ * Підказки ігор під полем пошуку: з'являються під час набору (з паузою 250 мс, щоб не питати магазин на кожну літеру).
+ * Клік або Enter на підказці відкриває сторінку гри; Enter без вибору — звичайний пошук.
+ */
+function mountGameSuggest(input, list, storeName, initial) {
+  let shown = [];
+  let active = -1;
+  let timer = null;
+  let asked = '';
+  const close = () => {
+    list.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    active = -1;
+  };
+  const mark = (title, q) => {
+    const i = title.toLowerCase().indexOf(q.toLowerCase());
+    return i < 0 ? title : html`${title.slice(0, i)}<mark>${title.slice(i, i + q.length)}</mark>${title.slice(i + q.length)}`;
+  };
+  const show = (q) => {
+    if (!shown.length || document.activeElement !== input) return close();
+    active = -1;
+    setHtml(
+      list,
+      html`${shown.map(
+        (o, i) => html`<li role="option" id="game-opt-${i}" data-i="${i}" aria-selected="false">
+          ${o.imageUrl ? html`<img src="${o.imageUrl}" alt="" loading="lazy" />` : html`<span class="game-suggest-noimg"></span>`}
+          <span class="game-suggest-title">${mark(o.title, q)}</span>
+          <span class="game-suggest-price">
+            ${o.discount > 0 ? html`<span class="discount">−${o.discount}%</span>` : ''}
+            ${o.price == null ? '' : o.price === 0 ? t('Безкоштовно') : formatMoney(o.price, o.currency)}
+          </span>
+        </li>`
+      )}`
+    );
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+  };
+  const ask = () => {
+    const q = input.value.trim();
+    clearTimeout(timer);
+    // Для тексту, який уже шукали (сторінка результатів), підказки не потрібні
+    if (q.length < 2 || q === initial) {
+      asked = q;
+      return close();
+    }
+    timer = setTimeout(async () => {
+      asked = q;
+      try {
+        const { results } = await get(`/api/search?store=${storeName}&q=${encodeURIComponent(q)}`);
+        if (asked !== q) return; // поки чекали, текст змінився
+        shown = results.slice(0, 6);
+        show(q);
+      } catch {
+        close(); // без підказок пошук однаково працює кнопкою
+      }
+    }, 250);
+  };
+  const highlight = (i) => {
+    active = (i + shown.length) % shown.length;
+    [...list.children].forEach((li, k) => li.setAttribute('aria-selected', String(k === active)));
+    input.setAttribute('aria-activedescendant', `game-opt-${active}`);
+  };
+  const choose = (i) => {
+    close();
+    go(gameHref(shown[i].store, shown[i].storeId));
+  };
+
+  input.addEventListener('input', ask);
+  input.addEventListener('focus', () => shown.length && input.value.trim() === asked && asked !== initial && show(asked));
+  input.addEventListener('blur', close);
+  input.addEventListener('keydown', (e) => {
+    if (list.hidden) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlight(active + (e.key === 'ArrowDown' ? 1 : -1));
+    } else if (e.key === 'Enter' && active >= 0) {
+      e.preventDefault();
+      choose(active);
+    } else if (e.key === 'Escape') {
+      close();
+    }
+  });
+  // mousedown, а не click: інакше поле встигне втратити фокус і список закриється раніше
+  list.addEventListener('mousedown', (e) => {
+    const li = e.target.closest('[data-i]');
+    if (!li) return;
+    e.preventDefault();
+    choose(Number(li.dataset.i));
+  });
+}
+
 function resultCard(o, index, linkMode) {
   let button;
   if (o.watching) button = html`<span class="pill pill-good">${t('У списку')}</span>`;
@@ -227,8 +319,12 @@ export async function render(root, params) {
             )}
           </div>
           <label class="visually-hidden" for="search-q">${t('Назва гри')}</label>
-          <input class="input" id="search-q" name="q" type="search" placeholder="${t('Назва гри, наприклад Hades')}" value="${q}"
-            minlength="2" maxlength="80" autocomplete="off" />
+          <div class="combo search-combo">
+            <input class="input" id="search-q" name="q" type="search" placeholder="${t('Назва гри, наприклад Hades')}" value="${q}"
+              minlength="2" maxlength="80" autocomplete="off"
+              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="game-suggest" />
+            <ul class="combo-list game-suggest" id="game-suggest" role="listbox" aria-label="${t('Підказки')}" hidden></ul>
+          </div>
           <button class="btn btn-primary" type="submit">${t('Шукати')}</button>
         </form>
         ${q || linkId
@@ -255,6 +351,8 @@ export async function render(root, params) {
     }
     go(hashFor(value, storeName));
   });
+
+  if (!linkId) mountGameSuggest(input, $('#game-suggest', root), storeName, q);
 
   root.querySelectorAll('[data-store]').forEach((b) =>
     b.addEventListener('click', () => go(hashFor(input.value.trim() || q, b.dataset.store)))

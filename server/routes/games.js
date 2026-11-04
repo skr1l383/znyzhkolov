@@ -146,6 +146,20 @@ function refreshInBackground(gameId, watchId) {
     .catch((err) => log.warn('prices.refresh', `Не вдалося оновити ціни гри #${gameId}: ${err.message}`));
 }
 
+// Підказки під час набору шлють схожі запити один за одним, тож відповіді магазину тримаємо кілька хвилин
+const SEARCH_TTL_MS = 5 * 60 * 1000;
+const searchCache = new Map();
+
+async function cachedSearch(storeName, q) {
+  const key = `${storeName}:${q.toLowerCase()}`;
+  const hit = searchCache.get(key);
+  if (hit && Date.now() - hit.at < SEARCH_TTL_MS) return hit.results;
+  const results = (await store(storeName).search(q)).slice(0, 20);
+  searchCache.set(key, { at: Date.now(), results });
+  if (searchCache.size > 500) searchCache.delete(searchCache.keys().next().value); // найстаріший запис
+  return results;
+}
+
 export function gameRoutes(router) {
   router.get('/api/search', requireAuth, async (ctx) => {
     const q = v.text(ctx.query.q, { field: 'q', label: 'Пошук', min: 2, max: 80 });
@@ -154,7 +168,7 @@ export function gameRoutes(router) {
 
     let results;
     try {
-      results = (await store(storeName).search(q)).slice(0, 20);
+      results = await cachedSearch(storeName, q);
     } catch (err) {
       log.warn('search.error', `Пошук у ${STORE_NAMES[storeName]} не вдався: ${err.message}`, { userId: ctx.user.id });
       throw templateError(502, '{store} зараз не відповідає. Спробуйте пізніше або пошукайте в іншому магазині', { store: STORE_NAMES[storeName] });
