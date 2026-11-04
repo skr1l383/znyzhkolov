@@ -25,6 +25,7 @@ import {
 } from '../ui.js';
 import { t, tp } from '../i18n.js';
 import { refreshMe, state } from '../app.js';
+import { mountGameSuggest } from '../gameSuggest.js';
 import { conditionsFields, conditionsText, readConditions } from './conditions.js';
 import { openAddDialog } from './search.js';
 import { dealCard } from './showcase.js';
@@ -623,7 +624,11 @@ export async function render(root) {
                     </button>`
                   )}
                 </div>
-                <input class="input" id="list-q" type="search" placeholder="${t('Пошук у списку')}" aria-label="${t('Пошук у списку')}" value="${view.q}" />
+                <div class="combo list-combo">
+                  <input class="input" id="list-q" type="search" placeholder="${t('Пошук у списку')}" aria-label="${t('Пошук у списку')}" value="${view.q}"
+                    autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="list-suggest" />
+                  <ul class="combo-list game-suggest" id="list-suggest" role="listbox" aria-label="${t('Підказки')}" hidden></ul>
+                </div>
                 <select class="select" id="list-sort" aria-label="${t('Сортування')}">
                   ${SORTS.map(([key, label]) => html`<option value="${key}" ${view.sort === key ? 'selected' : ''}>${t(label)}</option>`)}
                 </select>
@@ -632,8 +637,18 @@ export async function render(root) {
           : emptyState()}
       `
     );
-    if (items.length) drawList();
-    else loadStarter(root).then((list) => (starter = list));
+    if (items.length) {
+      drawList();
+      // Підказки з власного списку: без запитів до сервера, тож одразу
+      mountGameSuggest($('#list-q', root), $('#list-suggest', root), {
+        delay: 0,
+        source: async (q) =>
+          items
+            .filter((i) => i.title.toLocaleLowerCase().includes(q.toLocaleLowerCase()))
+            .map((i) => ({ ...(bestOf(i) || i.offers[0]), title: i.title, imageUrl: i.imageUrl }))
+            .filter((o) => ['steam', 'gog'].includes(o.store)),
+      });
+    } else loadStarter(root).then((list) => (starter = list));
   };
   root.oninput = (e) => {
     if (e.target.id !== 'list-q') return;

@@ -5,6 +5,7 @@ import { heroSrc, setBackdrop } from '../backdrop.js';
 import { go, state } from '../app.js';
 import { $, $$, STORE_NAMES, cover, gameHref, formatDate, formatMoney, formatUah, html, setHtml, timeAgo, toast } from '../ui.js';
 import { t, tp } from '../i18n.js';
+import { mountGameSuggest } from '../gameSuggest.js';
 import { openAddDialog } from './search.js';
 
 const PAGE = 24;
@@ -391,10 +392,12 @@ export async function render(root, params) {
 
       <form class="filters" role="search" aria-label="${t('Фільтри вітрини')}">
         <div class="filters-top">
-          <div class="filter-search">
+          <div class="filter-search combo">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             <input class="input" type="search" name="q" placeholder="${t('Пошук за назвою')}" value="${filters.q}"
-              aria-label="${t('Пошук за назвою')}" maxlength="80" />
+              aria-label="${t('Пошук за назвою')}" maxlength="80" autocomplete="off"
+              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="deal-suggest" />
+            <ul class="combo-list game-suggest" id="deal-suggest" role="listbox" aria-label="${t('Підказки')}" hidden></ul>
           </div>
           <div class="input-suffix filter-price">
             <input class="input num" type="number" name="maxPrice" min="0" step="1" inputmode="numeric" placeholder="${t('Ціна до')}"
@@ -530,6 +533,13 @@ export async function render(root, params) {
     history.replaceState(null, '', `#/${qs ? `?${qs}` : ''}`);
     load();
   }
+
+  // Підказки зі знижок; хто увійшов, тому ще й пошук гри в усьому Steam
+  mountGameSuggest(form.elements.q, $('#deal-suggest', form), {
+    source: async (q) => (await get(`/api/deals?q=${encodeURIComponent(q)}&limit=6`)).items,
+    more: (q) =>
+      state.user ? { label: t('Шукати «{q}» в усіх іграх Steam', { q }), href: `#/search?${new URLSearchParams({ q, store: 'steam' })}` } : null,
+  });
 
   let typing = null;
   form.addEventListener('input', (e) => {

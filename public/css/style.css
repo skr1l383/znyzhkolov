@@ -5301,6 +5301,21 @@ textarea.input {
   white-space: nowrap;
 }
 
+.combo-list.game-suggest li.game-suggest-more {
+  display: block;
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.list-combo {
+  flex: 1;
+  min-width: 180px;
+}
+
+.list-combo .input {
+  width: 100%;
+}
+
 @media (max-width: 760px) {
   .combo-list.game-suggest li {
     grid-template-columns: 64px minmax(0, 1fr);
