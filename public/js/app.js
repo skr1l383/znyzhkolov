@@ -3,6 +3,7 @@ import { syncAdvisor } from './advisor.js';
 import { get, patch, post } from './api.js';
 import { setPageBackdrop } from './backdrop.js';
 import { LANGS, getLang, setLang, t, translateStatic } from './i18n.js';
+import { initMotion, pageEnter } from './motion.js';
 import { $, $$, avatar, closeDialog, html, initials, openDialog, setHtml, toast } from './ui.js';
 import * as admin from './views/admin.js';
 import * as auth from './views/auth.js';
@@ -67,7 +68,10 @@ async function navigate() {
   // Вітрина і сторінка гри потім ставлять власний фон
   setPageBackdrop(name || 'home');
   const root = $('#view');
-  if (lastRoute !== name) window.scrollTo(0, 0);
+  if (lastRoute !== name) {
+    window.scrollTo(0, 0);
+    pageEnter(root);
+  }
   lastRoute = name;
   try {
     cleanup = (await route.view(root, params)) || null;
@@ -169,6 +173,7 @@ window.addEventListener('zk:unauthorized', () => {
 });
 
 window.addEventListener('hashchange', navigate);
+initMotion($('#view'));
 
 // Файл, кинутий повз зону завантаження, браузер відкрив би замість сайту — не дозволяємо
 for (const type of ['dragover', 'drop']) {

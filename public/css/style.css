@@ -726,7 +726,7 @@ p {
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.2s;
 }
 
 .btn:hover {
@@ -734,7 +734,7 @@ p {
 }
 
 .btn:active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.98);
 }
 
 .btn-primary {
@@ -745,6 +745,13 @@ p {
 
 .btn-primary:hover {
   background: color-mix(in srgb, var(--accent) 88%, #fff);
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--accent) 75%, transparent);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  box-shadow: none;
+  transform: translateY(1px) scale(0.98);
 }
 
 .btn-ghost {
@@ -1967,6 +1974,7 @@ p {
 
 .suggestion:hover {
   border-color: var(--accent);
+  transform: translateY(-2px);
 }
 
 .how-steps {
@@ -4481,15 +4489,6 @@ textarea.input {
   font-weight: 700;
 }
 
-/* Хто власник зображень і звідки дані — окремим рядком під назвою сайту */
-.site-footer .footer-legal {
-  flex-basis: 100%;
-  font-size: 12px;
-  text-align: center;
-  text-wrap: balance;
-  opacity: 0.85;
-}
-
 /* На телефоні кругла кнопка порадника стоїть у кутку — низ сторінки не ховаємо під нею */
 @media (max-width: 760px) {
   .site-footer {
@@ -5369,22 +5368,31 @@ textarea.input {
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow);
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.25s, border-color 0.25s;
 }
 
+/* Картка піднімається й світиться кольором сайту, обкладинка трохи наближається */
 .deal-card:hover {
-  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 16px 34px -14px color-mix(in srgb, var(--accent) 55%, transparent), var(--shadow);
+  transform: translateY(-4px);
 }
 
 .deal-cover {
   position: relative;
   display: block;
+  overflow: hidden;
 }
 
 .deal-cover .cover {
   display: block;
   aspect-ratio: 460 / 215;
   border-radius: 0;
+  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.deal-card:hover .deal-cover .cover {
+  transform: scale(1.05);
 }
 
 .deal-badge {
@@ -5624,6 +5632,7 @@ textarea.input {
 
 .quick-pick:hover {
   border-color: var(--accent);
+  transform: translateY(-2px);
 }
 
 .quick-pick[aria-pressed='true'] {
@@ -5984,6 +5993,109 @@ textarea.input {
   }
   .search-bar {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Анімації (public/js/motion.js) ---------- */
+/* Картка невидима, доки не дійде до екрана, тоді піднімається на місце; черговість — через --reveal-delay */
+.reveal {
+  opacity: 0;
+}
+
+.reveal.is-in {
+  animation: reveal-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) var(--reveal-delay, 0ms) both;
+}
+
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+#view.view-enter {
+  animation: view-enter 0.35s ease-out;
+}
+
+@keyframes view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Відблиск, що пробігає по знижці: на картці — при наведенні, на банері — раз на кілька секунд */
+.deal-badge,
+.hero-discount {
+  overflow: hidden;
+}
+
+.hero-discount {
+  position: relative;
+}
+
+.deal-badge::after,
+.hero-discount::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.6) 50%, transparent 70%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.deal-card:hover .deal-badge::after {
+  animation: sheen 0.8s ease-out;
+}
+
+.hero-discount::after {
+  animation: sheen-loop 5s ease-in-out 1.5s infinite;
+}
+
+@keyframes sheen {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes sheen-loop {
+  0%,
+  70% {
+    transform: translateX(-120%);
+  }
+  88%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.quick-pick,
+.suggestion {
+  transition: border-color 0.2s, transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media print {
+  .reveal {
+    opacity: 1 !important;
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-discount::after,
+  .deal-card:hover .deal-badge::after {
+    animation: none;
+  }
+  .deal-card:hover,
+  .deal-card:hover .deal-cover .cover,
+  .btn-primary:hover,
+  .quick-pick:hover,
+  .suggestion:hover {
+    transform: none;
   }
 }
 
