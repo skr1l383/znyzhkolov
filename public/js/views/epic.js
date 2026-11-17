@@ -4,7 +4,7 @@ import { get, patch } from '../api.js';
 import { setBackdrop } from '../backdrop.js';
 import { locale, t, tp } from '../i18n.js';
 import { state } from '../app.js';
-import { $, $$, cover, formatDate, formatUah, html, setHtml, timeAgo, toast } from '../ui.js';
+import { $, $$, cover, epicSized, formatDate, formatUah, html, setHtml, timeAgo, toast } from '../ui.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -120,7 +120,7 @@ export async function render(root) {
   const { items, past = [], stats, lastCheck } = await get('/api/epic');
   const current = items.filter((i) => i.status === 'current');
   const upcoming = items.filter((i) => i.status === 'upcoming');
-  if (current[0]?.imageUrl) setBackdrop(current[0].imageUrl);
+  if (current[0]?.imageUrl) setBackdrop(epicSized(current[0].imageUrl));
 
   setHtml(
     root,

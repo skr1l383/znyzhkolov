@@ -14,14 +14,25 @@ function pickSlug(el) {
   return el.urlSlug && !/^[0-9a-f]{32}$/.test(el.urlSlug) ? el.urlSlug : null;
 }
 
+// Оригінали картинок Epic важать 1–2 МБ (PNG). Їхній CDN за параметрами в адресі
+// сам віддає зменшену копію: JPEG шириною 960 px, ~70 КБ. Це прискорює головну на телефоні,
+// листи й повідомлення Telegram.
+function sized(url) {
+  const safe = safeImageUrl(url);
+  if (!safe) return null;
+  const u = new URL(safe);
+  if (u.hostname === 'cdn1.epicgames.com' && !u.search) u.search = '?w=960&resize=1&quality=medium';
+  return u.href;
+}
+
 function pickImage(el) {
   const images = el.keyImages || [];
   const order = ['OfferImageWide', 'DieselStoreFrontWide', 'featuredMedia', 'Thumbnail', 'OfferImageTall'];
   for (const type of order) {
     const img = images.find((i) => i.type === type && i.url);
-    if (img) return safeImageUrl(img.url);
+    if (img) return sized(img.url);
   }
-  return safeImageUrl(images[0]?.url);
+  return sized(images[0]?.url);
 }
 
 // У Epic для роздач discountPercentage = 0 означає «ціна 0», тобто 100% знижки

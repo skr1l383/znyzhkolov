@@ -101,10 +101,24 @@ export function initials(title) {
     .join('');
 }
 
+/**
+ * Оригінали Epic важать 1–2 МБ, а їхній CDN уміє віддати зменшену копію (~70 КБ).
+ * Сервер уже зберігає зменшені адреси; тут — для старих записів (історія роздач, сповіщення).
+ */
+export function epicSized(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname === 'cdn1.epicgames.com' && !u.search) u.search = '?w=960&resize=1&quality=medium';
+    return u.href;
+  } catch {
+    return url;
+  }
+}
+
 /** Обкладинка гри або заглушка з першими літерами назви. */
 export function cover(url, title, extraClass = '', fallback = null) {
   if (url) {
-    return html`<img class="cover ${extraClass}" src="${url}" alt="" loading="lazy" referrerpolicy="no-referrer"
+    return html`<img class="cover ${extraClass}" src="${epicSized(url)}" alt="" loading="lazy" referrerpolicy="no-referrer"
       data-title="${title}" ${fallback ? html`data-fallback="${fallback}"` : ''} />`;
   }
   return html`<div class="cover cover-placeholder ${extraClass}" aria-hidden="true">${initials(title)}</div>`;
