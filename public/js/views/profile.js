@@ -32,6 +32,12 @@ const TABS = [
 
 // ---------- Шапка ----------
 
+/** Привітання за часом доби. */
+function greeting() {
+  const h = new Date().getHours();
+  return t(h < 5 ? 'Доброї ночі' : h < 12 ? 'Доброго ранку' : h < 18 ? 'Доброго дня' : 'Доброго вечора');
+}
+
 function hero(u) {
   return html`
     <section class="profile-hero" id="profile-hero">
@@ -43,6 +49,7 @@ function hero(u) {
           <span class="profile-avatar-badge">${ICONS.camera}</span>
         </label>
         <div class="profile-who">
+          <p class="profile-greet">${greeting()}<span class="profile-wave" aria-hidden="true">👋</span></p>
           <div class="profile-name">
             <h1>${u.name}</h1>
             ${u.role === 'admin' ? html`<span class="pill pill-accent">${t('Адміністратор')}</span>` : ''}
@@ -323,6 +330,7 @@ export async function render(root, params) {
       ${hero(u)}
       <div class="profile-layout">
         <nav class="profile-tabs" role="tablist" aria-label="${t('Розділи профілю')}">
+          <span class="profile-tabs-pill" aria-hidden="true"></span>
           ${TABS.map(
             ([name, label, icon]) => html`<button type="button" role="tab" id="tab-${name}" data-tab="${name}" aria-controls="panel-${name}"
               aria-selected="${String(name === first)}" tabindex="${name === first ? '0' : '-1'}">${icon}<span>${t(label)}</span></button>`
@@ -340,6 +348,16 @@ export async function render(root, params) {
 
   // ---- Вкладки: адреса запам'ятовує відкриту, стрілки на клавіатурі перемикають ----
   const tabs = [...root.querySelectorAll('[data-tab]')];
+  const nav = $('.profile-tabs', root);
+  const pill = $('.profile-tabs-pill', nav);
+  // Підсвітка вибраної вкладки плавно переїжджає до неї (на телефоні вкладки в ряд — теж працює)
+  const movePill = () => {
+    const on = tabs.find((tab) => tab.getAttribute('aria-selected') === 'true');
+    if (!on) return;
+    pill.style.transform = `translate(${on.offsetLeft}px, ${on.offsetTop}px)`;
+    pill.style.width = `${on.offsetWidth}px`;
+    pill.style.height = `${on.offsetHeight}px`;
+  };
   const selectTab = (name, focus = false) => {
     for (const tab of tabs) {
       const on = tab.dataset.tab === name;
@@ -347,10 +365,22 @@ export async function render(root, params) {
       tab.tabIndex = on ? 0 : -1;
       if (on && focus) tab.focus();
     }
-    root.querySelectorAll('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== name));
+    root.querySelectorAll('[data-panel]').forEach((p) => {
+      p.hidden = p.dataset.panel !== name;
+      if (p.hidden) return;
+      // Вміст вкладки з'являється хвилею — перезапускаємо анімацію щоразу
+      p.classList.remove('is-entering');
+      void p.offsetWidth;
+      p.classList.add('is-entering');
+    });
+    movePill();
     history.replaceState(null, '', name === 'main' ? '#/profile' : `#/profile?tab=${name}`);
   };
   selectTab(first);
+  // Спершу ставимо підсвітку на місце без руху, далі — з анімацією
+  requestAnimationFrame(() => nav.classList.add('is-ready'));
+  const resize = new ResizeObserver(() => (nav.isConnected ? movePill() : resize.disconnect()));
+  resize.observe(nav);
   tabs.forEach((tab, i) => {
     tab.addEventListener('click', () => selectTab(tab.dataset.tab));
     tab.addEventListener('keydown', (e) => {

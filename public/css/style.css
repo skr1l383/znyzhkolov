@@ -2265,6 +2265,40 @@ p {
   transform: scale(1.08);
 }
 
+/* Обкладинки повільно пливуть, а поверх переливається кольорове сяйво */
+.profile-covers {
+  animation: covers-drift 40s ease-in-out infinite alternate;
+}
+
+@keyframes covers-drift {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: translateX(-3%) scale(1.1);
+  }
+}
+
+.profile-cover::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: -40%;
+  background:
+    radial-gradient(closest-side, rgb(245 165 63 / 0.45), transparent) 20% 30% / 45% 60% no-repeat,
+    radial-gradient(closest-side, rgb(192 138 240 / 0.4), transparent) 75% 65% / 50% 70% no-repeat,
+    radial-gradient(closest-side, rgb(90 169 255 / 0.3), transparent) 50% 20% / 40% 50% no-repeat;
+  mix-blend-mode: screen;
+  animation: aurora 16s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes aurora {
+  to {
+    transform: translate(9%, -6%) rotate(10deg);
+  }
+}
+
 .profile-cover::after {
   content: '';
   position: absolute;
@@ -2311,6 +2345,52 @@ p {
 
 .profile-avatar:hover .profile-avatar-img {
   filter: brightness(0.82);
+}
+
+/* Кольорове кільце навколо фото, що повільно обертається */
+.profile-avatar::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -9px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent), #c08af0, #5aa9ff, var(--accent));
+  animation: spin 8s linear infinite;
+}
+
+.profile-greet {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.profile-wave {
+  display: inline-block;
+  margin-left: 6px;
+  transform-origin: 70% 75%;
+  animation: wave 1.8s ease-in-out 0.5s 2;
+}
+
+@keyframes wave {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30% {
+    transform: rotate(16deg);
+  }
+  20% {
+    transform: rotate(-8deg);
+  }
+  40% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
 }
 
 .profile-avatar:focus-within {
@@ -2438,8 +2518,34 @@ p {
   border-left: 0;
 }
 
+a.profile-stat {
+  position: relative;
+}
+
 a.profile-stat:hover {
   background: var(--surface-2);
+}
+
+/* При наведенні знизу виростає смужка кольору сайту */
+a.profile-stat::after {
+  content: '';
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+a.profile-stat:hover::after {
+  transform: scaleX(1);
+}
+
+a.profile-stat:hover b {
+  color: var(--accent-strong);
 }
 
 .profile-stat b {
@@ -2447,6 +2553,7 @@ a.profile-stat:hover {
   font-size: 24px;
   font-weight: 700;
   line-height: 1.25;
+  transition: color 0.2s;
 }
 
 .profile-stat span {
@@ -2465,7 +2572,10 @@ a.profile-stat:hover {
 }
 
 .profile-stat.is-accent b {
-  color: var(--accent-strong);
+  background: linear-gradient(90deg, var(--accent-strong), #c08af0);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .profile-stat.skeleton {
@@ -2489,6 +2599,8 @@ a.profile-stat:hover {
 }
 
 .profile-tabs button {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2502,6 +2614,7 @@ a.profile-stat:hover {
   font-weight: 700;
   text-align: left;
   cursor: pointer;
+  transition: color 0.2s, background 0.2s;
 }
 
 .profile-tabs button:hover {
@@ -2510,14 +2623,59 @@ a.profile-stat:hover {
 }
 
 .profile-tabs button[aria-selected='true'] {
-  background: var(--surface);
-  border-color: var(--border);
+  background: transparent;
   color: var(--fg);
-  box-shadow: var(--shadow);
 }
 
 .profile-tabs button[aria-selected='true'] .ico {
   color: var(--accent);
+  animation: tab-pop 0.4s cubic-bezier(0.2, 0.8, 0.2, 1.4);
+}
+
+@keyframes tab-pop {
+  40% {
+    transform: scale(1.25);
+  }
+}
+
+/* Підсвітка вибраної вкладки — одна на всі, переїжджає (позицію ставить profile.js) */
+.profile-tabs-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+.profile-tabs-pill::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 28%;
+  bottom: 28%;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.profile-tabs.is-ready .profile-tabs-pill {
+  transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.38s, height 0.38s;
+}
+
+/* Вміст вкладки з'являється хвилею */
+.profile-panel.is-entering > * {
+  animation: reveal-rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.profile-panel.is-entering > :nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.profile-panel.is-entering > :nth-child(n + 3) {
+  animation-delay: 140ms;
 }
 
 .profile-tabs .ico {
@@ -2776,8 +2934,14 @@ a.profile-stat:hover {
     gap: 14px;
   }
   .profile-tabs {
-    position: static;
+    position: relative;
+    top: 0; /* відступ потрібен лише «липким» вкладкам на комп'ютері */
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .profile-tabs-pill::before {
+    inset: auto 30% 5px;
+    width: auto;
+    height: 3px;
   }
   .profile-tabs button {
     flex-direction: column;
@@ -6145,6 +6309,17 @@ textarea.input {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .profile-covers,
+  .profile-cover::before,
+  .profile-avatar::before,
+  .profile-wave,
+  .profile-panel.is-entering > *,
+  .profile-tabs button[aria-selected='true'] .ico {
+    animation: none;
+  }
+  .profile-tabs.is-ready .profile-tabs-pill {
+    transition: none;
+  }
   .hero-discount::after,
   .deal-card:hover .deal-badge::after {
     animation: none;

@@ -17,6 +17,7 @@ const REVEAL = [
   '.how-steps li',
   '.list-stats > div',
   '.stat',
+  '.profile-stat:not(.skeleton)',
   '.regional-fact',
   '.notify-channel',
   '.game-about',
@@ -25,7 +26,7 @@ const REVEAL = [
   '.game-side > *',
 ].join(',');
 // Числа, які «набігають»
-const COUNT = '.list-stats b, .stat b, .epic-stats b';
+const COUNT = '.list-stats b, .stat b, .epic-stats b, .profile-stat b';
 const STAGGER_MS = 45;
 const MAX_STAGGER = 8; // далі затримка не росте, щоб довгий список не з'являвся вічність
 const COUNT_MS = 900;

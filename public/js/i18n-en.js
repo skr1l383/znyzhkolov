@@ -102,6 +102,10 @@ export const EN = {
   'Графік ціни': 'Price chart',
   'Історія ціни': 'Price history',
   Підказки: 'Suggestions',
+  'Доброї ночі': 'Good night',
+  'Доброго ранку': 'Good morning',
+  'Доброго дня': 'Good afternoon',
+  'Доброго вечора': 'Good evening',
   'Шукати «{q}» в усіх іграх Steam': 'Search all of Steam for “{q}”',
   'Ми ще не бачили цю гру на вітрині, тож історії ціни поки немає. Стеж за ціною — і графік почне будуватися з першої перевірки.':
     "We haven't seen this game in our showcase yet, so there is no price history. Watch its price and the chart will start with the first check.",
