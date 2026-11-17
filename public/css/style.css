@@ -2694,7 +2694,23 @@ a.profile-stat:hover b {
 
 .profile-panel-pair {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  align-items: start;
+  align-items: stretch;
+}
+
+/* Картки поруч однакової висоти, а кнопка з підказкою — внизу кожної, тож вони на одному рівні */
+.profile-panel-pair > .panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-panel-pair > .panel > form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.profile-panel-pair > .panel > form > :nth-last-child(2) {
+  margin-top: auto;
 }
 
 .panel-head {
