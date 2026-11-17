@@ -4239,6 +4239,54 @@ textarea.input {
   background: var(--surface);
   box-shadow: 0 18px 50px rgb(0 0 0 / 0.35);
   overflow: hidden;
+  /* Панель виростає з кнопки в кутку й так само в неї ховається */
+  transform-origin: calc(100% - 28px) calc(100% + 60px);
+  animation: advisor-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.advisor-panel.is-closing {
+  animation: advisor-out 0.2s ease-in forwards;
+  pointer-events: none;
+}
+
+@keyframes advisor-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.9);
+  }
+}
+
+@keyframes advisor-out {
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+  }
+}
+
+/* Нове повідомлення в чаті м'яко спливає */
+.advisor-msg:last-child {
+  animation: advisor-msg-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes advisor-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(48px);
+  }
+}
+
+@keyframes advisor-sheet-out {
+  to {
+    opacity: 0;
+    transform: translateY(48px);
+  }
+}
+
+@keyframes advisor-msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 .advisor-top {
@@ -4426,6 +4474,13 @@ textarea.input {
   .advisor-open .advisor-fab {
     display: none;
   }
+  /* На весь екран — виїжджає знизу, як аркуш */
+  .advisor-panel {
+    animation-name: advisor-sheet-in;
+  }
+  .advisor-panel.is-closing {
+    animation-name: advisor-sheet-out;
+  }
   .advisor-fab {
     right: 14px;
     bottom: calc(14px + env(safe-area-inset-bottom, 0px));
@@ -4448,6 +4503,10 @@ textarea.input {
     transition: none;
   }
   .advisor-fab:hover .advisor-icon-spark {
+    animation: none;
+  }
+  .advisor-panel,
+  .advisor-msg:last-child {
     animation: none;
   }
   .advisor-dots {

@@ -8,6 +8,7 @@ import { go, state } from './app.js';
 import { $, gameHref, html, raw, setHtml } from './ui.js';
 
 const STORE_KEY = 'zk-advisor';
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const TOOL_NAMES = {
   get_game_prices: 'ціни',
   get_price_history: 'історія цін',
@@ -179,12 +180,27 @@ function renderBody() {
 function setOpen(open) {
   const panel = $('#advisor-panel');
   if (!panel) return;
-  panel.hidden = !open;
   $('#advisor-fab').setAttribute('aria-expanded', String(open));
   document.body.classList.toggle('advisor-open', open);
   if (open) {
+    panel.classList.remove('is-closing'); // відкрили знову, поки панель ще ховалася
+    panel.hidden = false; // поява — CSS-анімацією, щойно панель стає видимою
     renderFrame();
     $('#advisor-form input')?.focus({ preventScroll: true });
+  } else if (!panel.hidden) {
+    if (reducedMotion.matches) {
+      panel.hidden = true;
+      return;
+    }
+    // Спершу панель плавно ховається в кнопку, а прихованою стає вже після анімації
+    panel.classList.add('is-closing');
+    panel.addEventListener('animationend', function done(e) {
+      if (e.target !== panel) return;
+      panel.removeEventListener('animationend', done);
+      if (!panel.classList.contains('is-closing')) return;
+      panel.classList.remove('is-closing');
+      panel.hidden = true;
+    });
   }
 }
 
@@ -228,7 +244,7 @@ export function syncAdvisor() {
         </button>
         <section class="advisor-panel" id="advisor-panel" role="dialog" aria-labelledby="advisor-title" hidden></section>`)
     );
-    $('#advisor-fab').addEventListener('click', () => setOpen($('#advisor-panel').hidden));
+    $('#advisor-fab').addEventListener('click', (e) => setOpen(e.currentTarget.getAttribute('aria-expanded') !== 'true'));
     const panel = $('#advisor-panel');
     panel.addEventListener('click', (e) => {
       if (e.target.closest('#advisor-close')) return setOpen(false);
