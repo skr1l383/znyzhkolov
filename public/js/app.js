@@ -70,7 +70,9 @@ async function navigate() {
   const root = $('#view');
   if (lastRoute !== name) {
     window.scrollTo(0, 0);
-    pageEnter(root);
+    // Лише при переході між сторінками: на першому завантаженні прозора поява
+    // затримувала б банер (LCP), і Lighthouse на телефоні знижував оцінку
+    if (lastRoute !== null) pageEnter(root);
   }
   lastRoute = name;
   try {
