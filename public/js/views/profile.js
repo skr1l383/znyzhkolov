@@ -20,11 +20,13 @@ const ICONS = {
   gift: svg(html`<rect x="4" y="9" width="16" height="11" rx="1.5" /><path d="M3 9h18M12 9v11M12 9c-1.5-3-5-4-5-1.5S10 9 12 9Zm0 0c1.5-3 5-4 5-1.5S14 9 12 9Z" />`),
   tag: svg(html`<path d="M3 12V4.5A1.5 1.5 0 0 1 4.5 3H12l9 9-9 9Z" /><circle cx="7.5" cy="7.5" r="1.5" />`),
   phone: svg(html`<rect x="6.5" y="2.5" width="11" height="19" rx="2.5" /><path d="M10.5 18.5h3" /><circle cx="17.5" cy="6" r="3" class="ico-dot" />`),
+  trophy: svg(html`<path d="M8 4h8v5a4 4 0 0 1-8 0Z" /><path d="M8 6H5.5a2.5 2.5 0 0 0 2.6 3.6M16 6h2.5a2.5 2.5 0 0 1-2.6 3.6M12 13v4M9 20.5h6M10 17h4" />`),
   logout: svg(html`<path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 16l-4-4 4-4M6 12h10" />`),
 };
 
 const TABS = [
   ['main', 'Профіль', ICONS.user],
+  ['awards', 'Нагороди', ICONS.trophy],
   ['alerts', 'Сповіщення', ICONS.bell],
   ['security', 'Безпека', ICONS.lock],
   ['data', 'Мої дані', ICONS.data],
@@ -102,12 +104,17 @@ function cover(urls) {
 const ACHIEVEMENTS = [
   ['first', '🎮', 'Перший крок', 'Додай першу гру до списку', (s) => [s.games, 1]],
   ['collector', '📚', 'Колекціонер', 'Стеж за 10 іграми', (s) => [s.games, 10]],
+  ['curator', '🏛️', 'Скарбниця', 'Стеж за 25 іграми', (s) => [s.games, 25]],
   ['hunter', '🎯', 'Мисливець за знижками', 'Дочекайся сповіщення про знижку', (s) => [s.facts.deals, 1]],
   ['saver', '💰', 'Економіст', 'Назбирай 1000 ₴ можливої економії у списку', (s) => [Math.floor(s.savingsUah / 100), 1000]],
+  ['epic', '🎁', 'Збирач роздач', 'Отримай 5 сповіщень про роздачі Epic', (s) => [s.facts.epic, 5]],
   ['telegram', '✈️', 'На зв’язку', 'Підключи Telegram', (s) => [Number(s.facts.telegram), 1]],
   ['push', '🔔', 'Завжди в курсі', 'Увімкни пуш-сповіщення', (s) => [Number(s.facts.push), 1]],
-  ['steam', '🧩', 'Друг Steam', 'Імпортуй список бажаного зі Steam', (s) => [Number(s.facts.steam), 1]],
+  ['verified', '✅', 'Справжній', 'Підтверди пошту', (s) => [Number(s.facts.verified), 1]],
   ['face', '🖼️', 'Впізнаваний', 'Додай фото профілю', (s) => [Number(s.facts.avatar), 1]],
+  ['steam', '🧩', 'Друг Steam', 'Імпортуй список бажаного зі Steam', (s) => [Number(s.facts.steam), 1]],
+  ['share', '🔗', 'Ділюся', 'Поділися своїм списком із друзями', (s) => [Number(s.facts.shared), 1]],
+  ['advisor', '🤖', 'Порадився', 'Постав питання ШІ-порадникові', (s) => [s.facts.advisor, 1]],
   ['critic', '💬', 'Критик', 'Напиши коментар до гри', (s) => [s.facts.comments, 1]],
   ['veteran', '🏆', 'Старожил', 'Будь зі Знижколовом 30 днів', (s) => [s.facts.days, 30]],
 ];
@@ -121,32 +128,50 @@ function readSeen() {
   }
 }
 
+function achievementCard(a, fresh) {
+  return html`<li class="ach ${a.done ? 'is-done' : 'is-locked'} ${fresh.has(a.id) ? 'is-new' : ''}">
+    <span class="ach-medal" aria-hidden="true">
+      <span class="ach-emoji">${a.icon}</span>
+      ${a.done ? '' : html`<span class="ach-lock">${ICONS.lock}</span>`}
+    </span>
+    <span class="ach-text">
+      <b>${t(a.title)}${fresh.has(a.id) ? html` <span class="ach-new">${t('нова')}</span>` : ''}</b>
+      <small>${a.done ? t('Отримано') : t(a.hint)}</small>
+      ${!a.done && a.of > 1
+        ? html`<span class="ach-bar"><i style="--p: ${(a.have / a.of) * 100}%"></i></span>
+            <small class="ach-num">${a.have} / ${a.of}</small>`
+        : ''}
+    </span>
+    <span class="visually-hidden">${a.done ? t('Отримано') : t('Заблоковано')}</span>
+  </li>`;
+}
+
 function achievementsHtml(list, fresh) {
   const done = list.filter((a) => a.done).length;
+  // Наступна ціль — заблокована нагорода, до якої найменше лишилося
+  const next = list.filter((a) => !a.done).sort((a, b) => b.have / b.of - a.have / a.of)[0];
   return html`
-    <div class="ach-head">
-      <div class="panel-head">
-        <h2>${t('Нагороди')}</h2>
-        <p class="hint">${t('Відкривай їх, користуючись Знижколовом.')}</p>
+    <section class="panel stack achievements">
+      <div class="ach-head">
+        <div class="panel-head">
+          <h2>${t('Нагороди')}</h2>
+          <p class="hint">${t('Відкривай їх, користуючись Знижколовом.')}</p>
+        </div>
+        <span class="ach-count"><b>${done}</b> ${t('з {n}', { n: list.length })}</span>
       </div>
-      <span class="ach-count"><b>${done}</b> ${t('з {n}', { n: list.length })}</span>
-    </div>
-    <div class="ach-total" role="progressbar" aria-valuemin="0" aria-valuemax="${list.length}" aria-valuenow="${done}"
-      aria-label="${t('Нагороди')}"><span style="--p: ${(done / list.length) * 100}%"></span></div>
-    <ul class="ach-grid">
-      ${list.map(
-        (a) => html`<li class="ach ${a.done ? 'is-done' : ''} ${fresh.has(a.id) ? 'is-new' : ''}">
-          <span class="ach-medal" aria-hidden="true">${a.icon}</span>
-          <span class="ach-text">
-            <b>${t(a.title)}${fresh.has(a.id) ? html` <span class="ach-new">${t('нова')}</span>` : ''}</b>
-            <small>${a.done ? t('Отримано') : t(a.hint)}</small>
-            ${!a.done && a.of > 1
-              ? html`<span class="ach-bar" aria-label="${a.have} / ${a.of}"><i style="--p: ${(a.have / a.of) * 100}%"></i></span>`
-              : ''}
-          </span>
-        </li>`
-      )}
-    </ul>
+      <div class="ach-total" role="progressbar" aria-valuemin="0" aria-valuemax="${list.length}" aria-valuenow="${done}"
+        aria-label="${t('Нагороди')}"><span style="--p: ${(done / list.length) * 100}%"></span></div>
+      ${next
+        ? html`<p class="ach-next"><span aria-hidden="true">${next.icon}</span>
+            <span>${t('Наступна ціль:')} <b>${t(next.title)}</b> — ${t(next.hint).toLowerCase()}${next.of > 1 ? html` <em>${next.have} / ${next.of}</em>` : ''}</span></p>`
+        : html`<p class="ach-next is-all">🎉 ${t('Усі нагороди зібрано!')}</p>`}
+      <h3 class="ach-group">${t('Отримані')} <span>${done}</span></h3>
+      ${done ? html`<ul class="ach-grid">${list.filter((a) => a.done).map((a) => achievementCard(a, fresh))}</ul>` : html`<p class="muted">${t('Поки жодної — почни з першої гри у списку.')}</p>`}
+      ${done < list.length
+        ? html`<h3 class="ach-group">${t('Заблоковані')} <span>${list.length - done}</span></h3>
+            <ul class="ach-grid">${list.filter((a) => !a.done).map((a) => achievementCard(a, fresh))}</ul>`
+        : ''}
+    </section>
   `;
 }
 
@@ -161,6 +186,11 @@ function mountAchievements(box, summary) {
   // Уперше нагород не «вітаємо» — інакше всі давно отримані виглядали б новими
   const fresh = new Set(seen ? doneIds.filter((id) => !seen.includes(id)) : []);
   setHtml(box, achievementsHtml(list, fresh));
+  const count = box.closest('.profile-layout')?.querySelector('#tab-awards .tab-count');
+  if (count) {
+    count.textContent = `${doneIds.length}/${list.length}`;
+    count.hidden = false;
+  }
   try {
     localStorage.setItem(SEEN_KEY, JSON.stringify(doneIds));
   } catch {
@@ -174,10 +204,6 @@ function mountAchievements(box, summary) {
 
 function mainTab(u) {
   return html`
-    <section class="panel stack achievements" id="achievements">
-      <div class="skeleton" style="height: 220px"></div>
-    </section>
-
     <form class="panel stack" id="profile-form" novalidate>
       <div class="panel-head">
         <h2>${t('Особисті дані')}</h2>
@@ -411,11 +437,14 @@ export async function render(root, params) {
           <span class="profile-tabs-pill" aria-hidden="true"></span>
           ${TABS.map(
             ([name, label, icon]) => html`<button type="button" role="tab" id="tab-${name}" data-tab="${name}" aria-controls="panel-${name}"
-              aria-selected="${String(name === first)}" tabindex="${name === first ? '0' : '-1'}">${icon}<span>${t(label)}</span></button>`
+              aria-selected="${String(name === first)}" tabindex="${name === first ? '0' : '-1'}">${icon}<span>${t(label)}</span>${name === 'awards' ? html`<em class="tab-count" hidden></em>` : ''}</button>`
           )}
         </nav>
         <div class="profile-panels">
           <div class="profile-panel" role="tabpanel" id="panel-main" data-panel="main" aria-labelledby="tab-main">${mainTab(u)}</div>
+          <div class="profile-panel" role="tabpanel" id="panel-awards" data-panel="awards" aria-labelledby="tab-awards">
+            <div id="achievements"><div class="skeleton" style="height: 320px"></div></div>
+          </div>
           <div class="profile-panel" role="tabpanel" id="panel-alerts" data-panel="alerts" aria-labelledby="tab-alerts">${alertsTab(u)}</div>
           <div class="profile-panel profile-panel-pair" role="tabpanel" id="panel-security" data-panel="security" aria-labelledby="tab-security">${securityPanels(u)}</div>
           <div class="profile-panel" role="tabpanel" id="panel-data" data-panel="data" aria-labelledby="tab-data">${dataPanels()}</div>

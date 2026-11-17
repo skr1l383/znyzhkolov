@@ -3032,7 +3032,10 @@ a.profile-stat:hover b {
   .profile-tabs {
     position: relative;
     top: 0; /* відступ потрібен лише «липким» вкладкам на комп'ютері */
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .tab-count {
+    display: none;
   }
   .profile-tabs-pill::before {
     inset: auto 30% 5px;
@@ -6391,6 +6394,7 @@ textarea.input {
 }
 
 .ach-medal {
+  position: relative;
   flex: none;
   display: grid;
   place-items: center;
@@ -6399,8 +6403,124 @@ textarea.input {
   border-radius: 50%;
   background: var(--surface-2);
   font-size: 22px;
-  filter: grayscale(1);
-  opacity: 0.55;
+}
+
+/* Заблокована: пунктирна рамка, смуги, медаль у «тумані» й замок на ній */
+.ach.is-locked {
+  border-style: dashed;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--fg) 3.5%, transparent) 9px 18px),
+    var(--surface);
+}
+
+.ach.is-locked .ach-medal {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.ach.is-locked .ach-emoji {
+  filter: grayscale(1) blur(1.5px) brightness(0.7);
+  opacity: 0.45;
+}
+
+.ach.is-locked .ach-text b {
+  color: color-mix(in srgb, var(--fg) 75%, var(--muted));
+}
+
+.ach-lock {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 14%, var(--surface));
+  color: var(--fg);
+}
+
+.ach-lock .ico {
+  width: 12px;
+  height: 12px;
+}
+
+/* Наведи на заблоковану — замок смикається: «ще ні» */
+.ach.is-locked:hover .ach-lock {
+  animation: lock-shake 0.5s ease-in-out;
+}
+
+@keyframes lock-shake {
+  20%,
+  60% {
+    transform: translateX(-3px) rotate(-10deg);
+  }
+  40%,
+  80% {
+    transform: translateX(3px) rotate(10deg);
+  }
+}
+
+.ach-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.ach-next {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  font-size: 14px;
+}
+
+.ach-next > span:first-child {
+  font-size: 20px;
+}
+
+.ach-next em {
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-style: normal;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ach-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0 -4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ach-group span {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--fg);
+  font-size: 12px;
+}
+
+/* Скільки нагород — на самій вкладці */
+.tab-count {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .ach-text {
@@ -6618,7 +6738,8 @@ textarea.input {
   .ach.is-new,
   .ach.is-new .ach-medal,
   .ach.is-done:hover::after,
-  .ach.is-done:hover .ach-medal {
+  .ach.is-done:hover .ach-medal,
+  .ach.is-locked:hover .ach-lock {
     animation: none;
   }
   .ach.is-done:hover {

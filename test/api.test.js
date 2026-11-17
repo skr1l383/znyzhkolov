@@ -440,6 +440,9 @@ test('Підсумок для шапки профілю: ігри, викона�
   assert.equal(s.facts.deals, alerts.items.filter((i) => i.kind === 'deal' || i.kind === 'free').length);
   assert.equal(typeof s.facts.telegram, 'boolean');
   assert.equal(s.facts.push, false);
+  assert.equal(s.facts.epic, alerts.items.filter((i) => i.kind === 'epic').length);
+  assert.equal(typeof s.facts.verified, 'boolean');
+  assert.ok(Number.isInteger(s.facts.advisor));
   assert.ok(Number.isInteger(s.facts.comments) && Number.isInteger(s.facts.days) && s.facts.days >= 0);
 });
 

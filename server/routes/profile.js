@@ -42,6 +42,10 @@ export function profileRoutes(router) {
       // Факти для нагород у профілі (самі нагороди й тексти — на сторінці)
       facts: {
         deals: count("SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND kind IN ('deal', 'free')"),
+        epic: count("SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND kind = 'epic'"),
+        advisor: count("SELECT COUNT(*) AS n FROM event_log WHERE user_id = ? AND type = 'ai.answer'"),
+        verified: Boolean(ctx.user.email_verified_at),
+        shared: Boolean(ctx.user.share_token),
         telegram: Boolean(ctx.user.telegram_chat_id),
         push: count('SELECT COUNT(*) AS n FROM push_subscriptions WHERE user_id = ?') > 0,
         avatar: Boolean(ctx.user.avatar),
