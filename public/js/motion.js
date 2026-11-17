@@ -20,6 +20,7 @@ const REVEAL = [
   '.profile-stat:not(.skeleton)',
   '.regional-fact',
   '.notify-channel',
+  '.ach',
   '.game-about',
   '.game-history',
   '.game-regional',

@@ -39,6 +39,16 @@ export function profileRoutes(router) {
       savingsUah: s.savings,
       // Обкладинки ігор зі списку — для фону шапки профілю
       covers: items.map((i) => i.imageUrl).filter(Boolean).slice(0, 6),
+      // Факти для нагород у профілі (самі нагороди й тексти — на сторінці)
+      facts: {
+        deals: count("SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND kind IN ('deal', 'free')"),
+        telegram: Boolean(ctx.user.telegram_chat_id),
+        push: count('SELECT COUNT(*) AS n FROM push_subscriptions WHERE user_id = ?') > 0,
+        avatar: Boolean(ctx.user.avatar),
+        steam: Boolean(ctx.user.steam_id),
+        comments: count('SELECT COUNT(*) AS n FROM comments WHERE user_id = ?'),
+        days: Math.floor((Date.now() - new Date(ctx.user.created_at).getTime()) / (24 * 60 * 60 * 1000)),
+      },
     };
   });
 

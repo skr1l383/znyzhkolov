@@ -3,10 +3,11 @@
 import { get, post } from '../api.js';
 import { locale, t } from '../i18n.js';
 import { setUnread, state } from '../app.js';
-import { $, cover, formatDate, gameHref, html, setHtml, timeAgo } from '../ui.js';
+import { $, cover, formatDate, gameHref, html, raw, setHtml, timeAgo } from '../ui.js';
 import { pushState } from '../push.js';
 
 const ICONS = { deal: '🔥', free: '🎁', epic: '🎮', digest: '📬', system: '✓' };
+const BELL = '<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15Z" /><path d="M10 20.5a2.2 2.2 0 0 0 4 0" /></svg>';
 const FILTERS = [
   ['all', 'Усі'],
   ['deal', 'Знижки'],
@@ -122,16 +123,20 @@ export async function render(root) {
   setHtml(
     root,
     html`
-      <div class="page-head">
-        <div>
-          <h1>${t('Сповіщення')}</h1>
-          <p>
-            ${unread
-              ? t('Нових: {n}. Ми відмітили їх прочитаними.', { n: unread })
-              : t('Знижки на ігри з твого списку й нові роздачі — усе в одному місці.')}
-          </p>
+      <section class="search-hero notif-hero ${unread ? 'has-new' : ''}">
+        <div class="search-hero-head">
+          <span class="search-hero-icon notif-bell" aria-hidden="true">${raw(BELL)}</span>
+          <div>
+            <h1>${t('Сповіщення')}</h1>
+            <p>
+              ${unread
+                ? t('Нових: {n}. Ми відмітили їх прочитаними.', { n: unread })
+                : t('Знижки на ігри з твого списку й нові роздачі — усе в одному місці.')}
+            </p>
+          </div>
+          ${unread ? html`<span class="notif-new-count">+${unread}</span>` : ''}
         </div>
-      </div>
+      </section>
       <div class="epic-layout">
         <div class="epic-main">
           ${items.length

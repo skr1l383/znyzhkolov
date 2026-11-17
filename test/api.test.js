@@ -436,6 +436,11 @@ test('Підсумок для шапки профілю: ігри, викона�
   assert.equal(s.unread, alerts.unread);
   assert.ok(Number.isInteger(s.savingsUah) && s.savingsUah >= 0);
   assert.deepEqual(s.covers, list.map((i) => i.imageUrl).filter(Boolean).slice(0, 6));
+  // Факти для нагород
+  assert.equal(s.facts.deals, alerts.items.filter((i) => i.kind === 'deal' || i.kind === 'free').length);
+  assert.equal(typeof s.facts.telegram, 'boolean');
+  assert.equal(s.facts.push, false);
+  assert.ok(Number.isInteger(s.facts.comments) && Number.isInteger(s.facts.days) && s.facts.days >= 0);
 });
 
 test('Журнал подій записує входи та помилки входу', async () => {

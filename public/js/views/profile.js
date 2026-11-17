@@ -96,10 +96,88 @@ function cover(urls) {
   return html`<div class="profile-covers" style="--n: ${urls.length}">${urls.map((src) => html`<img src="${src}" alt="" loading="lazy" />`)}</div>`;
 }
 
+// ---------- Нагороди ----------
+
+// [id, значок, назва, як отримати, (підсумок) → [скільки є, скільки треба]]
+const ACHIEVEMENTS = [
+  ['first', '🎮', 'Перший крок', 'Додай першу гру до списку', (s) => [s.games, 1]],
+  ['collector', '📚', 'Колекціонер', 'Стеж за 10 іграми', (s) => [s.games, 10]],
+  ['hunter', '🎯', 'Мисливець за знижками', 'Дочекайся сповіщення про знижку', (s) => [s.facts.deals, 1]],
+  ['saver', '💰', 'Економіст', 'Назбирай 1000 ₴ можливої економії у списку', (s) => [Math.floor(s.savingsUah / 100), 1000]],
+  ['telegram', '✈️', 'На зв’язку', 'Підключи Telegram', (s) => [Number(s.facts.telegram), 1]],
+  ['push', '🔔', 'Завжди в курсі', 'Увімкни пуш-сповіщення', (s) => [Number(s.facts.push), 1]],
+  ['steam', '🧩', 'Друг Steam', 'Імпортуй список бажаного зі Steam', (s) => [Number(s.facts.steam), 1]],
+  ['face', '🖼️', 'Впізнаваний', 'Додай фото профілю', (s) => [Number(s.facts.avatar), 1]],
+  ['critic', '💬', 'Критик', 'Напиши коментар до гри', (s) => [s.facts.comments, 1]],
+  ['veteran', '🏆', 'Старожил', 'Будь зі Знижколовом 30 днів', (s) => [s.facts.days, 30]],
+];
+const SEEN_KEY = 'zk-achievements';
+
+function readSeen() {
+  try {
+    return JSON.parse(localStorage.getItem(SEEN_KEY)) || null;
+  } catch {
+    return null;
+  }
+}
+
+function achievementsHtml(list, fresh) {
+  const done = list.filter((a) => a.done).length;
+  return html`
+    <div class="ach-head">
+      <div class="panel-head">
+        <h2>${t('Нагороди')}</h2>
+        <p class="hint">${t('Відкривай їх, користуючись Знижколовом.')}</p>
+      </div>
+      <span class="ach-count"><b>${done}</b> ${t('з {n}', { n: list.length })}</span>
+    </div>
+    <div class="ach-total" role="progressbar" aria-valuemin="0" aria-valuemax="${list.length}" aria-valuenow="${done}"
+      aria-label="${t('Нагороди')}"><span style="--p: ${(done / list.length) * 100}%"></span></div>
+    <ul class="ach-grid">
+      ${list.map(
+        (a) => html`<li class="ach ${a.done ? 'is-done' : ''} ${fresh.has(a.id) ? 'is-new' : ''}">
+          <span class="ach-medal" aria-hidden="true">${a.icon}</span>
+          <span class="ach-text">
+            <b>${t(a.title)}${fresh.has(a.id) ? html` <span class="ach-new">${t('нова')}</span>` : ''}</b>
+            <small>${a.done ? t('Отримано') : t(a.hint)}</small>
+            ${!a.done && a.of > 1
+              ? html`<span class="ach-bar" aria-label="${a.have} / ${a.of}"><i style="--p: ${(a.have / a.of) * 100}%"></i></span>`
+              : ''}
+          </span>
+        </li>`
+      )}
+    </ul>
+  `;
+}
+
+/** Малює нагороди; нові (отримані з минулого перегляду) підсвічує й вітає повідомленням. */
+function mountAchievements(box, summary) {
+  const list = ACHIEVEMENTS.map(([id, icon, title, hint, progress]) => {
+    const [have, of] = progress(summary);
+    return { id, icon, title, hint, have: Math.min(have, of), of, done: have >= of };
+  });
+  const seen = readSeen();
+  const doneIds = list.filter((a) => a.done).map((a) => a.id);
+  // Уперше нагород не «вітаємо» — інакше всі давно отримані виглядали б новими
+  const fresh = new Set(seen ? doneIds.filter((id) => !seen.includes(id)) : []);
+  setHtml(box, achievementsHtml(list, fresh));
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify(doneIds));
+  } catch {
+    // без сховища нагороди однаково видно, просто без позначки «нова»
+  }
+  if (fresh.size === 1) toast(t('Нова нагорода: {title}', { title: t(list.find((a) => fresh.has(a.id)).title) }));
+  else if (fresh.size > 1) toast(t('Нових нагород: {n}', { n: fresh.size }));
+}
+
 // ---------- Вкладка «Профіль» ----------
 
 function mainTab(u) {
   return html`
+    <section class="panel stack achievements" id="achievements">
+      <div class="skeleton" style="height: 220px"></div>
+    </section>
+
     <form class="panel stack" id="profile-form" novalidate>
       <div class="panel-head">
         <h2>${t('Особисті дані')}</h2>
@@ -403,8 +481,12 @@ export async function render(root, params) {
     .then((s) => {
       setHtml($('#profile-stats', root), stats(s));
       setHtml($('#profile-cover', root), cover(s.covers));
+      mountAchievements($('#achievements', root), s);
     })
-    .catch(() => ($('#profile-stats', root).hidden = true));
+    .catch(() => {
+      $('#profile-stats', root).hidden = true;
+      $('#achievements', root).hidden = true;
+    });
 
   // ---- Фото: натиснути на нього або перетягнути картинку на шапку ----
   const heroBox = $('#profile-hero', root);
